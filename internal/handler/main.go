@@ -1,11 +1,12 @@
 package handler
 
 import (
-	"log"
+	"fmt"
+	"os"
 
+	"github.com/alecthomas/participle/v2"
+	"github.com/alecthomas/participle/v2/lexer"
 	"github.com/bondyra/wtf/internal/config"
-	graphviz "github.com/goccy/go-graphviz"
-	"github.com/goccy/go-graphviz/cgraph"
 )
 
 type Handler interface {
@@ -20,50 +21,54 @@ type QueryHandler struct {
 	Query string
 }
 
-func Dupa(x string) string {
-	return x + "dupa"
+type AST struct {
+	Profiles   Collection `( "in" @@)?`
+	Entitities []Entity   `@@*`
+}
+
+type Collection struct {
+	All      bool     `  @"*"`
+	Elements []string `| @Ident ( "," @Ident )*`
+}
+
+type Entity struct {
+	Item Item `  ( "item" @@)`
+	Link Link `| ( "link" @@)`
+}
+
+type Item struct {
+	Type      []string   `@Ident ( "." @Ident )*`
+	Alias     string     `@Ident`
+	Modifiers []Modifier `(@@)*`
+}
+
+type Link struct {
+	From string `@Ident`
+	To   string `@Ident`
+}
+
+type Modifier struct {
+	Set       Collection `"attr" @@`
+	Add       Collection `| "add" @@`
+	Sub       Collection `| "sub" @@`
+	SearchMod string     `| "where" @GoCode`
 }
 
 func (q QueryHandler) Execute(c config.Config) {
-	// PARSE
-	// convert .Query into an intermediary tree using command, service config and config
-	// PULL
-	// data is pulled in parallel based on tree from remote
-	// OUTPUT
-	// tree is traversed once again with fresh data and json is generated
-	// VISUALIZE (optional, true by default)
-	// output json is converted to graphviz
+	ast, _ := fmt.Println(parse(q.Query))
+	fmt.Println(ast)
 }
 
-func visualize() {
-	g := graphviz.New()
-	graph, err := g.Graph()
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer func() {
-		if err := graph.Close(); err != nil {
-			log.Fatal(err)
-		}
-		g.Close()
-	}()
-	n, err := graph.CreateNode("n")
-	if err != nil {
-		log.Fatal(err)
-	}
-	m, err := graph.CreateNode("m")
-	if err != nil {
-		log.Fatal(err)
-	}
-	m.SetShape(cgraph.RectangleShape)
-	m.SetImage("assets/aws-ec2-icon-423x512-iaajemnx.png")
-	m.SetImagePos("tc")
-	e, err := graph.CreateEdge("e", n, m)
-	if err != nil {
-		log.Fatal(err)
-	}
-	e.SetLabel("e")
-	if err := g.RenderFilename(graph, graphviz.SVG, "graph.svg"); err != nil {
-		log.Fatal(err)
-	}
+func parse(input string) (*AST, error) {
+	var lexer = lexer.MustSimple([]lexer.SimpleRule{
+		{`GoCode`, `{[^}]+}`},
+		{`Ident`, `[a-zA-Z_][a-zA-Z0-9_]*`},
+		{"Punct", `[-[!@#$%^&*()+_=\|:;<,>.?/]|]`},
+		{"whitespace", `\s+`},
+	})
+	var parser = participle.MustBuild[AST](
+		participle.Lexer(lexer),
+		participle.Unquote("GoCode"),
+	)
+	return parser.ParseString("", input, participle.Trace(os.Stderr))
 }
