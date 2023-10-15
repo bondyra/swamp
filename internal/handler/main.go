@@ -2,7 +2,6 @@ package handler
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/alecthomas/participle/v2"
 	"github.com/alecthomas/participle/v2/lexer"
@@ -31,27 +30,55 @@ type Collection struct {
 	Elements []string `| @Ident ( "," @Ident )*`
 }
 
-type Entity struct {
-	Item Item `  ( "item" @@)`
-	Link Link `| ( "link" @@)`
+type Entity interface{ value() }
+
+type ItemEntity struct {
+	Value Item `"item" @@`
 }
+
+func (f ItemEntity) value() {}
+
+type LinkEntity struct {
+	Value Link `"item" @@`
+}
+
+func (f LinkEntity) value() {}
 
 type Item struct {
 	Type      []string   `@Ident ( "." @Ident )*`
 	Alias     string     `@Ident`
-	Modifiers []Modifier `(@@)*`
+	Modifiers []Modifier `@@*`
 }
+
+type Modifier interface{ value() }
+
+type SetModifier struct {
+	Value Collection `"attr" @@`
+}
+
+func (f SetModifier) value() {}
+
+type AddModifier struct {
+	Value Collection `"add" @@`
+}
+
+func (f AddModifier) value() {}
+
+type SubModifier struct {
+	Value Collection `"sub" @@`
+}
+
+func (f SubModifier) value() {}
+
+type SearchModifier struct {
+	Value string `"where" @GoCode`
+}
+
+func (f SearchModifier) value() {}
 
 type Link struct {
 	From string `@Ident`
 	To   string `@Ident`
-}
-
-type Modifier struct {
-	Set       Collection `"attr" @@`
-	Add       Collection `| "add" @@`
-	Sub       Collection `| "sub" @@`
-	SearchMod string     `| "where" @GoCode`
 }
 
 func (q QueryHandler) Execute(c config.Config) {
@@ -69,6 +96,8 @@ func parse(input string) (*AST, error) {
 	var parser = participle.MustBuild[AST](
 		participle.Lexer(lexer),
 		participle.Unquote("GoCode"),
+		participle.Union[Modifier](SetModifier{}, SubModifier{}, AddModifier{}, SearchModifier{}),
+		participle.Union[Entity](ItemEntity{}, LinkEntity{}),
 	)
-	return parser.ParseString("", input, participle.Trace(os.Stderr))
+	return parser.ParseString("", input)
 }
