@@ -11,19 +11,19 @@ import (
 	"github.com/bondyra/swamp/internal/reader"
 )
 
-type Factory interface {
+type ClientFactory interface {
 	NewClient(string) (AwsClientInterface, error)
 }
 
-type DefaultFactory struct{}
+type DefaultClientFactory struct{}
 
-func (df DefaultFactory) NewClient(profile string) (AwsClientInterface, error) {
+func (df DefaultClientFactory) NewClient(profile string) (AwsClientInterface, error) {
 	context := context.TODO()
 	cfg, err := config.LoadDefaultConfig(context, config.WithSharedConfigProfile(profile))
 	if err != nil {
 		return nil, err
 	}
-	return AwsClient{ccClient: cloudcontrol.NewFromConfig(cfg)}, nil
+	return &AwsClient{ccClient: cloudcontrol.NewFromConfig(cfg)}, nil
 }
 
 type AwsClientInterface interface {
@@ -40,7 +40,7 @@ type AwsClient struct {
 	ccClient ccInterface
 }
 
-func (ac AwsClient) GetResource(id string, typeName string) (*reader.ItemData, error) {
+func (ac *AwsClient) GetResource(id string, typeName string) (*reader.ItemData, error) {
 	input := &cloudcontrol.GetResourceInput{
 		Identifier: &id,
 		TypeName:   &typeName,
@@ -61,7 +61,7 @@ func (ac AwsClient) GetResource(id string, typeName string) (*reader.ItemData, e
 	return &reader.ItemData{Identifier: *resp.ResourceDescription.Identifier, Properties: props}, err
 }
 
-func (ac AwsClient) ListResources(typeName string) ([]*reader.ItemData, error) {
+func (ac *AwsClient) ListResources(typeName string) ([]*reader.ItemData, error) {
 	input := &cloudcontrol.ListResourcesInput{
 		TypeName: &typeName,
 	}
@@ -85,7 +85,7 @@ func (ac AwsClient) ListResources(typeName string) ([]*reader.ItemData, error) {
 	return outputs, nil
 }
 
-func (ac AwsClient) parseProperties(response string) (*map[string]string, error) {
+func (ac *AwsClient) parseProperties(response string) (*map[string]string, error) {
 	output, err := common.Unmarshal[map[string]any]([]byte(response))
 	if err != nil {
 		return nil, err

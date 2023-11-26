@@ -32,8 +32,8 @@ type mockAwsFactory struct {
 	output mockAwsFactoryOutput
 }
 
-func (maf mockAwsFactory) NewClient(profile string) (client.AwsClientInterface, error) {
-	return maf.output.client, maf.output.err
+func (maf mockAwsFactory) NewPool(profiles []string, factory client.ClientFactory) (client.Pool, error) {
+	return nil, nil
 }
 
 type mockAwsClient struct{}
@@ -454,51 +454,6 @@ func TestAwsReader_IsFilterSupported(t *testing.T) {
 			ar := AwsReader{def: tt.def}
 			if got := ar.IsFilterSupported(tt.itemType, tt.filter); got != tt.want {
 				t.Errorf("AwsReader.IsFilterSupported() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestAwsReader_GetItems(t *testing.T) {
-	type fields struct {
-		awsFactory     client.Factory
-		def            *definition.Definition
-		knownTypes     []string
-		configProfiles []string
-		clients        map[string]client.AwsClientInterface
-	}
-	type args struct {
-		itemType      string
-		profiles      []string
-		attrs         []string
-		filter        reader.Filter
-		parentContext reader.ParentContext
-	}
-	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		want    []*reader.ItemData
-		wantErr bool
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ar := AwsReader{
-				awsFactory:     tt.fields.awsFactory,
-				def:            tt.fields.def,
-				knownTypes:     tt.fields.knownTypes,
-				configProfiles: tt.fields.configProfiles,
-				clients:        tt.fields.clients,
-			}
-			got, err := ar.GetItems(tt.args.itemType, tt.args.profiles, tt.args.attrs, tt.args.filter, tt.args.parentContext)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("AwsReader.GetItems() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("AwsReader.GetItems() = %v, want %v", got, tt.want)
 			}
 		})
 	}

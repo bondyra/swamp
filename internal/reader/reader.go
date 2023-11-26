@@ -14,8 +14,8 @@ type ItemData struct {
 }
 
 type Item struct {
-	Profile    string
-	Properties ItemData
+	Profile string
+	Data    *ItemData
 }
 
 type Reader interface {

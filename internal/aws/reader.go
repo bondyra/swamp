@@ -11,7 +11,7 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-func NewReader(profileProvider profile.Provider, awsFactory client.Factory, defFactory definition.Factory, configPaths []string) (*AwsReader, error) {
+func NewReader(profileProvider profile.Provider, awsFactory client.PoolFactory, defFactory definition.Factory, configPaths []string) (*AwsReader, error) {
 	profiles, err := profileProvider.ProvideProfiles(configPaths...)
 	if err != nil {
 		return nil, err
@@ -28,7 +28,7 @@ func NewReader(profileProvider profile.Provider, awsFactory client.Factory, defF
 }
 
 type AwsReader struct {
-	awsFactory     client.Factory
+	awsFactory     client.PoolFactory
 	def            *definition.Definition
 	knownTypes     []string
 	configProfiles []string
