@@ -2,7 +2,9 @@ package aws
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
+	"strconv"
 	"testing"
 
 	"github.com/bondyra/swamp/internal/aws/client"
@@ -426,13 +428,91 @@ func TestAwsReader_IsFilterSupported(t *testing.T) {
 	}
 }
 
-func TestAwsReader_GetItems(t *testing.T) {
-	type fields struct {
-		pool         client.Pool
-		def          *definition.Definition
-		knownTypes   []string
-		knownAliases []string
+const (
+	ID_1_1 = iota
+	ID_1_2
+	ID_2_1
+	ID_2_2
+	ID_3_1
+	ID_3_ERR
+)
+
+var (
+	itemData []reader.ItemData = []reader.ItemData{
+		{Identifier: fmt.Sprint(ID_1_1), Properties: &map[string]string{"a": "a_1_1", "b": "11", "c": "true"}},
+		{Identifier: fmt.Sprint(ID_1_2), Properties: &map[string]string{"a": "a_1_2", "b": "12", "c": "false"}},
+		{Identifier: fmt.Sprint(ID_2_1), Properties: &map[string]string{"a": "a_2_1", "b": "21", "c": "true"}},
+		{Identifier: fmt.Sprint(ID_2_2), Properties: &map[string]string{"a": "a_2_2", "b": "22", "c": "false"}},
+		{Identifier: fmt.Sprint(ID_3_1), Properties: &map[string]string{"a": "a_3_1", "b": "31", "c": "true"}},
+		{Identifier: fmt.Sprint(ID_3_ERR), Properties: &map[string]string{"a": "a_3_2", "b": "32", "c": "false"}},
 	}
+)
+
+const (
+	PROFILE_1                     = "p_1"
+	PROFILE_2                     = "p_2"
+	TYPE_1                        = "type_1"
+	TYPE_1_ID_FIELD               = "type_1_id_field"
+	TYPE_2                        = "type_2"
+	TYPE_2_ID_FIELD               = "type_2_id_field"
+	TYPE_3                        = "type_3"
+	TYPE_3_ID_FIELD               = "type_3_id_field"
+	TYPE_THAT_CAUSES_ERR          = "type_err"
+	TYPE_THAT_CAUSES_ERR_ID_FIELD = "type_err_id_field"
+	TYPE_NOT_FOUND_IN_DEFINITION  = "type_def_err"
+)
+
+var testDefinition definition.Definition = definition.Definition{
+	TypeDefinitions: []definition.TypeDefinition{
+		{Type: TYPE_1, IdentifierField: TYPE_1_ID_FIELD, Alias: "Alias1"},
+		{Type: TYPE_2, IdentifierField: TYPE_2_ID_FIELD, Alias: "Alias2"},
+		{Type: TYPE_3, IdentifierField: TYPE_3_ID_FIELD, Alias: "Alias2"},
+		{Type: TYPE_THAT_CAUSES_ERR, IdentifierField: TYPE_THAT_CAUSES_ERR_ID_FIELD, Alias: "Alias2"},
+	},
+}
+
+type mockPool struct {
+}
+
+func (mp mockPool) ListResources(profile string, typeName string) ([]*reader.Item, error) {
+	if typeName == TYPE_THAT_CAUSES_ERR {
+		return nil, errors.New("some error")
+	}
+	switch typeName {
+	case TYPE_1:
+		return []*reader.Item{{Profile: profile, Data: &itemData[ID_1_1]}, {Profile: profile, Data: &itemData[ID_1_2]}}, nil
+	case TYPE_2:
+		return []*reader.Item{{Profile: profile, Data: &itemData[ID_2_1]}, {Profile: profile, Data: &itemData[ID_2_2]}}, nil
+	case TYPE_3:
+		return []*reader.Item{{Profile: profile, Data: &itemData[ID_3_1]}, {Profile: profile, Data: &itemData[ID_3_ERR]}}, nil
+	}
+	panic("test setup error, unexpected type in mock " + typeName)
+}
+
+func (mp mockPool) GetResource(profile string, id string, typeName string) (*reader.Item, error) {
+	if typeName == TYPE_THAT_CAUSES_ERR {
+		return nil, errors.New("some error")
+	}
+	switch typeName {
+	case TYPE_1, TYPE_2, TYPE_3:
+		intId, err := strconv.Atoi(id)
+		if err != nil {
+			panic("test setup error, non number id in mock " + id)
+		}
+		switch intId {
+		case ID_3_ERR:
+			return nil, errors.New("some error")
+		case ID_1_1, ID_1_2, ID_2_1, ID_2_2, ID_3_1:
+			return &reader.Item{Profile: profile, Data: &itemData[intId]}, nil
+		default:
+			panic("test setup error, unexpected id in mock " + id)
+		}
+	default:
+		panic("test setup error, unexpected type in mock " + typeName)
+	}
+}
+
+func TestAwsReader_GetItems(t *testing.T) {
 	type args struct {
 		itemType string
 		profiles []string
@@ -441,20 +521,24 @@ func TestAwsReader_GetItems(t *testing.T) {
 	}
 	tests := []struct {
 		name    string
-		fields  fields
 		args    args
 		want    []*reader.Item
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		// {
+		// 	name:    "",
+		// 	args:    args{},
+		// 	want:    []*reader.Item{},
+		// 	wantErr: false,
+		// },
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ar := AwsReader{
-				pool:         tt.fields.pool,
-				def:          tt.fields.def,
-				knownTypes:   tt.fields.knownTypes,
-				knownAliases: tt.fields.knownAliases,
+				pool:         mockPool{},
+				def:          &testDefinition,
+				knownTypes:   nil,
+				knownAliases: nil,
 			}
 			got, err := ar.GetItems(tt.args.itemType, tt.args.profiles, tt.args.attrs, tt.args.filters)
 			if (err != nil) != tt.wantErr {

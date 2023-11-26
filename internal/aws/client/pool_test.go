@@ -37,8 +37,7 @@ func TestLazyPoolFactory_NewPool(t *testing.T) {
 }
 
 const (
-	PROFILE_OK_1               = "p_ok_1"
-	PROFILE_OK_2               = "p_ok_2"
+	PROFILE_1                  = "p_ok_1"
 	PROFILE_ERR_CLIENT         = "p_err_1"
 	PROFILE_UNKNOWN            = "p_err_2"
 	ID_1                       = "id_ok_1"
@@ -103,7 +102,7 @@ type MockClientFactory struct {
 
 func (mcf MockClientFactory) NewClient(profile string) (AwsClientInterface, error) {
 	switch profile {
-	case PROFILE_OK_1, PROFILE_OK_2:
+	case PROFILE_1:
 		return &mockClient{}, nil
 	default:
 		return nil, fmt.Errorf("unexpected test profile: %v", profile)
@@ -111,7 +110,7 @@ func (mcf MockClientFactory) NewClient(profile string) (AwsClientInterface, erro
 }
 
 func TestLazyPool_GetResource(t *testing.T) {
-	clients := map[string]AwsClientInterface{PROFILE_OK_1: nil, PROFILE_OK_2: nil, PROFILE_ERR_CLIENT: nil}
+	clients := map[string]AwsClientInterface{PROFILE_1: nil, PROFILE_ERR_CLIENT: nil}
 	type args struct {
 		profile  string
 		id       string
@@ -125,8 +124,8 @@ func TestLazyPool_GetResource(t *testing.T) {
 	}{
 		{
 			name:    "test profile",
-			args:    args{profile: PROFILE_OK_1, id: ID_1, typeName: TYPE_OK},
-			want:    &reader.Item{Profile: PROFILE_OK_1, Data: &reader.ItemData{Identifier: ID_1, Properties: &dummyProps1}},
+			args:    args{profile: PROFILE_1, id: ID_1, typeName: TYPE_OK},
+			want:    &reader.Item{Profile: PROFILE_1, Data: &reader.ItemData{Identifier: ID_1, Properties: &dummyProps1}},
 			wantErr: false,
 		},
 		{
@@ -137,13 +136,13 @@ func TestLazyPool_GetResource(t *testing.T) {
 		},
 		{
 			name:    "test no inputs on not found aws error",
-			args:    args{profile: PROFILE_OK_1, id: ID_1, typeName: TYPE_THAT_CAUSES_NOT_FOUND},
+			args:    args{profile: PROFILE_1, id: ID_1, typeName: TYPE_THAT_CAUSES_NOT_FOUND},
 			want:    nil,
 			wantErr: false,
 		},
 		{
 			name:    "test error on any other aws error",
-			args:    args{profile: PROFILE_OK_1, id: ID_1, typeName: TYPE_THAT_CAUSES_ERR},
+			args:    args{profile: PROFILE_1, id: ID_1, typeName: TYPE_THAT_CAUSES_ERR},
 			want:    nil,
 			wantErr: true,
 		},
@@ -173,7 +172,7 @@ func TestLazyPool_GetResource(t *testing.T) {
 }
 
 func TestLazyPool_ListResources(t *testing.T) {
-	clients := map[string]AwsClientInterface{PROFILE_OK_1: nil, PROFILE_OK_2: nil, PROFILE_ERR_CLIENT: nil}
+	clients := map[string]AwsClientInterface{PROFILE_1: nil, PROFILE_ERR_CLIENT: nil}
 	type args struct {
 		profile  string
 		typeName string
@@ -186,10 +185,10 @@ func TestLazyPool_ListResources(t *testing.T) {
 	}{
 		{
 			name: "test one profile",
-			args: args{profile: PROFILE_OK_1, typeName: TYPE_OK},
+			args: args{profile: PROFILE_1, typeName: TYPE_OK},
 			want: []*reader.Item{
-				{Profile: PROFILE_OK_1, Data: &reader.ItemData{Identifier: ID_1, Properties: &dummyProps1}},
-				{Profile: PROFILE_OK_1, Data: &reader.ItemData{Identifier: ID_2, Properties: &dummyProps2}},
+				{Profile: PROFILE_1, Data: &reader.ItemData{Identifier: ID_1, Properties: &dummyProps1}},
+				{Profile: PROFILE_1, Data: &reader.ItemData{Identifier: ID_2, Properties: &dummyProps2}},
 			},
 			wantErr: false,
 		},
@@ -201,13 +200,13 @@ func TestLazyPool_ListResources(t *testing.T) {
 		},
 		{
 			name:    "test no inputs on not found aws error",
-			args:    args{profile: PROFILE_OK_1, typeName: TYPE_THAT_CAUSES_NOT_FOUND},
+			args:    args{profile: PROFILE_1, typeName: TYPE_THAT_CAUSES_NOT_FOUND},
 			want:    []*reader.Item{},
 			wantErr: false,
 		},
 		{
 			name:    "test error on any other aws error",
-			args:    args{profile: PROFILE_OK_1, typeName: TYPE_THAT_CAUSES_ERR},
+			args:    args{profile: PROFILE_1, typeName: TYPE_THAT_CAUSES_ERR},
 			want:    nil,
 			wantErr: true,
 		},
