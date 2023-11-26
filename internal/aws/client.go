@@ -12,17 +12,22 @@ type AwsClientInterface interface {
 	ListItems(string) ([]map[string]string, error)
 }
 
+type ccInterface interface {
+	GetResource(ctx context.Context, input *cloudcontrol.GetResourceInput, optFns ...func(*cloudcontrol.Options)) (*cloudcontrol.GetResourceOutput, error)
+	ListResources(ctx context.Context, input *cloudcontrol.ListResourcesInput, optFns ...func(*cloudcontrol.Options)) (*cloudcontrol.ListResourcesOutput, error)
+}
+
 type AwsClient struct {
-	ccClient *cloudcontrol.Client
+	ccClient ccInterface
 }
 
 func (ac AwsClient) GetItem(id string, typeName string) (map[string]string, error) {
-	input := cloudcontrol.GetResourceInput{
+	input := &cloudcontrol.GetResourceInput{
 		Identifier: &id,
 		TypeName:   &typeName,
 	}
 
-	response, err := ac.ccClient.GetResource(context.TODO(), &input)
+	response, err := ac.ccClient.GetResource(context.TODO(), input)
 	if err != nil {
 		return nil, err
 	}
@@ -35,11 +40,11 @@ func (ac AwsClient) GetItem(id string, typeName string) (map[string]string, erro
 }
 
 func (ac AwsClient) ListItems(typeName string) ([]map[string]string, error) {
-	input := cloudcontrol.ListResourcesInput{
+	input := &cloudcontrol.ListResourcesInput{
 		TypeName: &typeName,
 	}
 
-	resp, err := ac.ccClient.ListResources(context.TODO(), &input)
+	resp, err := ac.ccClient.ListResources(context.TODO(), input)
 	if err != nil {
 		return nil, err
 	}

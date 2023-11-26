@@ -14,33 +14,30 @@ func NewReader(profileFactory ProfileFactory, awsFactory AwsFactory, configPaths
 	}
 	return &AwsReader{
 		awsFactory:     awsFactory,
-		configProfiles: Intersect(profilesLists...),
+		configProfiles: Sum(profilesLists...),
 	}, nil
 }
 
 type AwsReader struct {
 	awsFactory     AwsFactory
 	configProfiles []string
-	connections    map[string]AwsConnection
+	clients        map[string]AwsClientInterface
 }
 
 func (ar *AwsReader) Init(selectedProfiles []string) error {
-	return ar.initPool(selectedProfiles)
-}
-
-func (ar *AwsReader) InitAll() error {
-	return ar.initPool(nil)
-}
-
-func (ar *AwsReader) initPool(selectedProfiles []string) error {
+	if selectedProfiles == nil {
+		selectedProfiles = ar.configProfiles
+	}
 	existingProfiles := Intersect(ar.configProfiles, selectedProfiles)
+	createdClients := make(map[string]AwsClientInterface, 0)
 	for _, profile := range existingProfiles {
-		ar.connections[profile] = AwsConnection{profile: profile}
-		err := ar.connections[profile].Init(ar.awsFactory)
+		var err error
+		createdClients[profile], err = ar.awsFactory.NewClient(profile)
 		if err != nil {
 			return err
 		}
 	}
+	ar.clients = createdClients
 	return nil
 }
 

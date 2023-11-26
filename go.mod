@@ -22,9 +22,6 @@ require (
 	github.com/aws/smithy-go v1.16.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
-	golang.org/x/sys v0.13.0 // indirect
-	golang.org/x/tools v0.14.0 // indirect
-	golang.org/x/tools/cmd/cover v0.1.0-deprecated // indirect
 )
 
 require (
