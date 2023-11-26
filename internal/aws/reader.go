@@ -8,26 +8,19 @@ import (
 	"github.com/bondyra/swamp/internal/reader"
 )
 
-func NewReader(profileFactory profile.Factory, awsFactory client.Factory, defFactory definition.Factory, configPaths []string) (*AwsReader, error) {
-	// todo: move to provider
-	provider := profileFactory.NewProvider()
-	profilesLists := [][]string{}
-	for _, configPath := range configPaths {
-		profiles, err := provider.ProvideProfiles(configPath)
-		if err != nil {
-			return nil, err
-		}
-		profilesLists = append(profilesLists, profiles)
+func NewReader(profileProvider profile.Provider, awsFactory client.Factory, defFactory definition.Factory, configPaths []string) (*AwsReader, error) {
+	profiles, err := profileProvider.ProvideProfiles(configPaths...)
+	if err != nil {
+		return nil, err
 	}
-	//
-	definition, err := defFactory.NewDefinition("definition.json")
+	definition, err := defFactory.FromFile("definition.json")
 	if err != nil {
 		return nil, err
 	}
 	return &AwsReader{
 		awsFactory:     awsFactory,
 		definition:     definition,
-		configProfiles: common.Sum(profilesLists...),
+		configProfiles: profiles,
 	}, nil
 }
 

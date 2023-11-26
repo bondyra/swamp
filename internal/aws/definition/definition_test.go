@@ -51,7 +51,7 @@ func TestDefaultFactory_NewDefinition(t *testing.T) {
 				inputPath = tempFile.Name()
 			}
 
-			got, err := factory.NewDefinition(inputPath)
+			got, err := factory.FromFile(inputPath)
 
 			if (err != nil) != tt.wantErr {
 				t.Errorf("DefaultFactory.NewDefinition() error = %v, wantErr %v", err, tt.wantErr)
@@ -80,7 +80,7 @@ func TestDefaultFactory_NewDefinitionFull(t *testing.T) {
 	}
 	factory := DefaultFactory{}
 
-	got, err := factory.NewDefinition(testFilePath + "full_definition.json")
+	got, err := factory.FromFile(testFilePath + "full_definition.json")
 
 	if err != nil {
 		t.Errorf("DefaultFactory.NewDefinition() error = %v", err)
@@ -144,7 +144,7 @@ func TestDefinition_Validate(t *testing.T) {
 	factory := DefaultFactory{}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			d, fileError := factory.NewDefinition(testFilePath + tt.testFile)
+			d, fileError := factory.FromFile(testFilePath + tt.testFile)
 
 			if fileError != nil {
 				t.Errorf("Definition.Validate() invalid test file: %v", tt.testFile)

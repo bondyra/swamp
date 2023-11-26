@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"golang.org/x/exp/slices"
 )
 
 func TestReadConfigAsString(t *testing.T) {
@@ -56,11 +57,11 @@ func TestReadConfigAsStringForNonExistentFile(t *testing.T) {
 }
 
 type MockConfigReader struct {
-	content string
+	pathToContent map[string]string
 }
 
 func (mcr MockConfigReader) ReadConfigAsString(path string) (string, error) {
-	return mcr.content, nil
+	return mcr.pathToContent[path], nil
 }
 
 type MockErrorConfigReader struct{}
@@ -69,73 +70,45 @@ func (mecr MockErrorConfigReader) ReadConfigAsString(path string) (string, error
 	return "", errors.New("")
 }
 
+func multiline(args ...string) string {
+	return strings.Join(args, "\n")
+}
+
 func TestProvideProfiles(t *testing.T) {
 	tests := []struct {
 		name             string
-		configContent    string
+		pathToContent    map[string]string
 		configRegex      regexp.Regexp
 		expectedProfiles []string
 	}{
 		{
-			name:             "test nothing",
-			configContent:    "",
+			name:             "test no paths",
+			pathToContent:    map[string]string{},
 			expectedProfiles: []string{},
 		},
 		{
-			name: "test default profile only",
-			configContent: `
-			[default]
-			a
-			b
-			c
-			d
-			`,
-			expectedProfiles: []string{"default"},
-		},
-		{
-			name: "test custom profile only",
-			configContent: `
-			[profile p1]
-			a
-			b
-			c
-			d
-			`,
-			expectedProfiles: []string{"p1"},
-		},
-		{
-			name: "test default and custom one",
-			configContent: `
-			[default]
-			a
-			b
-			[profile p1]
-			c
-			d
-			`,
-			expectedProfiles: []string{"default", "p1"},
-		},
-		{
-			name: "test default and custom two",
-			configContent: `
-			[default]
-			a
-			b
-			[p1]
-			c
-			[profile abc]
-			d
-			`,
-			expectedProfiles: []string{"default", "p1", "abc"},
+			name: "test multiple paths",
+			pathToContent: map[string]string{
+				"path1":         multiline("a", "[default]", "b", "[profile p1]", "[profile in_both]", "c"),
+				"path2":         multiline("[profile p2]", "a", "[default]", "b", "[profile in_both]", "c"),
+				"path3":         multiline("[p3_1]", "a", "b", "[profile p3_2]"),
+				"emptyFilePath": "",
+			},
+			expectedProfiles: []string{"default", "p1", "in_both", "p2", "p3_1", "p3_2"},
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			dp := DefaultProvider{configReader: MockConfigReader{pathToContent: test.pathToContent}}
+			paths := make([]string, 0, len(test.pathToContent))
+			for k := range test.pathToContent {
+				paths = append(paths, k)
+			}
 
-			dp := DefaultProvider{configReader: MockConfigReader{content: test.configContent}}
+			profiles, err := dp.ProvideProfiles(paths...)
 
-			profiles, err := dp.ProvideProfiles("path")
-
+			slices.Sort(profiles)
+			slices.Sort(test.expectedProfiles)
 			if !cmp.Equal(test.expectedProfiles, profiles) {
 				t.Errorf("%s expected:\n%v\ngot:\n%v", test.name, test.expectedProfiles, profiles)
 			}

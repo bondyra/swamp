@@ -5,16 +5,6 @@ import (
 	"regexp"
 )
 
-type Factory interface {
-	NewProvider() Provider
-}
-
-type DefaultFactory struct{}
-
-func (df DefaultFactory) NewProvider() Provider {
-	return &DefaultProvider{AwsConfigReader{}}
-}
-
 type ConfigReader interface {
 	ReadConfigAsString(string) (string, error)
 }
@@ -31,15 +21,33 @@ func (dacr AwsConfigReader) ReadConfigAsString(path string) (string, error) {
 }
 
 type Provider interface {
-	ProvideProfiles(string) ([]string, error)
+	ProvideProfiles(...string) ([]string, error)
 }
 
 type DefaultProvider struct {
 	configReader ConfigReader
 }
 
-func (dp DefaultProvider) ProvideProfiles(path string) ([]string, error) {
-	results := []string{}
+func (dp DefaultProvider) ProvideProfiles(configPaths ...string) ([]string, error) {
+	resultsMap := make(map[string]bool)
+	for _, configPath := range configPaths {
+		profiles, err := dp.provideProfiles(configPath)
+		if err != nil {
+			return nil, err
+		}
+		for _, p := range profiles {
+			resultsMap[p] = true
+		}
+	}
+	results := make([]string, 0, len(resultsMap))
+	for r := range resultsMap {
+		results = append(results, r)
+	}
+	return results, nil
+}
+
+func (dp DefaultProvider) provideProfiles(path string) ([]string, error) {
+	results := make([]string, 0)
 	data, err := dp.configReader.ReadConfigAsString(path)
 	if err != nil {
 		return nil, err

@@ -2,157 +2,138 @@ package aws
 
 import (
 	"errors"
-	"fmt"
 	"reflect"
 	"testing"
 
 	"github.com/bondyra/swamp/internal/aws/client"
 	"github.com/bondyra/swamp/internal/aws/definition"
-	"github.com/bondyra/swamp/internal/aws/profile"
 	"github.com/google/go-cmp/cmp"
-	"golang.org/x/exp/maps"
-	"golang.org/x/exp/slices"
 )
 
-type MockProfileProvider struct {
-	pathToOutput map[string]output
-}
-
-type output struct {
+type mockProfileProviderOutput struct {
 	profiles []string
 	err      error
 }
 
-func (mpp MockProfileProvider) ProvideProfiles(path string) ([]string, error) {
-	if output, ok := mpp.pathToOutput[path]; ok {
-		return output.profiles, output.err
-	} else {
-		panic(fmt.Sprintf("path: %v does not exist in setup %v", path, mpp.pathToOutput))
-	}
+type mockProfileProvider struct {
+	output mockProfileProviderOutput
 }
 
-type MockProfileFactory struct {
-	mpp MockProfileProvider
+func (mpp mockProfileProvider) ProvideProfiles(paths ...string) ([]string, error) {
+	return mpp.output.profiles, mpp.output.err
 }
 
-func (mpf MockProfileFactory) NewProvider() profile.Provider {
-	return mpf.mpp
+type mockAwsFactoryOutput struct {
+	client client.AwsClientInterface
+	err    error
 }
 
-type MockAwsFactory struct{}
-
-func (maf MockAwsFactory) NewClient(profile string) (client.AwsClientInterface, error) {
-	return MockAwsClient{}, nil
+type mockAwsFactory struct {
+	output mockAwsFactoryOutput
 }
 
-type MockErrorAwsFactory struct{}
-
-func (meaf MockErrorAwsFactory) NewClient(profile string) (client.AwsClientInterface, error) {
-	return nil, errors.New("some error")
+func (maf mockAwsFactory) NewClient(profile string) (client.AwsClientInterface, error) {
+	return maf.output.client, maf.output.err
 }
 
-type MockAwsClient struct{}
+type mockAwsClient struct{}
 
-func (mac MockAwsClient) GetItem(id string, typeName string) (map[string]string, error) {
+func (mac mockAwsClient) GetItem(id string, typeName string) (map[string]string, error) {
 	return make(map[string]string, 0), nil
 }
 
-func (ac MockAwsClient) ListItems(typeName string) ([]map[string]string, error) {
+func (ac mockAwsClient) ListItems(typeName string) ([]map[string]string, error) {
 	return make([]map[string]string, 0), nil
+}
+
+type mockDefFactoryOutput struct {
+	definition *definition.Definition
+	err        error
+}
+
+type mockDefFactory struct {
+	output mockDefFactoryOutput
+}
+
+func (mdf mockDefFactory) FromFile(jsonPath string) (*definition.Definition, error) {
+	return mdf.output.definition, mdf.output.err
 }
 
 func TestNewReader(t *testing.T) {
 	tests := []struct {
-		name             string
-		pathToOutput     map[string]output
-		expectedProfiles []string
-		returnsErr       bool
+		name                                 string
+		profileProviderProvideProfilesOutput []string
+		profileProviderProvideProfilesError  error
+		awsFactoryNewClientOutput            client.AwsClientInterface
+		awsFactoryNewClientError             error
+		defFactoryFromFileOutput             *definition.Definition
+		defFactoryFromFileError              error
+		wantErr                              bool
 	}{
 		{
-			name: "test no profiles",
-			pathToOutput: map[string]output{
-				"path1": {[]string{}, nil},
-				"path2": {[]string{}, nil},
-			},
-			expectedProfiles: []string{},
-			returnsErr:       false,
+			name:                                 "test no errors",
+			profileProviderProvideProfilesOutput: []string{"p1", "p2"},
+			profileProviderProvideProfilesError:  nil,
+			awsFactoryNewClientOutput:            mockAwsClient{},
+			awsFactoryNewClientError:             nil,
+			defFactoryFromFileOutput:             &definition.Definition{},
+			defFactoryFromFileError:              nil,
+			wantErr:                              false,
 		},
 		{
-			name: "test one path with profiles 1",
-			pathToOutput: map[string]output{
-				"path1": {[]string{"p1"}, nil},
-				"path2": {[]string{}, nil},
-			},
-			expectedProfiles: []string{"p1"},
-			returnsErr:       false,
+			name:                                 "test profile provider error causes error",
+			profileProviderProvideProfilesOutput: []string{"p1", "p2"},
+			profileProviderProvideProfilesError:  errors.New("some error"),
+			awsFactoryNewClientOutput:            mockAwsClient{},
+			awsFactoryNewClientError:             nil,
+			defFactoryFromFileOutput:             &definition.Definition{},
+			defFactoryFromFileError:              nil,
+			wantErr:                              true,
 		},
 		{
-			name: "test one path with profiles 2",
-			pathToOutput: map[string]output{
-				"path1": {[]string{}, nil},
-				"path2": {[]string{"p1"}, nil},
-			},
-			expectedProfiles: []string{"p1"},
-			returnsErr:       false,
+			name:                                 "test definition factory error causes error",
+			profileProviderProvideProfilesOutput: []string{"p1", "p2"},
+			profileProviderProvideProfilesError:  nil,
+			awsFactoryNewClientOutput:            mockAwsClient{},
+			awsFactoryNewClientError:             nil,
+			defFactoryFromFileOutput:             &definition.Definition{},
+			defFactoryFromFileError:              errors.New("some error"),
+			wantErr:                              true,
 		},
 		{
-			name: "test both paths with profiles",
-			pathToOutput: map[string]output{
-				"path1": {[]string{"p1"}, nil},
-				"path2": {[]string{"p2"}, nil},
-			},
-			expectedProfiles: []string{"p1", "p2"},
-			returnsErr:       false,
-		},
-		{
-			name: "test both paths with overlapping profiles",
-			pathToOutput: map[string]output{
-				"path1": {[]string{"p1", "p2"}, nil},
-				"path2": {[]string{"p2"}, nil},
-			},
-			expectedProfiles: []string{"p1", "p2"},
-			returnsErr:       false,
-		},
-		{
-			name: "test return error when any provider returns error",
-			pathToOutput: map[string]output{
-				"path1": {[]string{"anything"}, errors.New("some error")},
-				"path2": {[]string{"p2"}, nil},
-			},
-			expectedProfiles: nil,
-			returnsErr:       true,
+			name:                                 "test aws factory error does not cause errors", // it is for lazy use
+			profileProviderProvideProfilesOutput: []string{"p1", "p2"},
+			profileProviderProvideProfilesError:  nil,
+			awsFactoryNewClientOutput:            mockAwsClient{},
+			awsFactoryNewClientError:             errors.New("some error"),
+			defFactoryFromFileOutput:             &definition.Definition{},
+			defFactoryFromFileError:              nil,
+			wantErr:                              false,
 		},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			profileFactory := MockProfileFactory{mpp: MockProfileProvider{pathToOutput: test.pathToOutput}}
-			awsFactory := MockAwsFactory{}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			profileProvider := mockProfileProvider{mockProfileProviderOutput{tt.profileProviderProvideProfilesOutput, tt.profileProviderProvideProfilesError}}
+			awsFactory := mockAwsFactory{mockAwsFactoryOutput{tt.awsFactoryNewClientOutput, tt.awsFactoryNewClientError}}
+			defFactory := mockDefFactory{mockDefFactoryOutput{tt.defFactoryFromFileOutput, tt.defFactoryFromFileError}}
 
-			reader, err := NewReader(profileFactory, awsFactory, definition.DefaultFactory{}, maps.Keys(test.pathToOutput))
+			got, err := NewReader(profileProvider, awsFactory, defFactory, []string{})
 
-			if test.returnsErr {
-				if reader != nil {
-					t.Errorf("%s expected no reader to return", test.name)
-				}
-				if err == nil {
-					t.Errorf("expected:\nerror\ngot:\n%v", err)
-				}
-			} else {
-				slices.Sort(reader.configProfiles)
-				slices.Sort(test.expectedProfiles)
-				if !cmp.Equal(reader.configProfiles, test.expectedProfiles) {
-					t.Errorf("%s expected:\n%v\ngot:\n%v", test.name, test.expectedProfiles, reader.configProfiles)
-				}
-				if err != nil {
-					t.Errorf("%s error occured: %v", test.name, err)
-				}
+			if (err != nil) != tt.wantErr {
+				t.Errorf("NewReader() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			expectedReader := AwsReader{awsFactory, tt.defFactoryFromFileOutput, tt.profileProviderProvideProfilesOutput, make(map[string]client.AwsClientInterface, 0)}
+
+			if !reflect.DeepEqual(got, expectedReader) {
+				t.Errorf("NewReader() = %v, want %v", got, expectedReader)
 			}
 		})
 	}
 }
 
 func TestInit(t *testing.T) {
-
 	tests := []struct {
 		name                   string
 		allProfiles            []string
@@ -164,7 +145,7 @@ func TestInit(t *testing.T) {
 		{
 			name:                   "test init profiles",
 			allProfiles:            []string{"p1", "p2", "p3", "p4"},
-			factory:                MockAwsFactory{},
+			factory:                mockAwsFactory{},
 			profilesToInit:         []string{"p1", "p3"},
 			expectedClientProfiles: []string{"p1", "p3"},
 			returnsErr:             false,
@@ -172,7 +153,7 @@ func TestInit(t *testing.T) {
 		{
 			name:                   "test init all profiles",
 			allProfiles:            []string{"p1", "p2", "p3", "p4"},
-			factory:                MockAwsFactory{},
+			factory:                mockAwsFactory{},
 			profilesToInit:         nil,
 			expectedClientProfiles: []string{"p1", "p2", "p3", "p4"},
 			returnsErr:             false,
@@ -180,7 +161,7 @@ func TestInit(t *testing.T) {
 		{
 			name:                   "test init not existing profiles are filtered out",
 			allProfiles:            []string{"p1", "p2"},
-			factory:                MockAwsFactory{},
+			factory:                mockAwsFactory{},
 			profilesToInit:         []string{"p1", "p2", "p3", "p4"},
 			expectedClientProfiles: []string{"p1", "p2"},
 			returnsErr:             false,
@@ -188,7 +169,7 @@ func TestInit(t *testing.T) {
 		{
 			name:                   "test init errs when factory errs",
 			allProfiles:            []string{"p1", "p2", "p3", "p4"},
-			factory:                MockErrorAwsFactory{},
+			factory:                mockAwsFactory{},
 			profilesToInit:         nil,
 			expectedClientProfiles: nil,
 			returnsErr:             true,
@@ -199,7 +180,7 @@ func TestInit(t *testing.T) {
 			r := AwsReader{test.factory, &definition.Definition{}, test.allProfiles, make(map[string]client.AwsClientInterface, 0)}
 			expectedClients := make(map[string]client.AwsClientInterface, 0)
 			for _, k := range test.expectedClientProfiles {
-				expectedClients[k] = MockAwsClient{}
+				expectedClients[k] = mockAwsClient{}
 			}
 
 			err := r.Init(test.profilesToInit)

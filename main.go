@@ -22,10 +22,10 @@ func main() {
 	}
 	log.Printf("%v", ast)
 	var reader reader.Reader
-	profileFactory := profile.DefaultFactory{}
+	profileProvider := profile.DefaultProvider{}
 	awsFactory := client.DefaultFactory{}
 	defFactory := definition.DefaultFactory{}
-	reader, _ = aws.NewReader(profileFactory, awsFactory, defFactory, []string{})
+	reader, _ = aws.NewReader(profileProvider, awsFactory, defFactory, []string{})
 	fmt.Println(reader.GetItemTypes())
 	d, err3 := awsFactory.NewClient("default")
 	fmt.Println(err3)

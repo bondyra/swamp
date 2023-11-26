@@ -11,12 +11,12 @@ import (
 var validate *validator.Validate
 
 type Factory interface {
-	NewDefinition(string) (*Definition, error)
+	FromFile(string) (*Definition, error)
 }
 
 type DefaultFactory struct{}
 
-func (df DefaultFactory) NewDefinition(jsonPath string) (*Definition, error) {
+func (df DefaultFactory) FromFile(jsonPath string) (*Definition, error) {
 	var err error
 	data, err := os.ReadFile(jsonPath)
 	if err != nil {
