@@ -102,7 +102,7 @@ func (ar AwsReader) IsFilterSupported(itemType string, filter reader.Filter) boo
 	return slices.Contains(fields, filter.Attr)
 }
 
-func (ar AwsReader) GetItems(itemType string, profiles []string, attrs []string, filter *reader.Filter, parentContext *reader.ParentContext) ([]*reader.Item, error) {
+func (ar AwsReader) GetItems(itemType string, profiles []string, attrs []string, filters []reader.Filter) ([]*reader.Item, error) {
 	typeDefinition, err := ar.typeDefinition(itemType)
 	if err != nil {
 		return nil, err
@@ -111,22 +111,9 @@ func (ar AwsReader) GetItems(itemType string, profiles []string, attrs []string,
 	if err != nil {
 		return nil, err
 	}
-	if filter != nil && filter.Attr == typeDefinition.IdentifierField {
-		var filterFunc func(*reader.Item) bool
-		regex := regexp.MustCompile(filter.Value)
-		switch filter.Op {
-		case reader.OpEquals:
-			filterFunc = func(r *reader.Item) bool { return r.Data.Identifier == filter.Value }
-		case reader.OpNotEquals:
-			filterFunc = func(r *reader.Item) bool { return r.Data.Identifier != filter.Value }
-		case reader.OpLike:
-			filterFunc = func(r *reader.Item) bool { return regex.MatchString(r.Data.Identifier) }
-		case reader.OpNotLike:
-			filterFunc = func(r *reader.Item) bool { return !regex.MatchString(r.Data.Identifier) }
-		default:
-			return nil, fmt.Errorf("cannot filter identifier for %v", filter.Op)
-		}
-		baseItems = common.Filter(baseItems, filterFunc)
+	baseItems, err = ar.maybeFilterIds(baseItems, filters, typeDefinition.IdentifierField)
+	if err != nil {
+		return nil, err
 	}
 	items, err := ar.getItems(baseItems, itemType)
 	if err != nil {
@@ -148,13 +135,54 @@ func (ar AwsReader) listBaseItemsForEachProfile(profiles []string, itemType stri
 }
 
 func (ar AwsReader) getItems(baseItems []*reader.Item, itemType string) ([]*reader.Item, error) {
+	r := make(chan *reader.Item, len(baseItems))
+	e := make(chan error)
 	results := make([]*reader.Item, len(baseItems))
-	for i, baseItem := range baseItems {
-		result, err := ar.pool.GetResource(baseItem.Profile, baseItem.Data.Identifier, itemType)
-		if err != nil {
+	for _, baseItem := range baseItems {
+		go ar.getItem(baseItem, itemType, r, e)
+	}
+	for i := 0; i < len(baseItems); i++ {
+		select {
+		case result := <-r:
+			results[i] = result
+		case err := <-e:
 			return nil, err
 		}
-		results[i] = result
 	}
 	return results, nil
+}
+
+func (ar AwsReader) getItem(baseItem *reader.Item, itemType string, r chan *reader.Item, e chan error) {
+	result, err := ar.pool.GetResource(baseItem.Profile, baseItem.Data.Identifier, itemType)
+	if err != nil {
+		e <- err
+	} else {
+		r <- result
+	}
+}
+
+func (ar AwsReader) maybeFilterIds(baseItems []*reader.Item, filters []reader.Filter, idField string) ([]*reader.Item, error) {
+	if len(filters) == 0 {
+		return baseItems, nil
+	}
+	idFilters := common.Filter(filters, func(f reader.Filter) bool { return f.Attr == idField })
+
+	for _, idFilter := range idFilters {
+		var filterFunc func(*reader.Item) bool
+		regex := regexp.MustCompile(idFilter.Value)
+		switch idFilter.Op {
+		case reader.OpEquals:
+			filterFunc = func(r *reader.Item) bool { return r.Data.Identifier == idFilter.Value }
+		case reader.OpNotEquals:
+			filterFunc = func(r *reader.Item) bool { return r.Data.Identifier != idFilter.Value }
+		case reader.OpLike:
+			filterFunc = func(r *reader.Item) bool { return regex.MatchString(r.Data.Identifier) }
+		case reader.OpNotLike:
+			filterFunc = func(r *reader.Item) bool { return !regex.MatchString(r.Data.Identifier) }
+		default:
+			return nil, fmt.Errorf("cannot filter identifier for %v", idFilter.Op)
+		}
+		baseItems = common.Filter(baseItems, filterFunc)
+	}
+	return baseItems, nil
 }

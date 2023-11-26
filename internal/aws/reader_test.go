@@ -425,3 +425,45 @@ func TestAwsReader_IsFilterSupported(t *testing.T) {
 		})
 	}
 }
+
+func TestAwsReader_GetItems(t *testing.T) {
+	type fields struct {
+		pool         client.Pool
+		def          *definition.Definition
+		knownTypes   []string
+		knownAliases []string
+	}
+	type args struct {
+		itemType string
+		profiles []string
+		attrs    []string
+		filters  []reader.Filter
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		want    []*reader.Item
+		wantErr bool
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ar := AwsReader{
+				pool:         tt.fields.pool,
+				def:          tt.fields.def,
+				knownTypes:   tt.fields.knownTypes,
+				knownAliases: tt.fields.knownAliases,
+			}
+			got, err := ar.GetItems(tt.args.itemType, tt.args.profiles, tt.args.attrs, tt.args.filters)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("AwsReader.GetItems() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("AwsReader.GetItems() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
