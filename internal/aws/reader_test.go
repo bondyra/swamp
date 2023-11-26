@@ -7,6 +7,7 @@ import (
 
 	"github.com/bondyra/swamp/internal/aws/client"
 	"github.com/bondyra/swamp/internal/aws/definition"
+	"github.com/bondyra/swamp/internal/reader"
 	"github.com/google/go-cmp/cmp"
 )
 
@@ -38,12 +39,12 @@ func (maf mockAwsFactory) NewClient(profile string) (client.AwsClientInterface, 
 
 type mockAwsClient struct{}
 
-func (mac mockAwsClient) GetItem(id string, typeName string) (map[string]string, error) {
-	return make(map[string]string, 0), nil
+func (mac mockAwsClient) GetItem(id string, typeName string) (*reader.ItemData, error) {
+	return &reader.ItemData{}, nil
 }
 
-func (ac mockAwsClient) ListItems(typeName string) ([]map[string]string, error) {
-	return make([]map[string]string, 0), nil
+func (ac mockAwsClient) ListItems(typeName string) ([]*reader.ItemData, error) {
+	return []*reader.ItemData{}, nil
 }
 
 type mockDefFactoryOutput struct {
@@ -119,12 +120,14 @@ func TestNewReader(t *testing.T) {
 
 			got, err := NewReader(profileProvider, awsFactory, defFactory, []string{})
 
-			if (err != nil) != tt.wantErr {
-				t.Errorf("NewReader() error = %v, wantErr %v", err, tt.wantErr)
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("NewReader() error = %v, wantErr %v", err, tt.wantErr)
+				}
 				return
 			}
 
-			expectedReader := AwsReader{awsFactory, tt.defFactoryFromFileOutput, tt.profileProviderProvideProfilesOutput, make(map[string]client.AwsClientInterface, 0)}
+			expectedReader := &AwsReader{awsFactory, tt.defFactoryFromFileOutput, tt.profileProviderProvideProfilesOutput, nil}
 
 			if !reflect.DeepEqual(got, expectedReader) {
 				t.Errorf("NewReader() = %v, want %v", got, expectedReader)
@@ -145,7 +148,7 @@ func TestInit(t *testing.T) {
 		{
 			name:                   "test init profiles",
 			allProfiles:            []string{"p1", "p2", "p3", "p4"},
-			factory:                mockAwsFactory{},
+			factory:                mockAwsFactory{mockAwsFactoryOutput{nil, nil}},
 			profilesToInit:         []string{"p1", "p3"},
 			expectedClientProfiles: []string{"p1", "p3"},
 			returnsErr:             false,
@@ -153,7 +156,7 @@ func TestInit(t *testing.T) {
 		{
 			name:                   "test init all profiles",
 			allProfiles:            []string{"p1", "p2", "p3", "p4"},
-			factory:                mockAwsFactory{},
+			factory:                mockAwsFactory{mockAwsFactoryOutput{nil, nil}},
 			profilesToInit:         nil,
 			expectedClientProfiles: []string{"p1", "p2", "p3", "p4"},
 			returnsErr:             false,
@@ -161,7 +164,7 @@ func TestInit(t *testing.T) {
 		{
 			name:                   "test init not existing profiles are filtered out",
 			allProfiles:            []string{"p1", "p2"},
-			factory:                mockAwsFactory{},
+			factory:                mockAwsFactory{mockAwsFactoryOutput{nil, nil}},
 			profilesToInit:         []string{"p1", "p2", "p3", "p4"},
 			expectedClientProfiles: []string{"p1", "p2"},
 			returnsErr:             false,
@@ -169,7 +172,7 @@ func TestInit(t *testing.T) {
 		{
 			name:                   "test init errs when factory errs",
 			allProfiles:            []string{"p1", "p2", "p3", "p4"},
-			factory:                mockAwsFactory{},
+			factory:                mockAwsFactory{mockAwsFactoryOutput{nil, errors.New("some error")}},
 			profilesToInit:         nil,
 			expectedClientProfiles: nil,
 			returnsErr:             true,
@@ -180,7 +183,7 @@ func TestInit(t *testing.T) {
 			r := AwsReader{test.factory, &definition.Definition{}, test.allProfiles, make(map[string]client.AwsClientInterface, 0)}
 			expectedClients := make(map[string]client.AwsClientInterface, 0)
 			for _, k := range test.expectedClientProfiles {
-				expectedClients[k] = mockAwsClient{}
+				expectedClients[k] = nil
 			}
 
 			err := r.Init(test.profilesToInit)
@@ -247,6 +250,48 @@ func TestAwsReader_GetProfileNames(t *testing.T) {
 			}
 			if got := ar.GetProfileNames(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("AwsReader.GetProfileNames() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestAwsReader_GetItems(t *testing.T) {
+	type fields struct {
+		awsFactory     client.Factory
+		definition     *definition.Definition
+		configProfiles []string
+		clients        map[string]client.AwsClientInterface
+	}
+	type args struct {
+		resourceType  string
+		attrs         []string
+		filter        reader.Filter
+		parentContext reader.ParentContext
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		want    []reader.ItemData
+		wantErr bool
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ar := AwsReader{
+				awsFactory:     tt.fields.awsFactory,
+				definition:     tt.fields.definition,
+				configProfiles: tt.fields.configProfiles,
+				clients:        tt.fields.clients,
+			}
+			got, err := ar.GetItems(tt.args.resourceType, tt.args.attrs, tt.args.filter, tt.args.parentContext)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("AwsReader.GetItems() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("AwsReader.GetItems() = %v, want %v", got, tt.want)
 			}
 		})
 	}

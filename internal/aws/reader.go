@@ -1,6 +1,8 @@
 package aws
 
 import (
+	"fmt"
+
 	"github.com/bondyra/swamp/internal/aws/client"
 	"github.com/bondyra/swamp/internal/aws/common"
 	"github.com/bondyra/swamp/internal/aws/definition"
@@ -68,6 +70,19 @@ func (ar AwsReader) GetAllItemAttributes(itemType string) []string {
 	return ar.definition.GetAtributesForType(itemType, true)
 }
 
-func (ar AwsReader) GetItems(resourceType string, attrs []string, filter reader.Filter, parentContext reader.ParentContext) ([]reader.ItemData, error) {
-	return []reader.ItemData{}, nil
+func (ar AwsReader) GetItems(itemType string, attrs []string, filter reader.Filter, parentContext reader.ParentContext) ([]reader.ItemData, error) {
+	if !ar.definition.SupportsType(itemType) {
+		return nil, fmt.Errorf("unsupported type: %v", itemType)
+	}
+	if !ar.definition.SupportsAttrs(itemType, attrs) {
+		return nil, fmt.Errorf("type %v does not support some of following attrs: %v", itemType, attrs)
+	}
+	if !ar.definition.SupportsFilter(itemType, filter) {
+		return nil, fmt.Errorf("type %v does not support filter: %v", itemType, filter)
+	}
+	return nil, nil
+}
+
+func (ar AwsReader) listItems(itemType string) ([]*reader.ItemData, error) {
+	return nil, nil
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/cloudcontrol"
 	"github.com/bondyra/swamp/internal/aws/common"
+	"github.com/bondyra/swamp/internal/reader"
 )
 
 type Factory interface {
@@ -25,8 +26,8 @@ func (df DefaultFactory) NewClient(profile string) (AwsClientInterface, error) {
 }
 
 type AwsClientInterface interface {
-	GetItem(string, string) (map[string]string, error)
-	ListItems(string) ([]map[string]string, error)
+	GetItem(string, string) (*reader.ItemData, error)
+	ListItems(string) ([]*reader.ItemData, error)
 }
 
 type ccInterface interface {
@@ -38,7 +39,7 @@ type AwsClient struct {
 	ccClient ccInterface
 }
 
-func (ac AwsClient) GetItem(id string, typeName string) (map[string]string, error) {
+func (ac AwsClient) GetItem(id string, typeName string) (*reader.ItemData, error) {
 	input := &cloudcontrol.GetResourceInput{
 		Identifier: &id,
 		TypeName:   &typeName,
@@ -56,7 +57,7 @@ func (ac AwsClient) GetItem(id string, typeName string) (map[string]string, erro
 	return output, err
 }
 
-func (ac AwsClient) ListItems(typeName string) ([]map[string]string, error) {
+func (ac AwsClient) ListItems(typeName string) ([]*reader.ItemData, error) {
 	input := &cloudcontrol.ListResourcesInput{
 		TypeName: &typeName,
 	}
@@ -66,7 +67,7 @@ func (ac AwsClient) ListItems(typeName string) ([]map[string]string, error) {
 		return nil, err
 	}
 
-	outputs := make([]map[string]string, 0)
+	outputs := make([]*reader.ItemData, 0)
 	for _, rd := range resp.ResourceDescriptions {
 		output, err := ac.processResponse(*rd.Properties)
 		if err != nil {
@@ -77,7 +78,7 @@ func (ac AwsClient) ListItems(typeName string) ([]map[string]string, error) {
 	return outputs, nil
 }
 
-func (ac AwsClient) processResponse(response string) (map[string]string, error) {
+func (ac AwsClient) processResponse(response string) (*reader.ItemData, error) {
 	output, err := common.Unmarshal[map[string]any]([]byte(response))
 	if err != nil {
 		return nil, err
@@ -86,5 +87,5 @@ func (ac AwsClient) processResponse(response string) (map[string]string, error) 
 	for k := range *output {
 		processedOutput[k] = fmt.Sprintf("%v", (*output)[k])
 	}
-	return processedOutput, nil
+	return &reader.ItemData{Properties: &processedOutput}, nil
 }

@@ -5,7 +5,9 @@ import (
 	"os"
 
 	"github.com/bondyra/swamp/internal/aws/common"
+	"github.com/bondyra/swamp/internal/reader"
 	"github.com/go-playground/validator/v10"
+	"golang.org/x/exp/slices"
 )
 
 var validate *validator.Validate
@@ -104,4 +106,18 @@ func (d *Definition) GetAtributesForType(itemType string, all bool) []string {
 		}
 	}
 	return result
+}
+
+func (d *Definition) SupportsType(itemType string) bool {
+	return slices.Contains(d.AllDefinedTypes(), itemType)
+}
+
+func (d *Definition) SupportsAttrs(itemType string, attrs []string) bool {
+	definedAttrs := d.GetAtributesForType(itemType, true)
+	return len(common.Difference(attrs, definedAttrs)) == 0
+}
+
+func (d *Definition) SupportsFilter(itemType string, filter reader.Filter) bool {
+	definedAttrs := d.GetAtributesForType(itemType, true)
+	return slices.Contains(definedAttrs, filter.Attr)
 }

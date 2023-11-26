@@ -1,10 +1,16 @@
 package reader
 
-type Filter struct{}
+type Filter struct {
+	Attr  string
+	Op    string
+	Value any
+}
 
 type ParentContext struct{}
 
-type ItemData struct{}
+type ItemData struct {
+	Properties *map[string]string
+}
 
 type Reader interface {
 	// reader name, for namespace query validation
