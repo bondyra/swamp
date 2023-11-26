@@ -1,8 +1,9 @@
-package aws
+package client
 
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/aws/aws-sdk-go-v2/service/cloudcontrol"
 )
@@ -61,10 +62,16 @@ func (ac AwsClient) ListItems(typeName string) ([]map[string]string, error) {
 }
 
 func (ac AwsClient) processResponse(response string) (map[string]string, error) {
-	output := map[string]string{}
-	err := json.Unmarshal([]byte(response), &output)
-	if err != nil {
-		return nil, err
+	output := map[string]any{}
+	if response != "" {
+		err := json.Unmarshal([]byte(response), &output)
+		if err != nil {
+			return nil, err
+		}
 	}
-	return output, nil
+	processedOutput := map[string]string{}
+	for k := range output {
+		processedOutput[k] = fmt.Sprintf("%v", output[k])
+	}
+	return processedOutput, nil
 }

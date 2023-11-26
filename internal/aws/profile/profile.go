@@ -1,4 +1,4 @@
-package aws
+package profile
 
 import (
 	"os"
@@ -20,17 +20,17 @@ func (dacr AwsConfigReader) ReadConfigAsString(path string) (string, error) {
 	return string(data), nil
 }
 
-type ProfileProvider interface {
+type Provider interface {
 	ProvideProfiles(string) ([]string, error)
 }
 
-type DefaultProfileProvider struct {
+type DefaultProvider struct {
 	configReader ConfigReader
 }
 
-func (dapp DefaultProfileProvider) ProvideProfiles(path string) ([]string, error) {
+func (dp DefaultProvider) ProvideProfiles(path string) ([]string, error) {
 	results := []string{}
-	data, err := dapp.configReader.ReadConfigAsString(path)
+	data, err := dp.configReader.ReadConfigAsString(path)
 	if err != nil {
 		return nil, err
 	}

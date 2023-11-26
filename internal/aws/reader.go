@@ -1,9 +1,13 @@
 package aws
 
-import "github.com/bondyra/swamp/internal/reader"
+import (
+	"github.com/bondyra/swamp/internal/aws/client"
+	"github.com/bondyra/swamp/internal/aws/profile"
+	"github.com/bondyra/swamp/internal/reader"
+)
 
-func NewReader(profileFactory ProfileFactory, awsFactory AwsFactory, configPaths []string) (*AwsReader, error) {
-	provider := profileFactory.NewProfileProvider()
+func NewReader(profileFactory profile.Factory, awsFactory client.Factory, configPaths []string) (*AwsReader, error) {
+	provider := profileFactory.NewProvider()
 	profilesLists := [][]string{}
 	for _, configPath := range configPaths {
 		profiles, err := provider.ProvideProfiles(configPath)
@@ -19,9 +23,9 @@ func NewReader(profileFactory ProfileFactory, awsFactory AwsFactory, configPaths
 }
 
 type AwsReader struct {
-	awsFactory     AwsFactory
+	awsFactory     client.Factory
 	configProfiles []string
-	clients        map[string]AwsClientInterface
+	clients        map[string]client.AwsClientInterface
 }
 
 func (ar *AwsReader) Init(selectedProfiles []string) error {
@@ -29,7 +33,7 @@ func (ar *AwsReader) Init(selectedProfiles []string) error {
 		selectedProfiles = ar.configProfiles
 	}
 	existingProfiles := Intersect(ar.configProfiles, selectedProfiles)
-	createdClients := make(map[string]AwsClientInterface, 0)
+	createdClients := make(map[string]client.AwsClientInterface, 0)
 	for _, profile := range existingProfiles {
 		var err error
 		createdClients[profile], err = ar.awsFactory.NewClient(profile)
@@ -46,7 +50,7 @@ func (ar AwsReader) GetReaderName() string {
 }
 
 func (ar AwsReader) GetProfileNames() []string {
-	return []string{}
+	return ar.configProfiles
 }
 
 func (ar AwsReader) GetItemNames() []string {

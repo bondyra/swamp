@@ -1,0 +1,24 @@
+{
+  "types": [
+    {
+      "type": "Type1",
+      "identifierField": "Identifier1",
+      "alias": "Alias1",
+      "parents": [],
+      "attrs": [{"field": "Attribute1_1"}, {"field": "Attribute1_2"}]
+    },
+    {
+      "type": "Type2",
+      "identifierField": "Identifier2",
+      "alias": "Alias2",
+      "parents": [
+        {
+          "type": "ParentType2_1",
+          "linkType": "LinkType2_1",
+          "links": [{"parentField": "Link2_1ParentField1", "field": "Link2_1Field1"}]
+        }
+      ],
+      "attrs": [{"field": "Attribute2_1"}, {"field": "Attribute2_2"}]
+    }
+  ]
+}

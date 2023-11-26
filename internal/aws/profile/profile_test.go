@@ -1,4 +1,4 @@
-package aws
+package profile
 
 import (
 	"errors"
@@ -132,9 +132,9 @@ func TestProvideProfiles(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 
-			dapp := DefaultProfileProvider{configReader: MockConfigReader{content: test.configContent}}
+			dp := DefaultProvider{configReader: MockConfigReader{content: test.configContent}}
 
-			profiles, err := dapp.ProvideProfiles("path")
+			profiles, err := dp.ProvideProfiles("path")
 
 			if !cmp.Equal(test.expectedProfiles, profiles) {
 				t.Errorf("%s expected:\n%v\ngot:\n%v", test.name, test.expectedProfiles, profiles)
@@ -147,9 +147,9 @@ func TestProvideProfiles(t *testing.T) {
 }
 
 func TestProvideProfilesError(t *testing.T) {
-	dapp := DefaultProfileProvider{configReader: MockErrorConfigReader{}}
+	dp := DefaultProvider{configReader: MockErrorConfigReader{}}
 
-	_, err := dapp.ProvideProfiles("path")
+	_, err := dp.ProvideProfiles("path")
 
 	if err == nil {
 		t.Errorf("expected:\nsome error\ngot:\n%v", err)
