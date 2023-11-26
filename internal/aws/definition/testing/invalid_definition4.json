@@ -1,0 +1,14 @@
+{
+  "types": [
+    {
+      "type": "",
+      "identifierField": "Identifier1",
+      "alias": "Alias1"
+    },
+    {
+      "type": "Type1",
+      "identifierField": "Identifier2",
+      "alias": "Alias2"
+    }
+  ]
+}

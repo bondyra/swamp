@@ -3,10 +3,12 @@ package definition
 import (
 	"fmt"
 	"os"
-	"regexp"
 
 	"github.com/bondyra/swamp/internal/aws/common"
+	"github.com/go-playground/validator/v10"
 )
+
+var validate *validator.Validate
 
 type Factory interface {
 	NewDefinition(string) (Definition, error)
@@ -30,59 +32,41 @@ type DefinitionInterface interface {
 }
 
 type Definition struct {
-	TypeDefinitions []TypeDefinition `json:"types"`
-	allDefinedTypes []string
+	TypeDefinitions []TypeDefinition `json:"types" validate:"required,unique=Type,unique=Alias,dive"`
 }
 
 type TypeDefinition struct {
-	Type            string             `json:"type"`
-	IdentifierField string             `json:"identifierField"`
-	Alias           string             `json:"alias"`
-	Parents         []ParentDefinition `json:"parents,omitempty"`
-	Attrs           []Attr             `json:"attrs,omitempty"`
+	Type            string             `json:"type" validate:"required"`
+	IdentifierField string             `json:"identifierField" validate:"required"`
+	Alias           string             `json:"alias" validate:"required"`
+	Parents         []ParentDefinition `json:"parents,omitempty" validate:"unique=Type,dive"`
+	Attrs           []Attr             `json:"attrs,omitempty" validate:"dive"`
 }
 
 type ParentDefinition struct {
-	Type     string `json:"type"`
-	LinkType string `json:"linkType"`
-	Links    []Link `json:"links"`
+	Type     string `json:"type" validate:"required"`
+	LinkType string `json:"linkType" validate:"required,oneof=inline resourceModel"`
+	Links    []Link `json:"links" validate:"required"`
 }
 
 type Link struct {
-	ParentField string `json:"parentField"`
-	Field       string `json:"field"`
+	ParentField string `json:"parentField" validate:"required"`
+	Field       string `json:"field" validate:"required"`
 }
 
 type Attr struct {
-	Field string `json:"field"`
+	Field string `json:"field" validate:"required"`
 }
 
 func (d *Definition) Validate() error {
-	var err error
-	d.allDefinedTypes = d.AllDefinedTypes()
-	validators := []func() error{d.areTypesFormatted, d.areTypesNotDuplicated, d.areAllParentTypesDefined}
-	for _, validator := range validators {
-		if err = validator(); err != nil {
-			return err
-		}
+	validate = validator.New(validator.WithRequiredStructEnabled())
+	err := validate.Struct(d)
+	if err != nil {
+		return err
 	}
-	return nil
-}
-
-func (d *Definition) areTypesFormatted() error {
-	regex := regexp.MustCompile(`[a-zA-Z_][a-zA-Z0-9_]*`)
-	for _, t := range d.allDefinedTypes {
-		if !regex.Match([]byte(t)) {
-			return fmt.Errorf("invalid type: %v", t)
-		}
-	}
-	return nil
-}
-
-func (d *Definition) areTypesNotDuplicated() error {
-	duplicatedElements := common.DuplicatedElements(d.allDefinedTypes)
-	if len(duplicatedElements) > 0 {
-		return fmt.Errorf("invalid definition, following types were defined more than once: %v", duplicatedElements)
+	// more complicated validations that probably cannot be handled by validation package
+	if err2 := d.areAllParentTypesDefined(); err2 != nil {
+		return err2
 	}
 	return nil
 }
@@ -94,7 +78,7 @@ func (d *Definition) areAllParentTypesDefined() error {
 			parentTypes = append(parentTypes, parent.Type)
 		}
 	}
-	undefinedParentTypes := common.Difference(parentTypes, d.allDefinedTypes)
+	undefinedParentTypes := common.Difference(parentTypes, d.AllDefinedTypes())
 	if len(undefinedParentTypes) > 0 {
 		return fmt.Errorf("invalid definition, following parents are not defined: %v", undefinedParentTypes)
 	}

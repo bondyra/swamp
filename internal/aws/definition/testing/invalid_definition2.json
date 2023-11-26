@@ -1,14 +1,29 @@
 {
   "types": [
     {
-      "type": "",
+      "type": "Type1",
       "identifierField": "Identifier1",
-      "alias": "Alias1"
+      "alias": "Alias1",
+      "parents": [],
+      "attrs": [{"field": "Attribute1_1"}, {"field": "Attribute1_2"}]
     },
     {
-      "type": "Type1",
+      "type": "Type2",
       "identifierField": "Identifier2",
-      "alias": "Alias2"
+      "alias": "Alias2",
+      "parents": [
+        {
+          "type": "Type1",
+          "linkType": "inline",
+          "links": [{"parentField": "Link2_1ParentField1", "field": "Link2_1Field1"}]
+        },
+        {
+          "type": "NotDefinedParentType",
+          "linkType": "inline",
+          "links": [{"parentField": "Link2_2ParentField1", "field": "Link2_2Field1"}]
+        }
+      ],
+      "attrs": [{"field": "Attribute2_1"}, {"field": "Attribute2_2"}]
     }
   ]
 }

@@ -14,13 +14,8 @@
       "parents": [
         {
           "type": "Type1",
-          "linkType": "LinkType2_1",
+          "linkType": "InvalidLinkType",
           "links": [{"parentField": "Link2_1ParentField1", "field": "Link2_1Field1"}]
-        },
-        {
-          "type": "NotDefinedParentType",
-          "linkType": "LinkType2_1",
-          "links": [{"parentField": "Link2_2ParentField1", "field": "Link2_2Field1"}]
         }
       ],
       "attrs": [{"field": "Attribute2_1"}, {"field": "Attribute2_2"}]

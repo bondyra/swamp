@@ -73,7 +73,7 @@ func TestDefaultFactory_NewDefinitionFull(t *testing.T) {
 			{Type: "Type1", IdentifierField: "Identifier1", Alias: "Alias1", Parents: []ParentDefinition{}, Attrs: []Attr{{Field: "Attribute1_1"}, {Field: "Attribute1_2"}}},
 			{
 				Type: "Type2", IdentifierField: "Identifier2", Alias: "Alias2",
-				Parents: []ParentDefinition{{Type: "Type1", LinkType: "LinkType2_1", Links: []Link{{ParentField: "Link2_1ParentField1", Field: "Link2_1Field1"}}}},
+				Parents: []ParentDefinition{{Type: "Type1", LinkType: "inline", Links: []Link{{ParentField: "Link2_1ParentField1", Field: "Link2_1Field1"}}}},
 				Attrs:   []Attr{{Field: "Attribute2_1"}, {Field: "Attribute2_2"}},
 			},
 		},
@@ -101,28 +101,43 @@ func TestDefinition_Validate(t *testing.T) {
 		wantErr  bool
 	}{
 		{
-			name:     "test empty definition",
-			testFile: "empty_definition.json",
-			wantErr:  false,
-		},
-		{
 			name:     "test full definition",
 			testFile: "full_definition.json",
 			wantErr:  false,
+		},
+		{
+			name:     "test error when when empty",
+			testFile: "empty_definition.json",
+			wantErr:  true,
 		},
 		{
 			name:     "test error when types are duplicated",
 			testFile: "invalid_definition1.json",
 			wantErr:  true,
 		},
-		{ // TODO: more test cases for this V
-			name:     "test error when type is empty",
-			testFile: "invalid_definition2.json",
+		{
+			name:     "test error when aliases are duplicated",
+			testFile: "invalid_definition1b.json",
 			wantErr:  true,
 		},
 		{
 			name:     "test error when link does not refer to defined type",
+			testFile: "invalid_definition2.json",
+			wantErr:  true,
+		},
+		{
+			name:     "test error when link type is invalid",
 			testFile: "invalid_definition3.json",
+			wantErr:  true,
+		},
+		{
+			name:     "test error when any type is empty",
+			testFile: "invalid_definition4.json",
+			wantErr:  true,
+		},
+		{
+			name:     "test error when any alias is empty",
+			testFile: "invalid_definition5.json",
 			wantErr:  true,
 		},
 	}
