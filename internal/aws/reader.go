@@ -2,6 +2,7 @@ package aws
 
 import (
 	"fmt"
+	"regexp"
 
 	"github.com/bondyra/swamp/internal/aws/client"
 	"github.com/bondyra/swamp/internal/aws/common"
@@ -21,32 +22,40 @@ func NewReader(profileProvider profile.Provider, awsFactory client.PoolFactory, 
 		return nil, err
 	}
 	return &AwsReader{
-		awsFactory:     awsFactory,
-		def:            definition,
-		configProfiles: profiles,
+		pool: awsFactory.NewPool(profiles),
+		def:  definition,
 	}, nil
 }
 
 type AwsReader struct {
-	awsFactory     client.PoolFactory
-	def            *definition.Definition
-	knownTypes     []string
-	configProfiles []string
-	clients        map[string]client.AwsClientInterface
+	pool         client.Pool
+	def          *definition.Definition
+	knownTypes   []string
+	knownAliases []string
 }
 
 func (ar AwsReader) Name() string {
 	return "aws"
 }
 
-func (ar AwsReader) KnownTypes() []string {
+func (ar AwsReader) getKnownTypes() []string {
 	if ar.knownTypes == nil {
-		ar.knownTypes = make([]string, 0)
-		for _, typeDefinition := range ar.def.TypeDefinitions {
-			ar.knownTypes = append(ar.knownTypes, typeDefinition.Type)
+		ar.knownTypes = make([]string, len(ar.def.TypeDefinitions))
+		for i := range ar.def.TypeDefinitions {
+			ar.knownTypes[i] = ar.def.TypeDefinitions[i].Type
 		}
 	}
 	return ar.knownTypes
+}
+
+func (ar AwsReader) getKnownAliases() []string {
+	if ar.knownAliases == nil {
+		ar.knownAliases = make([]string, len(ar.def.TypeDefinitions))
+		for i := range ar.def.TypeDefinitions {
+			ar.knownAliases[i] = ar.def.TypeDefinitions[i].Alias
+		}
+	}
+	return ar.knownAliases
 }
 
 func (ar AwsReader) typeDefinition(itemType string) (*definition.TypeDefinition, error) {
@@ -59,7 +68,7 @@ func (ar AwsReader) typeDefinition(itemType string) (*definition.TypeDefinition,
 }
 
 func (ar AwsReader) IsTypeSupported(itemType string) bool {
-	return slices.Contains(ar.KnownTypes(), itemType)
+	return slices.Contains(ar.getKnownTypes(), itemType) || slices.Contains(ar.getKnownAliases(), itemType)
 }
 
 func (ar AwsReader) IsLinkSupported(itemType string, parentType string) bool {
@@ -93,31 +102,59 @@ func (ar AwsReader) IsFilterSupported(itemType string, filter reader.Filter) boo
 	return slices.Contains(fields, filter.Attr)
 }
 
-func (ar AwsReader) GetItems(itemType string, profiles []string, attrs []string, filter reader.Filter, parentContext reader.ParentContext) ([]*reader.Item, error) {
+func (ar AwsReader) GetItems(itemType string, profiles []string, attrs []string, filter *reader.Filter, parentContext *reader.ParentContext) ([]*reader.Item, error) {
 	typeDefinition, err := ar.typeDefinition(itemType)
 	if err != nil {
 		return nil, err
 	}
-	identifiers, err := ar.listIdentifiers(typeDefinition, filter)
+	baseItems, err := ar.listBaseItemsForEachProfile(profiles, itemType)
 	if err != nil {
 		return nil, err
 	}
+	if filter != nil && filter.Attr == typeDefinition.IdentifierField {
+		var filterFunc func(*reader.Item) bool
+		regex := regexp.MustCompile(filter.Value)
+		switch filter.Op {
+		case reader.OpEquals:
+			filterFunc = func(r *reader.Item) bool { return r.Data.Identifier == filter.Value }
+		case reader.OpNotEquals:
+			filterFunc = func(r *reader.Item) bool { return r.Data.Identifier != filter.Value }
+		case reader.OpLike:
+			filterFunc = func(r *reader.Item) bool { return regex.MatchString(r.Data.Identifier) }
+		case reader.OpNotLike:
+			filterFunc = func(r *reader.Item) bool { return !regex.MatchString(r.Data.Identifier) }
+		default:
+			return nil, fmt.Errorf("cannot filter identifier for %v", filter.Op)
+		}
+		baseItems = common.Filter(baseItems, filterFunc)
+	}
+	items, err := ar.getItems(baseItems, itemType)
+	if err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+func (ar AwsReader) listBaseItemsForEachProfile(profiles []string, itemType string) ([]*reader.Item, error) {
 	results := make([]*reader.Item, 0)
-	for _, id := range identifiers {
-		item, err := ar.getItem(id, attrs, filter)
+	for _, p := range profiles {
+		r, err := ar.pool.ListResources(p, itemType)
 		if err != nil {
 			return nil, err
 		}
-		results = append(results, item)
+		results = append(results, r...)
 	}
 	return results, nil
 }
 
-func (ar AwsReader) listIdentifiers(typeDefinition *definition.TypeDefinition, filter reader.Filter) ([]string, error) {
-
-	return nil, nil
-}
-
-func (ar AwsReader) getItem(id string, attrs []string, filter reader.Filter) (*reader.Item, error) {
-	return nil, nil
+func (ar AwsReader) getItems(baseItems []*reader.Item, itemType string) ([]*reader.Item, error) {
+	results := make([]*reader.Item, len(baseItems))
+	for i, baseItem := range baseItems {
+		result, err := ar.pool.GetResource(baseItem.Profile, baseItem.Data.Identifier, itemType)
+		if err != nil {
+			return nil, err
+		}
+		results[i] = result
+	}
+	return results, nil
 }

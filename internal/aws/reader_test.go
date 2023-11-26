@@ -23,20 +23,10 @@ func (mpp mockProfileProvider) ProvideProfiles(paths ...string) ([]string, error
 	return mpp.output.profiles, mpp.output.err
 }
 
-type mockAwsFactory struct{}
+type mockPoolFactory struct{}
 
-func (maf mockAwsFactory) NewPool(profiles []string, factory client.ClientFactory) (client.Pool, error) {
-	return nil, nil
-}
-
-type mockAwsClient struct{}
-
-func (mac mockAwsClient) GetResource(id string, typeName string) (*reader.ItemData, error) {
-	return &reader.ItemData{}, nil
-}
-
-func (ac mockAwsClient) ListResources(typeName string) ([]*reader.ItemData, error) {
-	return []*reader.ItemData{}, nil
+func (maf mockPoolFactory) NewPool(profiles []string) client.Pool {
+	return nil
 }
 
 type mockDefFactoryOutput struct {
@@ -97,10 +87,10 @@ func TestNewReader(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			profileProvider := mockProfileProvider{mockProfileProviderOutput{tt.profileProviderProvideProfilesOutput, tt.profileProviderProvideProfilesError}}
-			awsFactory := mockAwsFactory{}
+			poolFactory := mockPoolFactory{}
 			defFactory := mockDefFactory{mockDefFactoryOutput{tt.defFactoryFromFileOutput, tt.defFactoryFromFileError}}
 
-			got, err := NewReader(profileProvider, awsFactory, defFactory, []string{})
+			got, err := NewReader(profileProvider, poolFactory, defFactory, []string{})
 
 			if tt.wantErr {
 				if err == nil {
@@ -109,7 +99,7 @@ func TestNewReader(t *testing.T) {
 				return
 			}
 
-			expectedReader := &AwsReader{awsFactory, tt.defFactoryFromFileOutput, nil, tt.profileProviderProvideProfilesOutput, nil}
+			expectedReader := &AwsReader{nil, tt.defFactoryFromFileOutput, nil, nil}
 
 			if !reflect.DeepEqual(got, expectedReader) {
 				t.Errorf("NewReader() = %v, want %v", got, expectedReader)
@@ -138,32 +128,6 @@ func TestAwsReader_Name(t *testing.T) {
 	}
 }
 
-func TestAwsReader_KnownTypes(t *testing.T) {
-	tests := []struct {
-		name string
-		def  *definition.Definition
-		want []string
-	}{
-		{
-			name: "test",
-			def: &definition.Definition{TypeDefinitions: []definition.TypeDefinition{
-				{Type: "t1", IdentifierField: "id1", Alias: "a1"},
-				{Type: "t2", IdentifierField: "id1", Alias: "a1"},
-				{Type: "t3", IdentifierField: "id1", Alias: "a1"},
-			}},
-			want: []string{"t1", "t2", "t3"},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ar := AwsReader{def: tt.def}
-			if got := ar.KnownTypes(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("AwsReader.KnownTypes() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func TestAwsReader_IsTypeSupported(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -172,23 +136,43 @@ func TestAwsReader_IsTypeSupported(t *testing.T) {
 		want     bool
 	}{
 		{
-			name: "test true",
+			name: "test true when type matches",
 			def: &definition.Definition{TypeDefinitions: []definition.TypeDefinition{
 				{Type: "t1", IdentifierField: "id1", Alias: "a1"},
-				{Type: "t2", IdentifierField: "id1", Alias: "a1"},
-				{Type: "t3", IdentifierField: "id1", Alias: "a1"},
+				{Type: "t2", IdentifierField: "id2", Alias: "a2"},
+				{Type: "t3", IdentifierField: "id3", Alias: "a3"},
 			}},
 			itemType: "t3",
 			want:     true,
 		},
 		{
-			name: "test false",
+			name: "test true when alias matches",
 			def: &definition.Definition{TypeDefinitions: []definition.TypeDefinition{
-				{Type: "t11", IdentifierField: "id1", Alias: "a1"},
-				{Type: "t22", IdentifierField: "id1", Alias: "a1"},
-				{Type: "t33", IdentifierField: "id1", Alias: "a1"},
+				{Type: "t1", IdentifierField: "id1", Alias: "a1"},
+				{Type: "t2", IdentifierField: "id2", Alias: "a2"},
+				{Type: "t3", IdentifierField: "id3", Alias: "a3"},
+			}},
+			itemType: "a1",
+			want:     true,
+		},
+		{
+			name: "test false when no type matches",
+			def: &definition.Definition{TypeDefinitions: []definition.TypeDefinition{
+				{Type: "t11", IdentifierField: "id1", Alias: "aa1"},
+				{Type: "t22", IdentifierField: "id2", Alias: "aa2"},
+				{Type: "t33", IdentifierField: "id3", Alias: "aa3"},
 			}},
 			itemType: "t1",
+			want:     false,
+		},
+		{
+			name: "test false when no alias matches",
+			def: &definition.Definition{TypeDefinitions: []definition.TypeDefinition{
+				{Type: "t11", IdentifierField: "id1", Alias: "aa1"},
+				{Type: "t22", IdentifierField: "id2", Alias: "aa2"},
+				{Type: "t33", IdentifierField: "id3", Alias: "aa3"},
+			}},
+			itemType: "a1",
 			want:     false,
 		},
 	}

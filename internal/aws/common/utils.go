@@ -82,6 +82,19 @@ func Map[T, S any](a []T, f func(T) S) []S {
 	return b
 }
 
+func Filter[T any](a []T, f func(T) bool) []T {
+	if a == nil {
+		return nil
+	}
+	b := []T{}
+	for i, aa := range a {
+		if f(a[i]) {
+			b = append(b, aa)
+		}
+	}
+	return b
+}
+
 func Unmarshal[T any](input []byte) (*T, error) {
 	var output T
 	if len(input) == 0 {

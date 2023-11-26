@@ -1,30 +1,32 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
 	"strings"
 
-	"github.com/bondyra/swamp/internal/aws"
+	"github.com/aws/smithy-go"
 	"github.com/bondyra/swamp/internal/aws/client"
-	"github.com/bondyra/swamp/internal/aws/definition"
-	"github.com/bondyra/swamp/internal/aws/profile"
 	"github.com/bondyra/swamp/internal/parser"
-	"github.com/bondyra/swamp/internal/reader"
 )
 
 func main() {
 	query := strings.Join(os.Args[1:], " ")
-	ast, err := parser.ParseString(query)
+	_, err := parser.ParseString(query)
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Printf("%v", ast)
-	var reader reader.Reader
-	profileProvider := profile.DefaultProvider{}
-	awsFactory := client.LazyPoolFactory{}
-	defFactory := definition.DefaultFactory{}
-	reader, _ = aws.NewReader(profileProvider, awsFactory, defFactory, []string{})
-	fmt.Println(reader.Name())
+	//log.Printf("%v", ast)
+	pf := client.LazyPoolFactory{}
+	p := pf.NewPool("default")
+	fmt.Printf("%v - %v", p, err)
+	if err == nil {
+		r, err := p.GetResource("default", "vpc-c50797ae1", "AWS::EC2::VPC")
+		var ae smithy.APIError
+		if errors.As(err, &ae) {
+			fmt.Printf("%v - %v", r, ae.ErrorCode())
+		}
+	}
 }

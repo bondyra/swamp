@@ -246,6 +246,40 @@ func TestMap(t *testing.T) {
 	}
 }
 
+func TestFilter(t *testing.T) {
+	type something struct {
+		a string
+		b int
+	}
+	type args struct {
+		a []something
+		f func(something) bool
+	}
+	tests := []struct {
+		name string
+		args args
+		want []something
+	}{
+		{
+			name: "test",
+			args: args{a: []something{{"match", 1}, {"no-match", 2}, {"match", 3}}, f: func(s something) bool { return s.a == "match" }},
+			want: []something{{"match", 1}, {"match", 3}},
+		},
+		{
+			name: "test nil",
+			args: args{a: nil, f: func(s something) bool { return s.a == "match" }},
+			want: nil,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := Filter(tt.args.a, tt.args.f); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Filter() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestUnmarshal(t *testing.T) {
 	type testStruct struct {
 		A string `json:"a"`

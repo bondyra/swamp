@@ -2,9 +2,16 @@ package reader
 
 type Filter struct {
 	Attr  string
-	Op    string
+	Op    int
 	Value string
 }
+
+const (
+	OpEquals int = iota
+	OpNotEquals
+	OpLike
+	OpNotLike
+)
 
 type ParentContext struct{}
 
@@ -27,5 +34,5 @@ type Reader interface {
 	AreAttrsSupported(itemType string, attrs []string) bool
 	IsFilterSupported(itemType string, filter Filter) bool
 
-	GetItems(itemType string, profiles []string, attrs []string, filter Filter, context ParentContext) ([]*Item, error)
+	GetItems(itemType string, profiles []string, attrs []string, filter *Filter, context *ParentContext) ([]*Item, error)
 }

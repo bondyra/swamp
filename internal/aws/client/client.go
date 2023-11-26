@@ -5,26 +5,10 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/cloudcontrol"
 	"github.com/bondyra/swamp/internal/aws/common"
 	"github.com/bondyra/swamp/internal/reader"
 )
-
-type ClientFactory interface {
-	NewClient(string) (AwsClientInterface, error)
-}
-
-type DefaultClientFactory struct{}
-
-func (df DefaultClientFactory) NewClient(profile string) (AwsClientInterface, error) {
-	context := context.TODO()
-	cfg, err := config.LoadDefaultConfig(context, config.WithSharedConfigProfile(profile))
-	if err != nil {
-		return nil, err
-	}
-	return &AwsClient{ccClient: cloudcontrol.NewFromConfig(cfg)}, nil
-}
 
 type AwsClientInterface interface {
 	GetResource(string, string) (*reader.ItemData, error)
