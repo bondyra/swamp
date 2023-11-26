@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/bondyra/swamp/internal/aws/client"
+	"github.com/bondyra/swamp/internal/aws/definition"
 	"github.com/bondyra/swamp/internal/aws/profile"
 	"github.com/google/go-cmp/cmp"
 	"golang.org/x/exp/maps"
@@ -127,7 +128,7 @@ func TestNewReader(t *testing.T) {
 			profileFactory := MockProfileFactory{mpp: MockProfileProvider{pathToOutput: test.pathToOutput}}
 			awsFactory := MockAwsFactory{}
 
-			reader, err := NewReader(profileFactory, awsFactory, maps.Keys(test.pathToOutput))
+			reader, err := NewReader(profileFactory, awsFactory, definition.DefaultFactory{}, maps.Keys(test.pathToOutput))
 
 			if test.returnsErr {
 				if reader != nil {
@@ -195,7 +196,7 @@ func TestInit(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			r := AwsReader{test.factory, test.allProfiles, make(map[string]client.AwsClientInterface, 0)}
+			r := AwsReader{test.factory, &definition.Definition{}, test.allProfiles, make(map[string]client.AwsClientInterface, 0)}
 			expectedClients := make(map[string]client.AwsClientInterface, 0)
 			for _, k := range test.expectedClientProfiles {
 				expectedClients[k] = MockAwsClient{}
@@ -224,29 +225,18 @@ func TestInit(t *testing.T) {
 }
 
 func TestAwsReader_GetReaderName(t *testing.T) {
-	type fields struct {
-		awsFactory     client.Factory
-		configProfiles []string
-		clients        map[string]client.AwsClientInterface
-	}
 	tests := []struct {
-		name   string
-		fields fields
-		want   string
+		name string
+		want string
 	}{
 		{
-			name:   "test",
-			fields: fields{awsFactory: nil, configProfiles: nil, clients: nil},
-			want:   "aws",
+			name: "test",
+			want: "aws",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ar := AwsReader{
-				awsFactory:     tt.fields.awsFactory,
-				configProfiles: tt.fields.configProfiles,
-				clients:        tt.fields.clients,
-			}
+			ar := AwsReader{}
 			if got := ar.GetReaderName(); got != tt.want {
 				t.Errorf("AwsReader.GetReaderName() = %v, want %v", got, tt.want)
 			}
@@ -256,9 +246,7 @@ func TestAwsReader_GetReaderName(t *testing.T) {
 
 func TestAwsReader_GetProfileNames(t *testing.T) {
 	type fields struct {
-		awsFactory     client.Factory
 		configProfiles []string
-		clients        map[string]client.AwsClientInterface
 	}
 	tests := []struct {
 		name   string
@@ -267,16 +255,14 @@ func TestAwsReader_GetProfileNames(t *testing.T) {
 	}{
 		{
 			name:   "test",
-			fields: fields{awsFactory: nil, configProfiles: []string{"p1", "p2"}, clients: nil},
+			fields: fields{configProfiles: []string{"p1", "p2"}},
 			want:   []string{"p1", "p2"},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ar := AwsReader{
-				awsFactory:     tt.fields.awsFactory,
 				configProfiles: tt.fields.configProfiles,
-				clients:        tt.fields.clients,
 			}
 			if got := ar.GetProfileNames(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("AwsReader.GetProfileNames() = %v, want %v", got, tt.want)

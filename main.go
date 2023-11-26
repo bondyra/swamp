@@ -8,6 +8,7 @@ import (
 
 	"github.com/bondyra/swamp/internal/aws"
 	"github.com/bondyra/swamp/internal/aws/client"
+	"github.com/bondyra/swamp/internal/aws/definition"
 	"github.com/bondyra/swamp/internal/aws/profile"
 	"github.com/bondyra/swamp/internal/parser"
 	"github.com/bondyra/swamp/internal/reader"
@@ -23,8 +24,9 @@ func main() {
 	var reader reader.Reader
 	profileFactory := profile.DefaultFactory{}
 	awsFactory := client.DefaultFactory{}
-	reader, _ = aws.NewReader(profileFactory, awsFactory, []string{})
-	reader.GetItemNames()
+	defFactory := definition.DefaultFactory{}
+	reader, _ = aws.NewReader(profileFactory, awsFactory, defFactory, []string{})
+	fmt.Println(reader.GetItemTypes())
 	d, err3 := awsFactory.NewClient("default")
 	fmt.Println(err3)
 	p, err4 := d.ListItems("AWS::EC2::VPC")

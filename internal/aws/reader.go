@@ -3,11 +3,13 @@ package aws
 import (
 	"github.com/bondyra/swamp/internal/aws/client"
 	"github.com/bondyra/swamp/internal/aws/common"
+	"github.com/bondyra/swamp/internal/aws/definition"
 	"github.com/bondyra/swamp/internal/aws/profile"
 	"github.com/bondyra/swamp/internal/reader"
 )
 
-func NewReader(profileFactory profile.Factory, awsFactory client.Factory, configPaths []string) (*AwsReader, error) {
+func NewReader(profileFactory profile.Factory, awsFactory client.Factory, defFactory definition.Factory, configPaths []string) (*AwsReader, error) {
+	// todo: move to provider
 	provider := profileFactory.NewProvider()
 	profilesLists := [][]string{}
 	for _, configPath := range configPaths {
@@ -17,14 +19,21 @@ func NewReader(profileFactory profile.Factory, awsFactory client.Factory, config
 		}
 		profilesLists = append(profilesLists, profiles)
 	}
+	//
+	definition, err := defFactory.NewDefinition("definition.json")
+	if err != nil {
+		return nil, err
+	}
 	return &AwsReader{
 		awsFactory:     awsFactory,
+		definition:     definition,
 		configProfiles: common.Sum(profilesLists...),
 	}, nil
 }
 
 type AwsReader struct {
 	awsFactory     client.Factory
+	definition     *definition.Definition
 	configProfiles []string
 	clients        map[string]client.AwsClientInterface
 }
@@ -54,16 +63,16 @@ func (ar AwsReader) GetProfileNames() []string {
 	return ar.configProfiles
 }
 
-func (ar AwsReader) GetItemNames() []string {
-	return []string{}
+func (ar AwsReader) GetItemTypes() []string {
+	return ar.definition.AllDefinedTypes()
 }
 
 func (ar AwsReader) GetDefaultItemAttributes(itemType string) []string {
-	return []string{}
+	return ar.definition.GetAtributesForType(itemType, false)
 }
 
 func (ar AwsReader) GetAllItemAttributes(itemType string) []string {
-	return []string{}
+	return ar.definition.GetAtributesForType(itemType, true)
 }
 
 func (ar AwsReader) GetItems(resourceType string, attrs []string, filter reader.Filter, parentContext reader.ParentContext) ([]reader.ItemData, error) {

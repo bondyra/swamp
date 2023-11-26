@@ -12,7 +12,7 @@ type Reader interface {
 	// list profile names that were loaded
 	GetProfileNames() []string
 	// list all item names that can be read by this reader
-	GetItemNames() []string
+	GetItemTypes() []string
 	// list default attributes item with given name would have
 	GetDefaultItemAttributes(string) []string
 	// list attributes that item with given name can have

@@ -11,16 +11,14 @@ import (
 var validate *validator.Validate
 
 type Factory interface {
-	NewDefinition(string) (Definition, error)
+	NewDefinition(string) (*Definition, error)
 }
 
-type DefaultFactory struct {
-	jsonPath string
-}
+type DefaultFactory struct{}
 
-func (df DefaultFactory) NewDefinition() (*Definition, error) {
+func (df DefaultFactory) NewDefinition(jsonPath string) (*Definition, error) {
 	var err error
-	data, err := os.ReadFile(df.jsonPath)
+	data, err := os.ReadFile(jsonPath)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +53,8 @@ type Link struct {
 }
 
 type Attr struct {
-	Field string `json:"field" validate:"required"`
+	Field   string `json:"field" validate:"required"`
+	IsExtra bool   `json:"isExtra,omitempty"`
 }
 
 func (d *Definition) Validate() error {
@@ -91,4 +90,18 @@ func (d *Definition) AllDefinedTypes() []string {
 		allDefinedTypes = append(allDefinedTypes, typeDefinition.Type)
 	}
 	return allDefinedTypes
+}
+
+func (d *Definition) GetAtributesForType(itemType string, all bool) []string {
+	result := make([]string, 0)
+	for _, td := range d.TypeDefinitions {
+		if td.Type == itemType {
+			for _, attr := range td.Attrs {
+				if all || !attr.IsExtra {
+					result = append(result, attr.Field)
+				}
+			}
+		}
+	}
+	return result
 }
