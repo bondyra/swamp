@@ -1,11 +1,14 @@
 package aws
 
 import (
+	"fmt"
+
 	"github.com/bondyra/swamp/internal/aws/client"
 	"github.com/bondyra/swamp/internal/aws/common"
 	"github.com/bondyra/swamp/internal/aws/definition"
 	"github.com/bondyra/swamp/internal/aws/profile"
 	"github.com/bondyra/swamp/internal/reader"
+	"golang.org/x/exp/slices"
 )
 
 func NewReader(profileProvider profile.Provider, awsFactory client.Factory, defFactory definition.Factory, configPaths []string) (*AwsReader, error) {
@@ -19,49 +22,79 @@ func NewReader(profileProvider profile.Provider, awsFactory client.Factory, defF
 	}
 	return &AwsReader{
 		awsFactory:     awsFactory,
-		definition:     definition,
+		def:            definition,
 		configProfiles: profiles,
 	}, nil
 }
 
 type AwsReader struct {
 	awsFactory     client.Factory
-	definition     *definition.Definition
+	def            *definition.Definition
+	knownTypes     []string
 	configProfiles []string
 	clients        map[string]client.AwsClientInterface
 }
 
-func (ar *AwsReader) Init(selectedProfiles []string) error {
-	if selectedProfiles == nil {
-		selectedProfiles = ar.configProfiles
-	}
-	existingProfiles := common.Intersect(ar.configProfiles, selectedProfiles)
-	createdClients := make(map[string]client.AwsClientInterface, 0)
-	for _, profile := range existingProfiles {
-		var err error
-		createdClients[profile], err = ar.awsFactory.NewClient(profile)
-		if err != nil {
-			return err
-		}
-	}
-	ar.clients = createdClients
-	return nil
-}
-
-func (ar AwsReader) GetReaderName() string {
+func (ar AwsReader) Name() string {
 	return "aws"
 }
 
-func (ar AwsReader) GetProfileNames() []string {
-	return ar.configProfiles
+func (ar AwsReader) KnownTypes() []string {
+	if ar.knownTypes == nil {
+		ar.knownTypes = make([]string, 0)
+		for _, typeDefinition := range ar.def.TypeDefinitions {
+			ar.knownTypes = append(ar.knownTypes, typeDefinition.Type)
+		}
+	}
+	return ar.knownTypes
 }
 
-func (ar AwsReader) GetItemTypes() []string {
-	return ar.definition.AllDefinedTypes()
+func (ar AwsReader) typeDefinition(itemType string) (*definition.TypeDefinition, error) {
+	for _, td := range ar.def.TypeDefinitions {
+		if td.Type == itemType {
+			return &td, nil
+		}
+	}
+	return nil, fmt.Errorf("%v type is not supported", itemType)
 }
 
-func (ar AwsReader) GetItems(itemType string, attrs []string, filter reader.Filter, parentContext reader.ParentContext) ([]*reader.ItemData, error) {
-	typeDefinition, err := ar.definition.GetTypeDefinition(itemType)
+func (ar AwsReader) IsTypeSupported(itemType string) bool {
+	return slices.Contains(ar.KnownTypes(), itemType)
+}
+
+func (ar AwsReader) IsLinkSupported(itemType string, parentType string) bool {
+	td, err := ar.typeDefinition(itemType)
+	if err != nil {
+		return false
+	}
+	for _, l := range (*td).Parents {
+		if l.Type == parentType {
+			return true
+		}
+	}
+	return false
+}
+
+func (ar AwsReader) AreAttrsSupported(itemType string, attrs []string) bool {
+	td, err := ar.typeDefinition(itemType)
+	if err != nil {
+		return false
+	}
+	supported := common.Map((*td).Attrs, func(a definition.Attr) string { return a.Field })
+	return len(common.Difference(attrs, supported)) == 0
+}
+
+func (ar AwsReader) IsFilterSupported(itemType string, filter reader.Filter) bool {
+	td, err := ar.typeDefinition(itemType)
+	if err != nil {
+		return false
+	}
+	fields := common.Map((*td).Attrs, func(a definition.Attr) string { return a.Field })
+	return slices.Contains(fields, filter.Attr)
+}
+
+func (ar AwsReader) GetItems(itemType string, profiles []string, attrs []string, filter reader.Filter, parentContext reader.ParentContext) ([]*reader.ItemData, error) {
+	typeDefinition, err := ar.typeDefinition(itemType)
 	if err != nil {
 		return nil, err
 	}
@@ -81,6 +114,7 @@ func (ar AwsReader) GetItems(itemType string, attrs []string, filter reader.Filt
 }
 
 func (ar AwsReader) listIdentifiers(typeDefinition *definition.TypeDefinition, filter reader.Filter) ([]string, error) {
+
 	return nil, nil
 }
 

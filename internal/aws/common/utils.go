@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 )
 
-func Sum(inputs ...[]string) []string {
+func Union(inputs ...[]string) []string {
 	keys := make(map[string]bool)
 	for _, input := range inputs {
 		for _, val := range input {
@@ -68,6 +68,14 @@ func Difference(minuend []string, subtrahends ...[]string) []string {
 		}
 	}
 	return result
+}
+
+func Map[T, S any](a []T, f func(T) S) []S {
+	b := make([]S, len(a))
+	for i := range a {
+		b[i] = f(a[i])
+	}
+	return b
 }
 
 func Unmarshal[T any](input []byte) (*T, error) {

@@ -13,12 +13,13 @@ type ItemData struct {
 }
 
 type Reader interface {
-	// reader name, for namespace query validation
-	GetReaderName() string
-	// list profile names that were loaded
-	GetProfileNames() []string
-	// list all item names that can be read by this reader
-	GetItemTypes() []string
+	Name() string
+	KnownTypes() []string
 
-	GetItems(string, []string, Filter, ParentContext) ([]*ItemData, error)
+	IsTypeSupported(itemType string) bool
+	IsLinkSupported(itemType string, parentType string) bool
+	AreAttrsSupported(itemType string, attrs []string) bool
+	IsFilterSupported(itemType string, filter Filter) bool
+
+	GetItems(itemType string, profiles []string, attrs []string, filter Filter, context ParentContext) ([]*ItemData, error)
 }

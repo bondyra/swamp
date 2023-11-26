@@ -26,7 +26,7 @@ func main() {
 	awsFactory := client.DefaultFactory{}
 	defFactory := definition.DefaultFactory{}
 	reader, _ = aws.NewReader(profileProvider, awsFactory, defFactory, []string{})
-	fmt.Println(reader.GetItemTypes())
+	fmt.Println(reader.Name())
 	d, err3 := awsFactory.NewClient("default")
 	fmt.Println(err3)
 	p, err4 := d.ListResources("AWS::EC2::VPC")

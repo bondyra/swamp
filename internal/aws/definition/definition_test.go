@@ -91,119 +91,87 @@ func TestDefaultFactory_NewDefinitionFull(t *testing.T) {
 	}
 }
 
-func TestDefinition_Validate(t *testing.T) {
-	type fields struct {
-		TypeDefinitions []TypeDefinition
-	}
+func TestValidate(t *testing.T) {
 	tests := []struct {
-		name     string
-		testFile string
-		wantErr  bool
+		name    string
+		tds     []TypeDefinition
+		wantErr bool
 	}{
 		{
-			name:     "test full definition",
-			testFile: "full_definition.json",
-			wantErr:  false,
+			name: "test full definition",
+			tds: []TypeDefinition{
+				{Type: "t1", IdentifierField: "id1", Alias: "a1", Parents: []ParentDefinition{}, Attrs: []Attr{{Field: "a1_1"}, {Field: "a1_2"}}},
+				{
+					Type: "t2", IdentifierField: "id2", Alias: "a2",
+					Parents: []ParentDefinition{{Type: "t1", LinkType: "inline", Links: []Link{{ParentField: "l2_pf1", Field: "l2_f1"}}}},
+					Attrs:   []Attr{{Field: "a2_1"}, {Field: "a2_2"}},
+				},
+			},
+			wantErr: false,
 		},
 		{
-			name:     "test error when when empty",
-			testFile: "empty_definition.json",
-			wantErr:  true,
+			name: "test error when types are duplicated",
+			tds: []TypeDefinition{
+				{Type: "t1", IdentifierField: "id1", Alias: "a1"},
+				{Type: "t1", IdentifierField: "id2", Alias: "a2"},
+			},
+			wantErr: true,
 		},
 		{
-			name:     "test error when types are duplicated",
-			testFile: "invalid_definition1.json",
-			wantErr:  true,
+			name: "test error when aliases are duplicated",
+			tds: []TypeDefinition{
+				{Type: "t1", IdentifierField: "id1", Alias: "a1"},
+				{Type: "t2", IdentifierField: "id2", Alias: "a1"},
+			},
+			wantErr: true,
 		},
 		{
-			name:     "test error when aliases are duplicated",
-			testFile: "invalid_definition1b.json",
-			wantErr:  true,
+			name: "test error when parent types are duplicated",
+			tds: []TypeDefinition{
+				{
+					Type: "t1", IdentifierField: "id1", Alias: "a1",
+					Parents: []ParentDefinition{
+						{Type: "t1", LinkType: "inline", Links: []Link{{ParentField: "pf", Field: "f"}}},
+						{Type: "t1", LinkType: "inline", Links: []Link{{ParentField: "pf", Field: "f"}}},
+					},
+				},
+			},
+			wantErr: true,
 		},
 		{
-			name:     "test error when link does not refer to defined type",
-			testFile: "invalid_definition2.json",
-			wantErr:  true,
+			name: "test error when link type is invalid",
+			tds: []TypeDefinition{
+				{
+					Type: "t2", IdentifierField: "id2", Alias: "a2",
+					Parents: []ParentDefinition{
+						{Type: "t1", LinkType: "inline", Links: []Link{{ParentField: "pf1", Field: "lf2"}}},
+						{Type: "t1", LinkType: "invalidLinkType", Links: []Link{{ParentField: "pf1", Field: "lf2"}}},
+					},
+				},
+			},
+			wantErr: true,
 		},
 		{
-			name:     "test error when link type is invalid",
-			testFile: "invalid_definition3.json",
-			wantErr:  true,
+			name: "test error when any type is empty",
+			tds: []TypeDefinition{
+				{Type: "", IdentifierField: "Identifier1", Alias: "Alias1"},
+				{Type: "Type2", IdentifierField: "Identifier2", Alias: "Alias2"},
+			},
+			wantErr: true,
 		},
 		{
-			name:     "test error when any type is empty",
-			testFile: "invalid_definition4.json",
-			wantErr:  true,
-		},
-		{
-			name:     "test error when any alias is empty",
-			testFile: "invalid_definition5.json",
-			wantErr:  true,
-		},
-	}
-	factory := DefaultFactory{}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			d, fileError := factory.FromFile(testFilePath + tt.testFile)
-
-			if fileError != nil {
-				t.Errorf("Definition.Validate() invalid test file: %v", tt.testFile)
-			}
-
-			if err := d.Validate(); (err != nil) != tt.wantErr {
-				t.Errorf("Definition.Validate() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
-
-func TestDefinition_AllDefinedTypes(t *testing.T) {
-	expected := []string{"Type1", "Type2"}
-	definition := Definition{[]TypeDefinition{
-		{Type: "Type1", IdentifierField: "Identifier1", Alias: "Alias1"},
-		{Type: "Type2", IdentifierField: "Identifier1", Alias: "Alias1"},
-	}}
-
-	got := definition.AllDefinedTypes()
-
-	if !reflect.DeepEqual(got, expected) {
-		t.Errorf("DefaultFactory.AllDefinedTypes() = %v, want %v", got, expected)
-	}
-}
-
-func TestDefinition_GetTypeDefinition(t *testing.T) {
-	td1 := TypeDefinition{Type: "Type1", IdentifierField: "Identifier1", Alias: "Alias1"}
-	td2 := TypeDefinition{Type: "Type2", IdentifierField: "Identifier1", Alias: "Alias1"}
-	d := &Definition{TypeDefinitions: []TypeDefinition{td1, td2}}
-	tests := []struct {
-		name     string
-		itemType string
-		want     *TypeDefinition
-		wantErr  bool
-	}{
-		{
-			name:     "errors when type is not defined",
-			itemType: "UnsupportedType",
-			want:     nil,
-			wantErr:  true,
-		},
-		{
-			name:     "errors when type is not defined",
-			itemType: "Type1",
-			want:     &td1,
-			wantErr:  false,
+			name: "test error when any alias is empty",
+			tds: []TypeDefinition{
+				{Type: "Type1", IdentifierField: "Identifier1", Alias: "Alias1"},
+				{Type: "Type2", IdentifierField: "Identifier2", Alias: ""},
+			},
+			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
-			got, err := d.GetTypeDefinition(tt.itemType)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Definition.GetTypeDefinition() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Definition.GetTypeDefinition() = %v, want %v", got, tt.want)
+			if err := Validate(Definition{tt.tds}); (err != nil) != tt.wantErr {
+				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}

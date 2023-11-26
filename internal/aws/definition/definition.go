@@ -1,7 +1,6 @@
 package definition
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/bondyra/swamp/internal/aws/common"
@@ -57,46 +56,11 @@ type Attr struct {
 	IsExtra bool   `json:"isExtra,omitempty"`
 }
 
-func (d *Definition) Validate() error {
+func Validate(d Definition) error {
 	validate = validator.New(validator.WithRequiredStructEnabled())
 	err := validate.Struct(d)
 	if err != nil {
 		return err
 	}
-	// more complicated validations that probably cannot be handled by validation package
-	if err2 := d.areAllParentTypesDefined(); err2 != nil {
-		return err2
-	}
 	return nil
-}
-
-func (d *Definition) areAllParentTypesDefined() error {
-	var parentTypes = make([]string, 0)
-	for _, typeDefinition := range d.TypeDefinitions {
-		for _, parent := range typeDefinition.Parents {
-			parentTypes = append(parentTypes, parent.Type)
-		}
-	}
-	undefinedParentTypes := common.Difference(parentTypes, d.AllDefinedTypes())
-	if len(undefinedParentTypes) > 0 {
-		return fmt.Errorf("invalid definition, following parents are not defined: %v", undefinedParentTypes)
-	}
-	return nil
-}
-
-func (d *Definition) AllDefinedTypes() []string {
-	allDefinedTypes := make([]string, 0)
-	for _, typeDefinition := range d.TypeDefinitions {
-		allDefinedTypes = append(allDefinedTypes, typeDefinition.Type)
-	}
-	return allDefinedTypes
-}
-
-func (d *Definition) GetTypeDefinition(itemType string) (*TypeDefinition, error) {
-	for _, td := range d.TypeDefinitions {
-		if td.Type == itemType {
-			return &td, nil
-		}
-	}
-	return nil, fmt.Errorf("%v type is not supported", itemType)
 }
