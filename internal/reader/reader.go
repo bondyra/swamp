@@ -3,7 +3,7 @@ package reader
 type Filter struct {
 	Attr  string
 	Op    string
-	Value any
+	Value string
 }
 
 type ParentContext struct{}
@@ -19,10 +19,6 @@ type Reader interface {
 	GetProfileNames() []string
 	// list all item names that can be read by this reader
 	GetItemTypes() []string
-	// list default attributes item with given name would have
-	GetDefaultItemAttributes(string) []string
-	// list attributes that item with given name can have
-	GetAllItemAttributes(string) []string
 
-	GetItems(string, []string, Filter, ParentContext) ([]ItemData, error)
+	GetItems(string, []string, Filter, ParentContext) ([]*ItemData, error)
 }

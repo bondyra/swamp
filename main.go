@@ -29,7 +29,7 @@ func main() {
 	fmt.Println(reader.GetItemTypes())
 	d, err3 := awsFactory.NewClient("default")
 	fmt.Println(err3)
-	p, err4 := d.ListItems("AWS::EC2::VPC")
+	p, err4 := d.ListResources("AWS::EC2::VPC")
 	fmt.Println(err4)
 	fmt.Println(fmt.Printf("%v", p))
 }

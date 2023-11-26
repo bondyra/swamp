@@ -39,11 +39,11 @@ func (maf mockAwsFactory) NewClient(profile string) (client.AwsClientInterface, 
 
 type mockAwsClient struct{}
 
-func (mac mockAwsClient) GetItem(id string, typeName string) (*reader.ItemData, error) {
+func (mac mockAwsClient) GetResource(id string, typeName string) (*reader.ItemData, error) {
 	return &reader.ItemData{}, nil
 }
 
-func (ac mockAwsClient) ListItems(typeName string) ([]*reader.ItemData, error) {
+func (ac mockAwsClient) ListResources(typeName string) ([]*reader.ItemData, error) {
 	return []*reader.ItemData{}, nil
 }
 

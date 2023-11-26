@@ -26,8 +26,8 @@ func (df DefaultFactory) NewClient(profile string) (AwsClientInterface, error) {
 }
 
 type AwsClientInterface interface {
-	GetItem(string, string) (*reader.ItemData, error)
-	ListItems(string) ([]*reader.ItemData, error)
+	GetResource(string, string) (*reader.ItemData, error)
+	ListResources(string) ([]*reader.ItemData, error)
 }
 
 type ccInterface interface {
@@ -39,7 +39,7 @@ type AwsClient struct {
 	ccClient ccInterface
 }
 
-func (ac AwsClient) GetItem(id string, typeName string) (*reader.ItemData, error) {
+func (ac AwsClient) GetResource(id string, typeName string) (*reader.ItemData, error) {
 	input := &cloudcontrol.GetResourceInput{
 		Identifier: &id,
 		TypeName:   &typeName,
@@ -57,7 +57,7 @@ func (ac AwsClient) GetItem(id string, typeName string) (*reader.ItemData, error
 	return output, err
 }
 
-func (ac AwsClient) ListItems(typeName string) ([]*reader.ItemData, error) {
+func (ac AwsClient) ListResources(typeName string) ([]*reader.ItemData, error) {
 	input := &cloudcontrol.ListResourcesInput{
 		TypeName: &typeName,
 	}

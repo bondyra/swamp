@@ -156,3 +156,55 @@ func TestDefinition_Validate(t *testing.T) {
 		})
 	}
 }
+
+func TestDefinition_AllDefinedTypes(t *testing.T) {
+	expected := []string{"Type1", "Type2"}
+	definition := Definition{[]TypeDefinition{
+		{Type: "Type1", IdentifierField: "Identifier1", Alias: "Alias1"},
+		{Type: "Type2", IdentifierField: "Identifier1", Alias: "Alias1"},
+	}}
+
+	got := definition.AllDefinedTypes()
+
+	if !reflect.DeepEqual(got, expected) {
+		t.Errorf("DefaultFactory.AllDefinedTypes() = %v, want %v", got, expected)
+	}
+}
+
+func TestDefinition_GetTypeDefinition(t *testing.T) {
+	td1 := TypeDefinition{Type: "Type1", IdentifierField: "Identifier1", Alias: "Alias1"}
+	td2 := TypeDefinition{Type: "Type2", IdentifierField: "Identifier1", Alias: "Alias1"}
+	d := &Definition{TypeDefinitions: []TypeDefinition{td1, td2}}
+	tests := []struct {
+		name     string
+		itemType string
+		want     *TypeDefinition
+		wantErr  bool
+	}{
+		{
+			name:     "errors when type is not defined",
+			itemType: "UnsupportedType",
+			want:     nil,
+			wantErr:  true,
+		},
+		{
+			name:     "errors when type is not defined",
+			itemType: "Type1",
+			want:     &td1,
+			wantErr:  false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			got, err := d.GetTypeDefinition(tt.itemType)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Definition.GetTypeDefinition() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Definition.GetTypeDefinition() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

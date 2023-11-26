@@ -39,7 +39,7 @@ func (mc mockClient) ListResources(ctx context.Context, input *cloudcontrol.List
 	return &output, mc.listResourcesError
 }
 
-func TestGetItem(t *testing.T) {
+func TestGetResource(t *testing.T) {
 
 	tests := []struct {
 		name               string
@@ -76,7 +76,7 @@ func TestGetItem(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			a := AwsClient{test.mockClient}
 
-			actualProperties, err := a.GetItem("id", "type")
+			actualProperties, err := a.GetResource("id", "type")
 
 			if test.returnsErr {
 				if err == nil {
@@ -95,7 +95,7 @@ func TestGetItem(t *testing.T) {
 	}
 }
 
-func TestListItems(t *testing.T) {
+func TestListResources(t *testing.T) {
 	tests := []struct {
 		name           string
 		mockClient     ccInterface
@@ -137,7 +137,7 @@ func TestListItems(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			a := AwsClient{test.mockClient}
 
-			actualProperties, err := a.ListItems("type")
+			actualProperties, err := a.ListResources("type")
 
 			if test.returnsErr {
 				if err == nil {

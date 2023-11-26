@@ -1,8 +1,6 @@
 package aws
 
 import (
-	"fmt"
-
 	"github.com/bondyra/swamp/internal/aws/client"
 	"github.com/bondyra/swamp/internal/aws/common"
 	"github.com/bondyra/swamp/internal/aws/definition"
@@ -62,27 +60,30 @@ func (ar AwsReader) GetItemTypes() []string {
 	return ar.definition.AllDefinedTypes()
 }
 
-func (ar AwsReader) GetDefaultItemAttributes(itemType string) []string {
-	return ar.definition.GetAtributesForType(itemType, false)
+func (ar AwsReader) GetItems(itemType string, attrs []string, filter reader.Filter, parentContext reader.ParentContext) ([]*reader.ItemData, error) {
+	typeDefinition, err := ar.definition.GetTypeDefinition(itemType)
+	if err != nil {
+		return nil, err
+	}
+	identifiers, err := ar.listIdentifiers(typeDefinition, filter)
+	if err != nil {
+		return nil, err
+	}
+	results := make([]*reader.ItemData, 0)
+	for _, id := range identifiers {
+		item, err := ar.getItem(id, attrs, filter)
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, item)
+	}
+	return results, nil
 }
 
-func (ar AwsReader) GetAllItemAttributes(itemType string) []string {
-	return ar.definition.GetAtributesForType(itemType, true)
-}
-
-func (ar AwsReader) GetItems(itemType string, attrs []string, filter reader.Filter, parentContext reader.ParentContext) ([]reader.ItemData, error) {
-	if !ar.definition.SupportsType(itemType) {
-		return nil, fmt.Errorf("unsupported type: %v", itemType)
-	}
-	if !ar.definition.SupportsAttrs(itemType, attrs) {
-		return nil, fmt.Errorf("type %v does not support some of following attrs: %v", itemType, attrs)
-	}
-	if !ar.definition.SupportsFilter(itemType, filter) {
-		return nil, fmt.Errorf("type %v does not support filter: %v", itemType, filter)
-	}
+func (ar AwsReader) listIdentifiers(typeDefinition *definition.TypeDefinition, filter reader.Filter) ([]string, error) {
 	return nil, nil
 }
 
-func (ar AwsReader) listItems(itemType string) ([]*reader.ItemData, error) {
+func (ar AwsReader) getItem(id string, attrs []string, filter reader.Filter) (*reader.ItemData, error) {
 	return nil, nil
 }
