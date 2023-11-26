@@ -93,7 +93,7 @@ func (ar AwsReader) IsFilterSupported(itemType string, filter reader.Filter) boo
 	return slices.Contains(fields, filter.Attr)
 }
 
-func (ar AwsReader) GetItems(itemType string, profiles []string, attrs []string, filter reader.Filter, parentContext reader.ParentContext) ([]*reader.ItemData, error) {
+func (ar AwsReader) GetItems(itemType string, profiles []string, attrs []string, filter reader.Filter, parentContext reader.ParentContext) ([]*reader.Item, error) {
 	typeDefinition, err := ar.typeDefinition(itemType)
 	if err != nil {
 		return nil, err
@@ -102,7 +102,7 @@ func (ar AwsReader) GetItems(itemType string, profiles []string, attrs []string,
 	if err != nil {
 		return nil, err
 	}
-	results := make([]*reader.ItemData, 0)
+	results := make([]*reader.Item, 0)
 	for _, id := range identifiers {
 		item, err := ar.getItem(id, attrs, filter)
 		if err != nil {
@@ -118,6 +118,6 @@ func (ar AwsReader) listIdentifiers(typeDefinition *definition.TypeDefinition, f
 	return nil, nil
 }
 
-func (ar AwsReader) getItem(id string, attrs []string, filter reader.Filter) (*reader.ItemData, error) {
+func (ar AwsReader) getItem(id string, attrs []string, filter reader.Filter) (*reader.Item, error) {
 	return nil, nil
 }

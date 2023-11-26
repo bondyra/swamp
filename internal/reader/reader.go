@@ -9,7 +9,13 @@ type Filter struct {
 type ParentContext struct{}
 
 type ItemData struct {
+	Identifier string
 	Properties *map[string]string
+}
+
+type Item struct {
+	Profile    string
+	Properties ItemData
 }
 
 type Reader interface {
@@ -21,5 +27,5 @@ type Reader interface {
 	AreAttrsSupported(itemType string, attrs []string) bool
 	IsFilterSupported(itemType string, filter Filter) bool
 
-	GetItems(itemType string, profiles []string, attrs []string, filter Filter, context ParentContext) ([]*ItemData, error)
+	GetItems(itemType string, profiles []string, attrs []string, filter Filter, context ParentContext) ([]*Item, error)
 }

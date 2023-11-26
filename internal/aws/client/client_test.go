@@ -12,6 +12,7 @@ import (
 )
 
 var (
+	dummyId           string = "id"
 	emptyProperties   string = ""
 	someProperties    string = "{\"str\":\"abc\", \"int\":1, \"float\": 1.23, \"bool\": true}"
 	invalidProperties string = "{invalid"
@@ -54,15 +55,15 @@ func TestGetResource(t *testing.T) {
 		{
 			name: "test valid response",
 			mockClient: mockClient{getResourceOutput: &cloudcontrol.GetResourceOutput{
-				ResourceDescription: &cctypes.ResourceDescription{Properties: &someProperties},
+				ResourceDescription: &cctypes.ResourceDescription{Identifier: &dummyId, Properties: &someProperties},
 			}},
-			expectedProperties: &reader.ItemData{Properties: &map[string]string{"str": "abc", "int": "1", "float": "1.23", "bool": "true"}},
+			expectedProperties: &reader.ItemData{Identifier: dummyId, Properties: &map[string]string{"str": "abc", "int": "1", "float": "1.23", "bool": "true"}},
 			returnsErr:         false,
 		},
 		{
 			name: "test empty response",
 			mockClient: mockClient{getResourceOutput: &cloudcontrol.GetResourceOutput{
-				ResourceDescription: &cctypes.ResourceDescription{Properties: &emptyProperties},
+				ResourceDescription: &cctypes.ResourceDescription{Identifier: &dummyId, Properties: &emptyProperties},
 			}},
 			expectedProperties: nil,
 			returnsErr:         true,
@@ -70,7 +71,7 @@ func TestGetResource(t *testing.T) {
 		{
 			name: "test invalid response",
 			mockClient: mockClient{getResourceOutput: &cloudcontrol.GetResourceOutput{
-				ResourceDescription: &cctypes.ResourceDescription{Properties: &invalidProperties},
+				ResourceDescription: &cctypes.ResourceDescription{Identifier: &dummyId, Properties: &invalidProperties},
 			}},
 			expectedProperties: nil,
 			returnsErr:         true,
@@ -116,8 +117,8 @@ func TestListResources(t *testing.T) {
 			name: "test response with empty properties",
 			mockClient: mockClient{listResourcesOutputs: &cloudcontrol.ListResourcesOutput{
 				ResourceDescriptions: []cctypes.ResourceDescription{
-					{Properties: &emptyProperties},
-					{Properties: &emptyProperties},
+					{Identifier: &dummyId, Properties: &emptyProperties},
+					{Identifier: &dummyId, Properties: &emptyProperties},
 				},
 			}},
 			expectedOutput: nil,
@@ -127,8 +128,8 @@ func TestListResources(t *testing.T) {
 			name: "test response with empty properties and valid properties",
 			mockClient: mockClient{listResourcesOutputs: &cloudcontrol.ListResourcesOutput{
 				ResourceDescriptions: []cctypes.ResourceDescription{
-					{Properties: &someProperties},
-					{Properties: &emptyProperties},
+					{Identifier: &dummyId, Properties: &someProperties},
+					{Identifier: &dummyId, Properties: &emptyProperties},
 				},
 			}},
 			expectedOutput: nil,
@@ -144,8 +145,8 @@ func TestListResources(t *testing.T) {
 			name: "test response with invalid properties",
 			mockClient: mockClient{listResourcesOutputs: &cloudcontrol.ListResourcesOutput{
 				ResourceDescriptions: []cctypes.ResourceDescription{
-					{Properties: &someProperties},
-					{Properties: &invalidProperties},
+					{Identifier: &dummyId, Properties: &someProperties},
+					{Identifier: &dummyId, Properties: &invalidProperties},
 				},
 			}},
 			expectedOutput: nil,
@@ -155,13 +156,13 @@ func TestListResources(t *testing.T) {
 			name: "test response with valid properties",
 			mockClient: mockClient{listResourcesOutputs: &cloudcontrol.ListResourcesOutput{
 				ResourceDescriptions: []cctypes.ResourceDescription{
-					{Properties: &someProperties},
-					{Properties: &someProperties},
+					{Identifier: &dummyId, Properties: &someProperties},
+					{Identifier: &dummyId, Properties: &someProperties},
 				},
 			}},
 			expectedOutput: []*reader.ItemData{
-				{Properties: &map[string]string{"str": "abc", "int": "1", "float": "1.23", "bool": "true"}},
-				{Properties: &map[string]string{"str": "abc", "int": "1", "float": "1.23", "bool": "true"}},
+				{Identifier: dummyId, Properties: &map[string]string{"str": "abc", "int": "1", "float": "1.23", "bool": "true"}},
+				{Identifier: dummyId, Properties: &map[string]string{"str": "abc", "int": "1", "float": "1.23", "bool": "true"}},
 			},
 			returnsErr: false,
 		},
