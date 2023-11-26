@@ -18,29 +18,21 @@ var (
 )
 
 type mockClient struct {
-	getResourceProperties   *string
-	getResourceError        error
-	listResourcesProperties []*string
-	listResourcesError      error
+	getResourceOutput    *cloudcontrol.GetResourceOutput
+	getResourceError     error
+	listResourcesOutputs *cloudcontrol.ListResourcesOutput
+	listResourcesError   error
 }
 
 func (mc mockClient) GetResource(ctx context.Context, input *cloudcontrol.GetResourceInput, optFns ...func(*cloudcontrol.Options)) (*cloudcontrol.GetResourceOutput, error) {
-	output := cloudcontrol.GetResourceOutput{
-		ResourceDescription: &cctypes.ResourceDescription{Properties: mc.getResourceProperties},
-	}
-	return &output, mc.getResourceError
+	return mc.getResourceOutput, mc.getResourceError
 }
 
 func (mc mockClient) ListResources(ctx context.Context, input *cloudcontrol.ListResourcesInput, optFns ...func(*cloudcontrol.Options)) (*cloudcontrol.ListResourcesOutput, error) {
-	output := cloudcontrol.ListResourcesOutput{}
-	for _, p := range mc.listResourcesProperties {
-		output.ResourceDescriptions = append(output.ResourceDescriptions, cctypes.ResourceDescription{Properties: p})
-	}
-	return &output, mc.listResourcesError
+	return mc.listResourcesOutputs, mc.listResourcesError
 }
 
 func TestGetResource(t *testing.T) {
-
 	tests := []struct {
 		name               string
 		mockClient         ccInterface
@@ -48,10 +40,10 @@ func TestGetResource(t *testing.T) {
 		returnsErr         bool
 	}{
 		{
-			name:               "test empty response",
-			mockClient:         mockClient{getResourceProperties: &emptyProperties},
-			expectedProperties: &reader.ItemData{Properties: &map[string]string{}},
-			returnsErr:         false,
+			name:               "test nil response",
+			mockClient:         mockClient{},
+			expectedProperties: nil,
+			returnsErr:         true,
 		},
 		{
 			name:               "test error",
@@ -60,14 +52,26 @@ func TestGetResource(t *testing.T) {
 			returnsErr:         true,
 		},
 		{
-			name:               "test valid response",
-			mockClient:         mockClient{getResourceProperties: &someProperties},
+			name: "test valid response",
+			mockClient: mockClient{getResourceOutput: &cloudcontrol.GetResourceOutput{
+				ResourceDescription: &cctypes.ResourceDescription{Properties: &someProperties},
+			}},
 			expectedProperties: &reader.ItemData{Properties: &map[string]string{"str": "abc", "int": "1", "float": "1.23", "bool": "true"}},
 			returnsErr:         false,
 		},
 		{
-			name:               "test invalid response",
-			mockClient:         mockClient{getResourceProperties: &invalidProperties},
+			name: "test empty response",
+			mockClient: mockClient{getResourceOutput: &cloudcontrol.GetResourceOutput{
+				ResourceDescription: &cctypes.ResourceDescription{Properties: &emptyProperties},
+			}},
+			expectedProperties: nil,
+			returnsErr:         true,
+		},
+		{
+			name: "test invalid response",
+			mockClient: mockClient{getResourceOutput: &cloudcontrol.GetResourceOutput{
+				ResourceDescription: &cctypes.ResourceDescription{Properties: &invalidProperties},
+			}},
 			expectedProperties: nil,
 			returnsErr:         true,
 		},
@@ -103,22 +107,32 @@ func TestListResources(t *testing.T) {
 		returnsErr     bool
 	}{
 		{
-			name:           "test empty response",
-			mockClient:     mockClient{},
-			expectedOutput: []*reader.ItemData{},
-			returnsErr:     false,
+			name:           "test nil reponse",
+			mockClient:     mockClient{listResourcesOutputs: nil},
+			expectedOutput: nil,
+			returnsErr:     true,
 		},
 		{
-			name:           "test response with empty properties",
-			mockClient:     mockClient{listResourcesProperties: []*string{&emptyProperties, &emptyProperties}},
-			expectedOutput: []*reader.ItemData{{Properties: &map[string]string{}}, {Properties: &map[string]string{}}},
-			returnsErr:     false,
+			name: "test response with empty properties",
+			mockClient: mockClient{listResourcesOutputs: &cloudcontrol.ListResourcesOutput{
+				ResourceDescriptions: []cctypes.ResourceDescription{
+					{Properties: &emptyProperties},
+					{Properties: &emptyProperties},
+				},
+			}},
+			expectedOutput: nil,
+			returnsErr:     true,
 		},
 		{
-			name:           "test response with empty properties and valid properties",
-			mockClient:     mockClient{listResourcesProperties: []*string{&someProperties, &emptyProperties}},
-			expectedOutput: []*reader.ItemData{{Properties: &map[string]string{"str": "abc", "int": "1", "float": "1.23", "bool": "true"}}, &reader.ItemData{&map[string]string{}}},
-			returnsErr:     false,
+			name: "test response with empty properties and valid properties",
+			mockClient: mockClient{listResourcesOutputs: &cloudcontrol.ListResourcesOutput{
+				ResourceDescriptions: []cctypes.ResourceDescription{
+					{Properties: &someProperties},
+					{Properties: &emptyProperties},
+				},
+			}},
+			expectedOutput: nil,
+			returnsErr:     true,
 		},
 		{
 			name:           "test error",
@@ -127,10 +141,29 @@ func TestListResources(t *testing.T) {
 			returnsErr:     true,
 		},
 		{
-			name:           "test response with invalid properties",
-			mockClient:     mockClient{listResourcesProperties: []*string{&someProperties, &invalidProperties}},
+			name: "test response with invalid properties",
+			mockClient: mockClient{listResourcesOutputs: &cloudcontrol.ListResourcesOutput{
+				ResourceDescriptions: []cctypes.ResourceDescription{
+					{Properties: &someProperties},
+					{Properties: &invalidProperties},
+				},
+			}},
 			expectedOutput: nil,
 			returnsErr:     true,
+		},
+		{
+			name: "test response with valid properties",
+			mockClient: mockClient{listResourcesOutputs: &cloudcontrol.ListResourcesOutput{
+				ResourceDescriptions: []cctypes.ResourceDescription{
+					{Properties: &someProperties},
+					{Properties: &someProperties},
+				},
+			}},
+			expectedOutput: []*reader.ItemData{
+				{Properties: &map[string]string{"str": "abc", "int": "1", "float": "1.23", "bool": "true"}},
+				{Properties: &map[string]string{"str": "abc", "int": "1", "float": "1.23", "bool": "true"}},
+			},
+			returnsErr: false,
 		},
 	}
 	for _, test := range tests {

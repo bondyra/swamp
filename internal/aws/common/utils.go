@@ -2,6 +2,7 @@ package common
 
 import (
 	"encoding/json"
+	"errors"
 )
 
 func Union(inputs ...[]string) []string {
@@ -71,6 +72,9 @@ func Difference(minuend []string, subtrahends ...[]string) []string {
 }
 
 func Map[T, S any](a []T, f func(T) S) []S {
+	if a == nil {
+		return nil
+	}
 	b := make([]S, len(a))
 	for i := range a {
 		b[i] = f(a[i])
@@ -81,7 +85,7 @@ func Map[T, S any](a []T, f func(T) S) []S {
 func Unmarshal[T any](input []byte) (*T, error) {
 	var output T
 	if len(input) == 0 {
-		return &output, nil
+		return nil, errors.New("cannot unmarshal empty input")
 	}
 	err := json.Unmarshal([]byte(input), &output)
 	if err != nil {

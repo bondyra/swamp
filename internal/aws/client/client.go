@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -45,12 +46,15 @@ func (ac AwsClient) GetResource(id string, typeName string) (*reader.ItemData, e
 		TypeName:   &typeName,
 	}
 
-	response, err := ac.ccClient.GetResource(context.TODO(), input)
+	resp, err := ac.ccClient.GetResource(context.TODO(), input)
 	if err != nil {
 		return nil, err
 	}
+	if resp == nil {
+		return nil, errors.New("unexpected null ListResources response")
+	}
 
-	output, err := ac.processResponse(*response.ResourceDescription.Properties)
+	output, err := ac.processResponse(*resp.ResourceDescription.Properties)
 	if err != nil {
 		return nil, err
 	}
@@ -65,6 +69,9 @@ func (ac AwsClient) ListResources(typeName string) ([]*reader.ItemData, error) {
 	resp, err := ac.ccClient.ListResources(context.TODO(), input)
 	if err != nil {
 		return nil, err
+	}
+	if resp == nil {
+		return nil, errors.New("unexpected null ListResources response")
 	}
 
 	outputs := make([]*reader.ItemData, 0)

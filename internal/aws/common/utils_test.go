@@ -20,11 +20,38 @@ func TestUnion(t *testing.T) {
 		args args
 		want []string
 	}{
-		// TODO: Add test cases.
+		{
+			name: "test nil",
+			args: args{lst(nil, nil)},
+			want: []string{},
+		},
+		{
+			name: "test empty",
+			args: args{inputs: lst([]string{}, []string{}, []string{})},
+			want: []string{},
+		},
+		{
+			name: "test some plus empty",
+			args: args{inputs: lst([]string{"a", "b"}, []string{}, []string{})},
+			want: []string{"a", "b"},
+		},
+		{
+			name: "test some plus some",
+			args: args{inputs: lst([]string{"a", "b"}, []string{"c"}, []string{"d"})},
+			want: []string{"a", "b", "c", "d"},
+		},
+		{
+			name: "test some plus some overlapping",
+			args: args{inputs: lst([]string{"a", "b"}, []string{"c", "d"}, []string{"d"})},
+			want: []string{"a", "b", "c", "d"},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := Union(tt.args.inputs...); !reflect.DeepEqual(got, tt.want) {
+			got := Union(tt.args.inputs...)
+			slices.Sort(got)
+			slices.Sort(tt.want)
+			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Union() = %v, want %v", got, tt.want)
 			}
 		})
@@ -40,11 +67,28 @@ func TestDuplicatedElements(t *testing.T) {
 		args args
 		want []string
 	}{
-		// TODO: Add test cases.
+		{
+			name: "test nil",
+			args: args{nil},
+			want: []string{},
+		},
+		{
+			name: "test returns nothing when unique",
+			args: args{input: []string{"a", "b"}},
+			want: []string{},
+		},
+		{
+			name: "test duplicates",
+			args: args{input: []string{"a", "b", "c", "a", "b"}},
+			want: []string{"a", "b"},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := DuplicatedElements(tt.args.input); !reflect.DeepEqual(got, tt.want) {
+			got := DuplicatedElements(tt.args.input)
+			slices.Sort(got)
+			slices.Sort(tt.want)
+			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("DuplicatedElements() = %v, want %v", got, tt.want)
 			}
 		})
@@ -60,11 +104,38 @@ func TestIntersect(t *testing.T) {
 		args args
 		want []string
 	}{
-		// TODO: Add test cases.
+		{
+			name: "test nil",
+			args: args{lst(nil, nil)},
+			want: []string{},
+		},
+		{
+			name: "test empty",
+			args: args{inputs: lst([]string{}, []string{}, []string{})},
+			want: []string{},
+		},
+		{
+			name: "test no intersection",
+			args: args{inputs: lst([]string{"a", "b"}, []string{"c"}, []string{"d"})},
+			want: []string{},
+		},
+		{
+			name: "test no intersection when common element is not in every input",
+			args: args{inputs: lst([]string{"a", "b"}, []string{"c", "d"}, []string{"d"})},
+			want: []string{},
+		},
+		{
+			name: "test actual intersection",
+			args: args{inputs: lst([]string{"a", "c", "b", "d"}, []string{"c", "d"}, []string{"d", "c", "b", "e"})},
+			want: []string{"c", "d"},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := Intersect(tt.args.inputs...); !reflect.DeepEqual(got, tt.want) {
+			got := Intersect(tt.args.inputs...)
+			slices.Sort(got)
+			slices.Sort(tt.want)
+			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Intersect() = %v, want %v", got, tt.want)
 			}
 		})
@@ -82,6 +153,11 @@ func TestDifference(t *testing.T) {
 		args args
 		want []string
 	}{
+		{
+			name: "test nil",
+			args: args{s{}, lst(nil, nil)},
+			want: s{},
+		},
 		{
 			name: "test empty",
 			args: args{s{}, lst(s{}, s{})},
@@ -123,7 +199,6 @@ func TestDifference(t *testing.T) {
 			got := Difference(tt.args.minuend, tt.args.subtrahends...)
 			slices.Sort(tt.want)
 			slices.Sort(got)
-
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Difference() = %v, want %v", got, tt.want)
 			}
@@ -145,11 +220,26 @@ func TestMap(t *testing.T) {
 		args args
 		want []string
 	}{
-		// TODO: Add test cases.
+		{
+			name: "test nil",
+			args: args{a: nil, f: func(s something) string { return s.a }},
+			want: nil,
+		},
+		{
+			name: "test empty",
+			args: args{a: []something{}, f: func(s something) string { return s.a }},
+			want: make([]string, 0),
+		},
+		{
+			name: "test actual map",
+			args: args{a: []something{{a: "a", b: 1}, {a: "b", b: 2}}, f: func(s something) string { return s.a }},
+			want: []string{"a", "b"},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := Map(tt.args.a, tt.args.f); !reflect.DeepEqual(got, tt.want) {
+			got := Map(tt.args.a, tt.args.f)
+			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Map() = %v, want %v", got, tt.want)
 			}
 		})
@@ -157,20 +247,53 @@ func TestMap(t *testing.T) {
 }
 
 func TestUnmarshal(t *testing.T) {
+	type testStruct struct {
+		A string `json:"a"`
+		B int    `json:"b,omitempty"`
+	}
 	type args struct {
 		input []byte
 	}
 	tests := []struct {
 		name    string
 		args    args
-		want    string
+		want    *testStruct
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		{
+			name:    "test nil",
+			args:    args{nil},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name:    "test empty",
+			args:    args{[]byte("")},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name:    "test invalid",
+			args:    args{[]byte("{invalid json")},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name:    "test required",
+			args:    args{[]byte("{\"a\":\"a\"}")},
+			want:    &testStruct{A: "a"},
+			wantErr: false,
+		},
+		{
+			name:    "test full",
+			args:    args{[]byte("{\"a\":\"a\", \"b\":1}")},
+			want:    &testStruct{A: "a", B: 1},
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := Unmarshal[string](tt.args.input)
+			got, err := Unmarshal[testStruct](tt.args.input)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Unmarshal() error = %v, wantErr %v", err, tt.wantErr)
 				return
