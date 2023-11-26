@@ -1,13 +1,14 @@
 package handler
 
 import (
-	"strings"
+	"fmt"
 
-	"github.com/bondyra/wtf/internal/config"
+	"github.com/alecthomas/participle/v2"
+	"github.com/alecthomas/participle/v2/lexer"
 )
 
 type Handler interface {
-	Execute(c config.Config)
+	Execute()
 }
 
 type ConfigHandler struct {
@@ -18,10 +19,54 @@ type QueryHandler struct {
 	Query string
 }
 
-func (d ConfigHandler) Execute(c config.Config) {
-	println("config -" + strings.Join(d.Args, "+"))
+type AST struct {
+	Profiles   Collection `( "in" @@)?`
+	Entitities []Entity   `@@*`
 }
 
-func (q QueryHandler) Execute(c config.Config) {
-	println("query -" + q.Query)
+type Collection struct {
+	All      bool     `  @"*"`
+	Elements []string `| @Ident ( "," @Ident )*`
+}
+
+type Entity struct {
+	Item Item `  ( "item" @@)`
+	Link Link `| ( "link" @@)`
+}
+
+type Item struct {
+	Type      []string   `@Ident ( "." @Ident )*`
+	Alias     string     `@Ident`
+	Modifiers []Modifier `(@@)*`
+}
+
+type Link struct {
+	From string `@Ident`
+	To   string `@Ident`
+}
+
+type Modifier struct {
+	Set       Collection `"attr" @@`
+	Add       Collection `| "add" @@`
+	Sub       Collection `| "sub" @@`
+	SearchMod string     `| "where" @GoCode`
+}
+
+func (q QueryHandler) Execute() {
+	ast, _ := fmt.Println(parse(q.Query))
+	fmt.Println(ast)
+}
+
+func parse(input string) (*AST, error) {
+	var lexer = lexer.MustSimple([]lexer.SimpleRule{
+		{`GoCode`, `{[^}]+}`},
+		{`Ident`, `[a-zA-Z_][a-zA-Z0-9_]*`},
+		{"Punct", `[-[!@#$%^&*()+_=\|:;<,>.?/]|]`},
+		{"whitespace", `\s+`},
+	})
+	var parser = participle.MustBuild[AST](
+		participle.Lexer(lexer),
+		participle.Unquote("GoCode"),
+	)
+	return parser.ParseString("", input)
 }

@@ -1,0 +1,40 @@
+
+	// message := NewMessage()
+	// greeter := NewGreeter(message)
+	// event := NewEvent(greeter)
+
+	// event.Start()
+
+	/*
+		wtf in aws-profile-1, aws-profile-2 with vpc / vpc attrs name, tags add subnet
+		/ subnet attrs name add ec2 elb igw rtb
+	*/
+	// PARSE
+	// convert .Query into an intermediary tree using command, service config and config
+	// generic "Parser", which also validates the syntax obviously
+	// VALIDATION
+	// this step traverses the tree and sees if all directives can be fulfilled, consulting this with plugins
+	// outputs parsed tree
+	// COLLECT
+	// this step traverses the tree and:
+	// - translates sentences to plugin API calls, shrinks them as much as possible
+	// - efficiently (least calls as possible + in parallel) gathers data by invoking plugins, caches it or not (song of future)
+	// outputs full tree
+	// OUTPUT
+	// full tree is shrinked down to parsed tree requirements
+	// outputs result JSON with formal schema
+	// VISUALIZE (optional, true by default)
+	// result is converted to graphviz, new html page is displayed (or just an svg file?)
+
+	// WTF_CONFIG:
+	// - defines profiles (wtf in <profiles>) - profile has name, plugin name, required credentials
+	// - defines default resource plugin (e.g. "aws") - so you dont need to write aws.vpc but just vpc
+	// - defines command defaults (e.g. always reload, use cache - song of future)
+	// PLUGIN:
+	// externally instalable go module with implemented API
+	// interface probably be like:
+	// - Attrs() - return attribute names and its aliases can be specified in query
+	// - Addable() - return resources and its aliases that can be added
+	// - Pull(RESOURCE, ATTRIBUTES, FILTER, [PARENT]) - pulls the given resource with some attributes and some filter and an optional parent resource for better context
+	// - Resources() - lists supported resources and its aliases
+	// - Name() - returns plugin name, such as "aws"
