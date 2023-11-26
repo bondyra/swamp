@@ -23,14 +23,7 @@ func (mpp mockProfileProvider) ProvideProfiles(paths ...string) ([]string, error
 	return mpp.output.profiles, mpp.output.err
 }
 
-type mockAwsFactoryOutput struct {
-	client client.AwsClientInterface
-	err    error
-}
-
-type mockAwsFactory struct {
-	output mockAwsFactoryOutput
-}
+type mockAwsFactory struct{}
 
 func (maf mockAwsFactory) NewPool(profiles []string, factory client.ClientFactory) (client.Pool, error) {
 	return nil, nil
@@ -64,8 +57,6 @@ func TestNewReader(t *testing.T) {
 		name                                 string
 		profileProviderProvideProfilesOutput []string
 		profileProviderProvideProfilesError  error
-		awsFactoryNewClientOutput            client.AwsClientInterface
-		awsFactoryNewClientError             error
 		defFactoryFromFileOutput             *definition.Definition
 		defFactoryFromFileError              error
 		wantErr                              bool
@@ -74,8 +65,6 @@ func TestNewReader(t *testing.T) {
 			name:                                 "test no errors",
 			profileProviderProvideProfilesOutput: []string{"p1", "p2"},
 			profileProviderProvideProfilesError:  nil,
-			awsFactoryNewClientOutput:            mockAwsClient{},
-			awsFactoryNewClientError:             nil,
 			defFactoryFromFileOutput:             &definition.Definition{},
 			defFactoryFromFileError:              nil,
 			wantErr:                              false,
@@ -84,8 +73,6 @@ func TestNewReader(t *testing.T) {
 			name:                                 "test profile provider error causes error",
 			profileProviderProvideProfilesOutput: []string{"p1", "p2"},
 			profileProviderProvideProfilesError:  errors.New("some error"),
-			awsFactoryNewClientOutput:            mockAwsClient{},
-			awsFactoryNewClientError:             nil,
 			defFactoryFromFileOutput:             &definition.Definition{},
 			defFactoryFromFileError:              nil,
 			wantErr:                              true,
@@ -94,8 +81,6 @@ func TestNewReader(t *testing.T) {
 			name:                                 "test definition factory error causes error",
 			profileProviderProvideProfilesOutput: []string{"p1", "p2"},
 			profileProviderProvideProfilesError:  nil,
-			awsFactoryNewClientOutput:            mockAwsClient{},
-			awsFactoryNewClientError:             nil,
 			defFactoryFromFileOutput:             &definition.Definition{},
 			defFactoryFromFileError:              errors.New("some error"),
 			wantErr:                              true,
@@ -104,8 +89,6 @@ func TestNewReader(t *testing.T) {
 			name:                                 "test aws factory error does not cause errors", // it is for lazy use
 			profileProviderProvideProfilesOutput: []string{"p1", "p2"},
 			profileProviderProvideProfilesError:  nil,
-			awsFactoryNewClientOutput:            mockAwsClient{},
-			awsFactoryNewClientError:             errors.New("some error"),
 			defFactoryFromFileOutput:             &definition.Definition{},
 			defFactoryFromFileError:              nil,
 			wantErr:                              false,
@@ -114,7 +97,7 @@ func TestNewReader(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			profileProvider := mockProfileProvider{mockProfileProviderOutput{tt.profileProviderProvideProfilesOutput, tt.profileProviderProvideProfilesError}}
-			awsFactory := mockAwsFactory{mockAwsFactoryOutput{tt.awsFactoryNewClientOutput, tt.awsFactoryNewClientError}}
+			awsFactory := mockAwsFactory{}
 			defFactory := mockDefFactory{mockDefFactoryOutput{tt.defFactoryFromFileOutput, tt.defFactoryFromFileError}}
 
 			got, err := NewReader(profileProvider, awsFactory, defFactory, []string{})

@@ -51,7 +51,7 @@ func (ac *AwsClient) GetResource(id string, typeName string) (*reader.ItemData, 
 		return nil, err
 	}
 	if resp == nil {
-		return nil, errors.New("unexpected null cc ListResources response")
+		return nil, errors.New("unexpected null cc GetResource response")
 	}
 
 	props, err := ac.parseProperties(*resp.ResourceDescription.Properties)

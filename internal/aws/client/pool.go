@@ -27,7 +27,7 @@ func (lpf LazyPoolFactory) NewPool(profiles []string, factory ClientFactory) (Po
 	for _, p := range profiles {
 		clients[p] = nil
 	}
-	return LazyPool{clients, factory}, nil
+	return LazyPool{clients, DefaultClientFactory{}}, nil
 }
 
 func (lp LazyPool) GetResource(profiles []string, id string, typeName string) ([]*reader.Item, error) {
@@ -37,7 +37,9 @@ func (lp LazyPool) GetResource(profiles []string, id string, typeName string) ([
 		if err != nil {
 			return nil, err
 		}
-		results = append(results, it)
+		if it != nil {
+			results = append(results, it)
+		}
 	}
 	return results, nil
 }
@@ -61,7 +63,9 @@ func (lp LazyPool) getResourceSingle(profile string, id string, typeName string)
 	}
 	resp, err := client.GetResource(id, typeName)
 	if err != nil {
-		return nil, err
+		// todo: differentiate between not found and others
+		// todo: add debug logging
+		return nil, nil
 	}
 	return &reader.Item{Profile: profile, Data: resp}, nil
 }
@@ -73,9 +77,11 @@ func (lp LazyPool) listResourcesSingle(profile string, typeName string) ([]*read
 	}
 	resp, err := client.ListResources(typeName)
 	if err != nil {
-		return nil, err
+		// todo: differentiate between not found and others
+		// todo: add debug logging
+		return []*reader.Item{}, nil
 	}
-	results := make([]*reader.Item, len(resp))
+	results := make([]*reader.Item, 0)
 	for _, r := range resp {
 		results = append(results, &reader.Item{Profile: profile, Data: r})
 	}
@@ -94,5 +100,5 @@ func (lp LazyPool) getClient(profile string) (AwsClientInterface, error) {
 		}
 		lp.clients[profile] = newClient
 	}
-	return client, nil
+	return lp.clients[profile], nil
 }

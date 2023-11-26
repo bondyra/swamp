@@ -18,43 +18,43 @@ var (
 	invalidProperties string = "{invalid"
 )
 
-type mockClient struct {
+type mockccClient struct {
 	getResourceOutput    *cloudcontrol.GetResourceOutput
 	getResourceError     error
 	listResourcesOutputs *cloudcontrol.ListResourcesOutput
 	listResourcesError   error
 }
 
-func (mc mockClient) GetResource(ctx context.Context, input *cloudcontrol.GetResourceInput, optFns ...func(*cloudcontrol.Options)) (*cloudcontrol.GetResourceOutput, error) {
+func (mc mockccClient) GetResource(ctx context.Context, input *cloudcontrol.GetResourceInput, optFns ...func(*cloudcontrol.Options)) (*cloudcontrol.GetResourceOutput, error) {
 	return mc.getResourceOutput, mc.getResourceError
 }
 
-func (mc mockClient) ListResources(ctx context.Context, input *cloudcontrol.ListResourcesInput, optFns ...func(*cloudcontrol.Options)) (*cloudcontrol.ListResourcesOutput, error) {
+func (mc mockccClient) ListResources(ctx context.Context, input *cloudcontrol.ListResourcesInput, optFns ...func(*cloudcontrol.Options)) (*cloudcontrol.ListResourcesOutput, error) {
 	return mc.listResourcesOutputs, mc.listResourcesError
 }
 
 func TestGetResource(t *testing.T) {
 	tests := []struct {
 		name               string
-		mockClient         ccInterface
+		mockccClient       ccInterface
 		expectedProperties *reader.ItemData
 		returnsErr         bool
 	}{
 		{
 			name:               "test nil response",
-			mockClient:         mockClient{},
+			mockccClient:       mockccClient{},
 			expectedProperties: nil,
 			returnsErr:         true,
 		},
 		{
 			name:               "test error",
-			mockClient:         mockClient{getResourceError: errors.New("some error")},
+			mockccClient:       mockccClient{getResourceError: errors.New("some error")},
 			expectedProperties: nil,
 			returnsErr:         true,
 		},
 		{
 			name: "test valid response",
-			mockClient: mockClient{getResourceOutput: &cloudcontrol.GetResourceOutput{
+			mockccClient: mockccClient{getResourceOutput: &cloudcontrol.GetResourceOutput{
 				ResourceDescription: &cctypes.ResourceDescription{Identifier: &dummyId, Properties: &someProperties},
 			}},
 			expectedProperties: &reader.ItemData{Identifier: dummyId, Properties: &map[string]string{"str": "abc", "int": "1", "float": "1.23", "bool": "true"}},
@@ -62,7 +62,7 @@ func TestGetResource(t *testing.T) {
 		},
 		{
 			name: "test empty response",
-			mockClient: mockClient{getResourceOutput: &cloudcontrol.GetResourceOutput{
+			mockccClient: mockccClient{getResourceOutput: &cloudcontrol.GetResourceOutput{
 				ResourceDescription: &cctypes.ResourceDescription{Identifier: &dummyId, Properties: &emptyProperties},
 			}},
 			expectedProperties: nil,
@@ -70,7 +70,7 @@ func TestGetResource(t *testing.T) {
 		},
 		{
 			name: "test invalid response",
-			mockClient: mockClient{getResourceOutput: &cloudcontrol.GetResourceOutput{
+			mockccClient: mockccClient{getResourceOutput: &cloudcontrol.GetResourceOutput{
 				ResourceDescription: &cctypes.ResourceDescription{Identifier: &dummyId, Properties: &invalidProperties},
 			}},
 			expectedProperties: nil,
@@ -79,7 +79,7 @@ func TestGetResource(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			a := AwsClient{test.mockClient}
+			a := AwsClient{test.mockccClient}
 
 			actualProperties, err := a.GetResource("id", "type")
 
@@ -103,19 +103,19 @@ func TestGetResource(t *testing.T) {
 func TestListResources(t *testing.T) {
 	tests := []struct {
 		name           string
-		mockClient     ccInterface
+		mockccClient   ccInterface
 		expectedOutput []*reader.ItemData
 		returnsErr     bool
 	}{
 		{
 			name:           "test nil reponse",
-			mockClient:     mockClient{listResourcesOutputs: nil},
+			mockccClient:   mockccClient{listResourcesOutputs: nil},
 			expectedOutput: nil,
 			returnsErr:     true,
 		},
 		{
 			name: "test response with empty properties",
-			mockClient: mockClient{listResourcesOutputs: &cloudcontrol.ListResourcesOutput{
+			mockccClient: mockccClient{listResourcesOutputs: &cloudcontrol.ListResourcesOutput{
 				ResourceDescriptions: []cctypes.ResourceDescription{
 					{Identifier: &dummyId, Properties: &emptyProperties},
 					{Identifier: &dummyId, Properties: &emptyProperties},
@@ -126,7 +126,7 @@ func TestListResources(t *testing.T) {
 		},
 		{
 			name: "test response with empty properties and valid properties",
-			mockClient: mockClient{listResourcesOutputs: &cloudcontrol.ListResourcesOutput{
+			mockccClient: mockccClient{listResourcesOutputs: &cloudcontrol.ListResourcesOutput{
 				ResourceDescriptions: []cctypes.ResourceDescription{
 					{Identifier: &dummyId, Properties: &someProperties},
 					{Identifier: &dummyId, Properties: &emptyProperties},
@@ -137,13 +137,13 @@ func TestListResources(t *testing.T) {
 		},
 		{
 			name:           "test error",
-			mockClient:     mockClient{listResourcesError: errors.New("some error")},
+			mockccClient:   mockccClient{listResourcesError: errors.New("some error")},
 			expectedOutput: nil,
 			returnsErr:     true,
 		},
 		{
 			name: "test response with invalid properties",
-			mockClient: mockClient{listResourcesOutputs: &cloudcontrol.ListResourcesOutput{
+			mockccClient: mockccClient{listResourcesOutputs: &cloudcontrol.ListResourcesOutput{
 				ResourceDescriptions: []cctypes.ResourceDescription{
 					{Identifier: &dummyId, Properties: &someProperties},
 					{Identifier: &dummyId, Properties: &invalidProperties},
@@ -154,7 +154,7 @@ func TestListResources(t *testing.T) {
 		},
 		{
 			name: "test response with valid properties",
-			mockClient: mockClient{listResourcesOutputs: &cloudcontrol.ListResourcesOutput{
+			mockccClient: mockccClient{listResourcesOutputs: &cloudcontrol.ListResourcesOutput{
 				ResourceDescriptions: []cctypes.ResourceDescription{
 					{Identifier: &dummyId, Properties: &someProperties},
 					{Identifier: &dummyId, Properties: &someProperties},
@@ -169,7 +169,7 @@ func TestListResources(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			a := AwsClient{test.mockClient}
+			a := AwsClient{test.mockccClient}
 
 			actualProperties, err := a.ListResources("type")
 
