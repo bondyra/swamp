@@ -123,7 +123,7 @@ func (ar AwsReader) GetItems(itemType string, profiles []string, attrs []string,
 }
 
 func (ar AwsReader) listBaseItemsForEachProfile(profiles []string, itemType string) ([]*reader.Item, error) {
-	results := make([]*reader.Item, 0)
+	results := []*reader.Item{}
 	for _, p := range profiles {
 		r, err := ar.pool.ListResources(p, itemType)
 		if err != nil {

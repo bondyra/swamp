@@ -18,6 +18,7 @@ type DefaultClientFactory struct {
 }
 
 func (dcf DefaultClientFactory) NewClient(profile string) (AwsClientInterface, error) {
+	// todo test coverage for aws client
 	context := context.TODO()
 	cfg, err := config.LoadDefaultConfig(context, config.WithSharedConfigProfile(profile))
 	if err != nil {
