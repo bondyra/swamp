@@ -39,7 +39,7 @@ func TestReadConfigAsString(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			tempFile, _ := os.CreateTemp(".", strings.Replace(test.name, " ", "-", -1))
 			tempFile.Write([]byte(test.inputContent))
-			dacr := DefaultAwsConfigReader{}
+			dacr := AwsConfigReader{}
 
 			content, err := dacr.ReadConfigAsString(tempFile.Name())
 
@@ -56,7 +56,7 @@ func TestReadConfigAsString(t *testing.T) {
 	}
 }
 func TestReadConfigAsStringForNonExistentFile(t *testing.T) {
-	dacr := DefaultAwsConfigReader{}
+	dacr := AwsConfigReader{}
 
 	content, err := dacr.ReadConfigAsString("path")
 
@@ -139,7 +139,7 @@ func TestProvideProfiles(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 
-			dapp := DefaultAwsProfileProvider{awsConfigReader: MockConfigReader{content: test.configContent}}
+			dapp := DefaultProfileProvider{configReader: MockConfigReader{content: test.configContent}}
 
 			profiles, err := dapp.ProvideProfiles("path")
 
