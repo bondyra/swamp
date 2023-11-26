@@ -1,4 +1,4 @@
-package handler
+package parser
 
 import (
 	"testing"
@@ -6,7 +6,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-func TestParse(t *testing.T) {
+func TestParseString(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    string
@@ -25,7 +25,7 @@ func TestParse(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			actual, err := parse(test.input)
+			actual, err := ParseString(test.input)
 			if err != nil {
 				t.Fatalf("unexpected error when parsing %v: %v", test.input, err)
 			}

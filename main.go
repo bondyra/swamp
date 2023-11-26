@@ -1,11 +1,18 @@
 package main
 
 import (
+	"log"
 	"os"
+	"strings"
 
-	"github.com/bondyra/wtf/internal/command"
+	"github.com/bondyra/wtf/internal/parser"
 )
 
 func main() {
-	command.Execute(os.Args[1:])
+	query := strings.Join(os.Args[1:], " ")
+	ast, err := parser.ParseString(query)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("%v", ast)
 }

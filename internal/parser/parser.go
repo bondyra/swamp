@@ -1,23 +1,9 @@
-package handler
+package parser
 
 import (
-	"fmt"
-
 	"github.com/alecthomas/participle/v2"
 	"github.com/alecthomas/participle/v2/lexer"
 )
-
-type Handler interface {
-	Execute()
-}
-
-type ConfigHandler struct {
-	Args []string
-}
-
-type QueryHandler struct {
-	Query string
-}
 
 type AST struct {
 	Profiles   Collection `( "in" @@)?`
@@ -52,12 +38,11 @@ type Modifier struct {
 	SearchMod string     `| "where" @GoCode`
 }
 
-func (q QueryHandler) Execute() {
-	ast, _ := fmt.Println(parse(q.Query))
-	fmt.Println(ast)
+func ParseString(input string) (*AST, error) {
+	return parseString(input)
 }
 
-func parse(input string) (*AST, error) {
+func parseString(input string) (*AST, error) {
 	var lexer = lexer.MustSimple([]lexer.SimpleRule{
 		{`GoCode`, `{[^}]+}`},
 		{`Ident`, `[a-zA-Z_][a-zA-Z0-9_]*`},
