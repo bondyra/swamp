@@ -5,6 +5,13 @@ import (
 	"github.com/alecthomas/participle/v2/lexer"
 )
 
+type Boolean bool
+
+func (b *Boolean) Capture(values []string) error {
+	*b = values[0] == "true"
+	return nil
+}
+
 type AST struct {
 	Profiles   Collection `( "in" @@)?`
 	Entitities []Entity   `@@*`
@@ -56,7 +63,20 @@ type SubModifier struct {
 func (f SubModifier) value() {}
 
 type SearchModifier struct {
-	Value string `"where" @GoCode`
+	Value SearchExpression `"where" @@`
+}
+
+type SearchExpression struct {
+	Attr  string      `@Ident`
+	Op    string      `@("eq"|"ne")`
+	Value SearchValue `@@`
+}
+
+type SearchValue struct {
+	Number  float64 ` @Number`
+	String  string  ` | @String`
+	Boolean Boolean ` | @("true" | "false")`
+	Null    bool    ` | @("nil" | "null")`
 }
 
 func (f SearchModifier) value() {}
@@ -72,14 +92,14 @@ func ParseString(input string) (*AST, error) {
 
 func parseString(input string) (*AST, error) {
 	var lexer = lexer.MustSimple([]lexer.SimpleRule{
-		{`GoCode`, `{[^}]+}`},
 		{`Ident`, `[a-zA-Z_][a-zA-Z0-9_]*`},
-		{"Punct", `[-[!@#$%^&*()+_=\|:;<,>.?/]|]`},
+		{`Number`, `[-+]?\d*\.?\d+([eE][-+]?\d+)?`},
+		{`String`, `'[^']*'|"[^"]*"`},
+		{"Punct", `[-[@#$%^&*()+_\|:;,.?/]|]`},
 		{"whitespace", `\s+`},
 	})
 	var parser = participle.MustBuild[AST](
 		participle.Lexer(lexer),
-		participle.Unquote("GoCode"),
 		participle.Union[Modifier](SetModifier{}, SubModifier{}, AddModifier{}, SearchModifier{}),
 		participle.Union[Entity](ItemEntity{}, LinkEntity{}),
 	)

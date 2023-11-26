@@ -1,0 +1,36 @@
+- type: AWS::EC2::VPC
+  identifierField: VpcId
+  abbr: vpc
+  parents: []
+  attrs:
+  - field: "CidrBlock"
+  - field: "EnableDnsHostnames"
+  - field: "EnableDnsSupport"
+  - field: "InstanceTenancy"
+  - field: "Ipv4IpamPoolId"
+  - field: "Ipv4NetmaskLength"
+  - field: "Tags"
+- type: AWS::EC2::Subnet
+  abbr: subnet
+  parents:
+  - type: AWS::EC2::VPC
+    linkType: inline
+    links:
+    - parentField: VpcId
+      field: VpcId
+  attrs:
+  - field: "AssignIpv6AddressOnCreation"
+  - field: "AvailabilityZone"
+  - field: "AvailabilityZoneId"
+  - field: "CidrBlock"
+  - field: "EnableDns64"
+  - field: "Ipv4NetmaskLength"
+  - field: "Ipv6CidrBlock"
+  - field: "Ipv6Native"
+  - field: "Ipv6NetmaskLength"
+  - field: "MapPublicIpOnLaunch"
+  - field: "OutpostArn"
+  - field: "PrivateDnsNameOptionsOnLaunch"
+  - field: "Tags"
+  - field: "VpcId"
+  

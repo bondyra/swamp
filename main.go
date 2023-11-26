@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/bondyra/wtf/internal/parser"
+	"github.com/bondyra/swamp/internal/parser"
 )
 
 func main() {

@@ -1,4 +1,4 @@
-module github.com/bondyra/wtf
+module github.com/bondyra/swamp
 
 go 1.19
 

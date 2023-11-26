@@ -1,6 +1,6 @@
 package aws
 
-import "github.com/bondyra/wtf/internal/reader"
+import "github.com/bondyra/swamp/internal/reader"
 
 func NewReader(awsCredentialsPath string, awsConfigPath string) (*AwsReader, error) {
 	provider := DefaultProfileProvider{configReader: AwsConfigReader{}}
