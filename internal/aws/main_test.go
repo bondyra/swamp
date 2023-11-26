@@ -20,16 +20,6 @@ var (
 	}
 )
 
-func TestGetPath(t *testing.T) {
-	dacr := DefaultAwsConfigReader{path: "path"}
-
-	actualPath := dacr.GetPath()
-
-	if !cmp.Equal(dacr.path, actualPath) {
-		t.Errorf("expected:\n%v\ngot:\n%v", dacr.path, actualPath)
-	}
-}
-
 func TestReadConfigAsString(t *testing.T) {
 	tests := []struct {
 		name         string
@@ -49,9 +39,9 @@ func TestReadConfigAsString(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			tempFile, _ := os.CreateTemp(".", strings.Replace(test.name, " ", "-", -1))
 			tempFile.Write([]byte(test.inputContent))
-			dacr := DefaultAwsConfigReader{path: tempFile.Name()}
+			dacr := DefaultAwsConfigReader{}
 
-			content, err := dacr.ReadConfigAsString()
+			content, err := dacr.ReadConfigAsString(tempFile.Name())
 
 			if !cmp.Equal(test.inputContent, content) {
 				t.Errorf("%s expected:\n%v\ngot:\n%v", test.name, test.inputContent, content)
@@ -66,9 +56,9 @@ func TestReadConfigAsString(t *testing.T) {
 	}
 }
 func TestReadConfigAsStringForNonExistentFile(t *testing.T) {
-	dacr := DefaultAwsConfigReader{path: "path"}
+	dacr := DefaultAwsConfigReader{}
 
-	content, err := dacr.ReadConfigAsString()
+	content, err := dacr.ReadConfigAsString("path")
 
 	if content != "" {
 		t.Errorf("expected: NOTHING\ngot:\n%v", content)
@@ -82,11 +72,7 @@ type MockConfigReader struct {
 	content string
 }
 
-func (mcr MockConfigReader) GetPath() string {
-	return "mock"
-}
-
-func (mcr MockConfigReader) ReadConfigAsString() (string, error) {
+func (mcr MockConfigReader) ReadConfigAsString(path string) (string, error) {
 	return mcr.content, nil
 }
 
@@ -100,7 +86,6 @@ func TestProvideProfiles(t *testing.T) {
 		{
 			name:             "test nothing",
 			configContent:    "",
-			configRegex:      *awsConfigRegex,
 			expectedProfiles: []string{},
 		},
 		{
@@ -112,8 +97,18 @@ func TestProvideProfiles(t *testing.T) {
 			c
 			d
 			`,
-			configRegex:      *awsConfigRegex,
 			expectedProfiles: []string{"default"},
+		},
+		{
+			name: "test custom profile only",
+			configContent: `
+			[profile p1]
+			a
+			b
+			c
+			d
+			`,
+			expectedProfiles: []string{"p1"},
 		},
 		{
 			name: "test default and custom one",
@@ -125,16 +120,28 @@ func TestProvideProfiles(t *testing.T) {
 			c
 			d
 			`,
-			configRegex:      *awsConfigRegex,
 			expectedProfiles: []string{"default", "p1"},
-		}, // TODO
+		},
+		{
+			name: "test default and custom two",
+			configContent: `
+			[default]
+			a
+			b
+			[p1]
+			c
+			[profile abc]
+			d
+			`,
+			expectedProfiles: []string{"default", "p1", "abc"},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 
-			dapp := DefaultAwsProfileProvider{awsConfigReader: MockConfigReader{content: test.configContent}, configRegex: test.configRegex, configDefaultRegex: *awsDefaultRegex}
+			dapp := DefaultAwsProfileProvider{awsConfigReader: MockConfigReader{content: test.configContent}}
 
-			profiles, err := dapp.ProvideProfiles()
+			profiles, err := dapp.ProvideProfiles("path")
 
 			if !cmp.Equal(test.expectedProfiles, profiles) {
 				t.Errorf("%s expected:\n%v\ngot:\n%v", test.name, test.expectedProfiles, profiles)

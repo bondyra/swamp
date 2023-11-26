@@ -1,18 +1,10 @@
 package aws
 
 import (
-	"errors"
-	"fmt"
 	"os"
 	"regexp"
 
 	"github.com/bondyra/wtf/internal/reader"
-)
-
-var (
-	awsConfigRegex      = regexp.MustCompile(`\[profile ([^\s]+)\]`)
-	awsCredentialsRegex = regexp.MustCompile(`\[(.+)\]`)
-	awsDefaultRegex     = regexp.MustCompile(`\[default\]`)
 )
 
 type AwsReader struct {
@@ -24,23 +16,17 @@ type ProfileProvider interface {
 }
 
 type AwsConfigReader interface {
-	GetPath() string
-	ReadConfigAsString() (string, error)
+	ReadConfigAsString(string) (string, error)
 }
 
 type DefaultAwsConfigReader struct {
-	path string
 }
 
-func (dacr DefaultAwsConfigReader) GetPath() string {
-	return dacr.path
-}
-
-func (dacr DefaultAwsConfigReader) ReadConfigAsString() (string, error) {
-	if dacr.path == "" {
+func (dacr DefaultAwsConfigReader) ReadConfigAsString(path string) (string, error) {
+	if path == "" {
 		return "", nil
 	}
-	data, err := os.ReadFile(dacr.path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return "", err
 	}
@@ -52,40 +38,33 @@ type AwsProfileProvider interface {
 }
 
 type DefaultAwsProfileProvider struct {
-	awsConfigReader    AwsConfigReader
-	configRegex        regexp.Regexp
-	configDefaultRegex regexp.Regexp
+	awsConfigReader AwsConfigReader
 }
 
-func (dapp DefaultAwsProfileProvider) ProvideProfiles() ([]string, error) {
+func (dapp DefaultAwsProfileProvider) ProvideProfiles(path string) ([]string, error) {
 	results := []string{}
-	data, err := dapp.awsConfigReader.ReadConfigAsString()
+	data, err := dapp.awsConfigReader.ReadConfigAsString(path)
 	if err != nil {
 		return nil, err
 	}
-	if dapp.configDefaultRegex.MatchString(data) {
-		results = append(results, "default")
-	}
-	for _, match := range dapp.configRegex.FindAllStringSubmatch(data, -1) {
+	regex := regexp.MustCompile(`([^[\s]+)\]`)
+	for _, match := range regex.FindAllStringSubmatch(data, -1) {
 		results = append(results, match[1])
 	}
 	return results, nil
 }
 
 func NewReader(awsCredentialsPath string, awsConfigPath string) (*AwsReader, error) {
-	credentialsProfiles, err := DefaultAwsProfileProvider{awsConfigReader: DefaultAwsConfigReader{path: awsCredentialsPath}, configRegex: *awsCredentialsRegex, configDefaultRegex: *awsDefaultRegex}.ProvideProfiles()
+	provider := DefaultAwsProfileProvider{awsConfigReader: DefaultAwsConfigReader{}}
+	credentialsProfiles, err := provider.ProvideProfiles(awsCredentialsPath)
 	if err != nil {
 		return nil, err
 	}
-	configProfiles, err := DefaultAwsProfileProvider{awsConfigReader: DefaultAwsConfigReader{path: awsConfigPath}, configRegex: *awsConfigRegex, configDefaultRegex: *awsDefaultRegex}.ProvideProfiles()
+	configProfiles, err := provider.ProvideProfiles(awsConfigPath)
 	if err != nil {
 		return nil, err
 	}
-	duplicatedProfiles := GetDuplicatedElements(append(credentialsProfiles, configProfiles...))
-	if len(duplicatedProfiles) > 0 {
-		return nil, errors.New(fmt.Sprintf("Cannot proceed, found duplicated profiles %v in AWS files", duplicatedProfiles))
-	}
-	return &AwsReader{profileNames: append(configProfiles, credentialsProfiles...)}, nil
+	return &AwsReader{profileNames: RemoveDuplicates(append(configProfiles, credentialsProfiles...))}, nil
 }
 
 func (r *AwsReader) QueryAllProfiles() ([]reader.Credentials, error) {
