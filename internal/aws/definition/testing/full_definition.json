@@ -13,7 +13,7 @@
       "alias": "Alias2",
       "parents": [
         {
-          "type": "ParentType2_1",
+          "type": "Type1",
           "linkType": "LinkType2_1",
           "links": [{"parentField": "Link2_1ParentField1", "field": "Link2_1Field1"}]
         }

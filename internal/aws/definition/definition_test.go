@@ -1,19 +1,17 @@
 package definition
 
 import (
-	"fmt"
 	"os"
-	"path"
 	"reflect"
-	"runtime"
 	"strings"
 	"testing"
 )
 
-func TestDefaultReader_ReadDefinition(t *testing.T) {
+const testFilePath string = "testing/"
+
+func TestDefaultFactory_NewDefinition(t *testing.T) {
 	tests := []struct {
 		name            string
-		dr              Reader
 		inputFileExists bool
 		inputContent    string
 		want            *Definition
@@ -21,7 +19,6 @@ func TestDefaultReader_ReadDefinition(t *testing.T) {
 	}{
 		{
 			name:            "test empty file",
-			dr:              &DefaultReader{},
 			inputFileExists: true,
 			inputContent:    "{}",
 			want:            &Definition{},
@@ -29,7 +26,6 @@ func TestDefaultReader_ReadDefinition(t *testing.T) {
 		},
 		{
 			name:            "test non existent file",
-			dr:              &DefaultReader{},
 			inputFileExists: false,
 			inputContent:    "{}",
 			want:            nil,
@@ -37,7 +33,6 @@ func TestDefaultReader_ReadDefinition(t *testing.T) {
 		},
 		{
 			name:            "test invalid file",
-			dr:              &DefaultReader{},
 			inputFileExists: true,
 			inputContent:    "{invalid json",
 			want:            nil,
@@ -46,7 +41,7 @@ func TestDefaultReader_ReadDefinition(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			inputPath := "path"
+			var inputPath string
 			if tt.inputFileExists {
 				fileNamePrefix := strings.Replace(tt.name, " ", "-", -1)
 				tempFile, _ := os.CreateTemp(".", fileNamePrefix)
@@ -54,16 +49,16 @@ func TestDefaultReader_ReadDefinition(t *testing.T) {
 				tempFile.Close()
 				inputPath = tempFile.Name()
 			}
-			dr := &DefaultReader{}
+			factory := DefaultFactory{inputPath}
 
-			got, err := dr.ReadDefinition(inputPath)
+			got, err := factory.NewDefinition()
 
 			if (err != nil) != tt.wantErr {
-				t.Errorf("DefaultReader.ReadDefinition() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("DefaultFactory.NewDefinition() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("DefaultReader.ReadDefinition() = %v, want %v", got, tt.want)
+				t.Errorf("DefaultFactory.NewDefinition() = %v, want %v", got, tt.want)
 			}
 			if tt.inputFileExists {
 				os.Remove(inputPath)
@@ -72,28 +67,76 @@ func TestDefaultReader_ReadDefinition(t *testing.T) {
 	}
 }
 
-func TestDefaultReader_ReadDefinitionFull(t *testing.T) {
-	dr := &DefaultReader{}
+func TestDefaultFactory_NewDefinitionFull(t *testing.T) {
 	expected := Definition{
 		TypeDefinitions: []TypeDefinition{
 			{Type: "Type1", IdentifierField: "Identifier1", Alias: "Alias1", Parents: []ParentDefinition{}, Attrs: []Attr{{Field: "Attribute1_1"}, {Field: "Attribute1_2"}}},
 			{
 				Type: "Type2", IdentifierField: "Identifier2", Alias: "Alias2",
-				Parents: []ParentDefinition{{Type: "ParentType2_1", LinkType: "LinkType2_1", Links: []Link{{ParentField: "Link2_1ParentField1", Field: "Link2_1Field1"}}}},
+				Parents: []ParentDefinition{{Type: "Type1", LinkType: "LinkType2_1", Links: []Link{{ParentField: "Link2_1ParentField1", Field: "Link2_1Field1"}}}},
 				Attrs:   []Attr{{Field: "Attribute2_1"}, {Field: "Attribute2_2"}},
 			},
 		},
 	}
-	_, thisFileName, _, _ := runtime.Caller(0)
+	factory := DefaultFactory{testFilePath + "full_definition.json"}
 
-	fmt.Println(path.Join(path.Dir(thisFileName), "testing/test_definition.json"))
-	content, err := dr.ReadDefinition(path.Join(path.Dir(thisFileName), "testing/test_definition.json"))
+	got, err := factory.NewDefinition()
 
 	if err != nil {
-		t.Errorf("DefaultReader.ReadDefinition() error = %v", err)
+		t.Errorf("DefaultFactory.NewDefinition() error = %v", err)
 		return
 	}
-	if !reflect.DeepEqual(*content, expected) {
-		t.Errorf("DefaultReader.ReadDefinition() = %v, want %v", *content, expected)
+	if !reflect.DeepEqual(*got, expected) {
+		t.Errorf("DefaultFactory.NewDefinition() = %v, want %v", *got, expected)
+	}
+}
+
+func TestDefinition_Validate(t *testing.T) {
+	type fields struct {
+		TypeDefinitions []TypeDefinition
+	}
+	tests := []struct {
+		name     string
+		testFile string
+		wantErr  bool
+	}{
+		{
+			name:     "test empty definition",
+			testFile: "empty_definition.json",
+			wantErr:  false,
+		},
+		{
+			name:     "test full definition",
+			testFile: "full_definition.json",
+			wantErr:  false,
+		},
+		{
+			name:     "test error when types are duplicated",
+			testFile: "invalid_definition1.json",
+			wantErr:  true,
+		},
+		{ // TODO: more test cases for this V
+			name:     "test error when type is empty",
+			testFile: "invalid_definition2.json",
+			wantErr:  true,
+		},
+		{
+			name:     "test error when link does not refer to defined type",
+			testFile: "invalid_definition3.json",
+			wantErr:  true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			d, fileError := DefaultFactory{testFilePath + tt.testFile}.NewDefinition()
+
+			if fileError != nil {
+				t.Errorf("Definition.Validate() invalid test file: %v", tt.testFile)
+			}
+
+			if err := d.Validate(); (err != nil) != tt.wantErr {
+				t.Errorf("Definition.Validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
 	}
 }

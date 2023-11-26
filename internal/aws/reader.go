@@ -2,6 +2,7 @@ package aws
 
 import (
 	"github.com/bondyra/swamp/internal/aws/client"
+	"github.com/bondyra/swamp/internal/aws/common"
 	"github.com/bondyra/swamp/internal/aws/profile"
 	"github.com/bondyra/swamp/internal/reader"
 )
@@ -18,7 +19,7 @@ func NewReader(profileFactory profile.Factory, awsFactory client.Factory, config
 	}
 	return &AwsReader{
 		awsFactory:     awsFactory,
-		configProfiles: Sum(profilesLists...),
+		configProfiles: common.Sum(profilesLists...),
 	}, nil
 }
 
@@ -32,7 +33,7 @@ func (ar *AwsReader) Init(selectedProfiles []string) error {
 	if selectedProfiles == nil {
 		selectedProfiles = ar.configProfiles
 	}
-	existingProfiles := Intersect(ar.configProfiles, selectedProfiles)
+	existingProfiles := common.Intersect(ar.configProfiles, selectedProfiles)
 	createdClients := make(map[string]client.AwsClientInterface, 0)
 	for _, profile := range existingProfiles {
 		var err error

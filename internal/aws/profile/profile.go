@@ -5,6 +5,16 @@ import (
 	"regexp"
 )
 
+type Factory interface {
+	NewProvider() Provider
+}
+
+type DefaultFactory struct{}
+
+func (df DefaultFactory) NewProvider() Provider {
+	return &DefaultProvider{AwsConfigReader{}}
+}
+
 type ConfigReader interface {
 	ReadConfigAsString(string) (string, error)
 }

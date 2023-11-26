@@ -2,11 +2,27 @@ package client
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
+	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/cloudcontrol"
+	"github.com/bondyra/swamp/internal/aws/common"
 )
+
+type Factory interface {
+	NewClient(string) (AwsClientInterface, error)
+}
+
+type DefaultFactory struct{}
+
+func (df DefaultFactory) NewClient(profile string) (AwsClientInterface, error) {
+	context := context.TODO()
+	cfg, err := config.LoadDefaultConfig(context, config.WithSharedConfigProfile(profile))
+	if err != nil {
+		return nil, err
+	}
+	return AwsClient{ccClient: cloudcontrol.NewFromConfig(cfg)}, nil
+}
 
 type AwsClientInterface interface {
 	GetItem(string, string) (map[string]string, error)
@@ -62,16 +78,13 @@ func (ac AwsClient) ListItems(typeName string) ([]map[string]string, error) {
 }
 
 func (ac AwsClient) processResponse(response string) (map[string]string, error) {
-	output := map[string]any{}
-	if response != "" {
-		err := json.Unmarshal([]byte(response), &output)
-		if err != nil {
-			return nil, err
-		}
+	output, err := common.Unmarshal[map[string]any]([]byte(response))
+	if err != nil {
+		return nil, err
 	}
 	processedOutput := map[string]string{}
-	for k := range output {
-		processedOutput[k] = fmt.Sprintf("%v", output[k])
+	for k := range *output {
+		processedOutput[k] = fmt.Sprintf("%v", (*output)[k])
 	}
 	return processedOutput, nil
 }
