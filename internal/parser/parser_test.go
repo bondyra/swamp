@@ -114,6 +114,23 @@ func TestParseString(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:  "test filter flag",
+			input: "item ns.res alias where a1 eq true",
+			expected: AST{
+				Entitities: []Entity{
+					ItemEntity{
+						Value: Item{
+							Type:  []string{"ns", "res"},
+							Alias: "alias",
+							Modifiers: []Modifier{
+								SearchModifier{Value: SearchExpression{Attr: "a1", Op: "eq", Value: SearchValue{Boolean: true}}},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

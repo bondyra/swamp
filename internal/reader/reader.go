@@ -1,22 +1,12 @@
 package reader
 
-type Credentials struct {
-}
+type Filter struct{}
 
-type ReadContext struct {
-	parentType string
-	parentId   string
-	parentData any
-}
+type ParentContext struct{}
 
-type Item interface{}
+type ItemData struct{}
 
 type Reader interface {
-	QueryAllProfiles() ([]Credentials, error)
-	QueryProfiles(profileNames []string) ([]Credentials, error)
-}
-
-type ReaderExt interface {
 	// reader name, for namespace query validation
 	GetReaderName() string
 	// list profile names that were loaded
@@ -28,8 +18,5 @@ type ReaderExt interface {
 	// list attributes that item with given name can have
 	GetAllItemAttributes(string) []string
 
-	// for specified resource type, list of attrs, userFilter string (to evaluate) and optional ReadContext,
-	ReadItems(string, []string, string, ReadContext) []Item
+	GetItems(string, []string, Filter, ParentContext) ([]ItemData, error)
 }
-
-// - Pull(RESOURCE, ATTRIBUTES, FILTER, [PARENT]) - pulls the given resource with some attributes and some filter and an optional parent resource for better context

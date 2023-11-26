@@ -1,15 +1,49 @@
 package aws
 
-type AwsConnection struct{}
-
-type AwsConnectionPool struct {
-	connections map[string]AwsConnection
+type AwsConnection struct {
+	profile string
+	client  AwsClientInterface
 }
 
-func NewConnectionPool(profiles []string) (AwsConnectionPool, error) {
-	connections := make(map[string]AwsConnection, 0)
-	for _, profile := range profiles {
-		connections[profile] = AwsConnection{}
+func (ac AwsConnection) Init(factory AwsFactory) error {
+	var err error
+	ac.client, err = factory.NewClient(ac.profile)
+	if err != nil {
+		return err
 	}
-	return AwsConnectionPool{connections: connections}, nil
+	return nil
 }
+
+// "GetResourceInput":{
+//     "TypeName":string*,
+//     "TypeVersionId":string,
+//     "RoleArn":string,
+//     "Identifier":string*
+//   }
+
+//   "GetResourceOutput":{
+//     "TypeName":string,
+//     "ResourceDescription":{
+//       "Identifier":string,
+//       "Properties":string json
+//     }
+//   }
+
+//   "ListResourcesInput":{
+//     "TypeName":string*,
+//     "TypeVersionId":string,
+//     "RoleArn":string,
+//     "NextToken":string,
+//     "MaxResults":string,
+//     "ResourceModel":string json
+//   },
+//   "ListResourcesOutput":{
+//     "TypeName":string,
+//     "ResourceDescriptions":[
+//       {
+//         "Identifier":string,
+//         "Properties":string json
+//       }
+//     ],
+//     "NextToken":string
+//   }

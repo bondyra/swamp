@@ -2,22 +2,12 @@ package aws
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"regexp"
 	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-)
-
-var (
-	MockReadFile = func(path string) (string, error) {
-		return fmt.Sprintf("content %v", path), nil
-	}
-	MockErrorReadFile = func(path string) (string, error) {
-		return "", errors.New("test error")
-	}
 )
 
 func TestReadConfigAsString(t *testing.T) {
@@ -58,11 +48,8 @@ func TestReadConfigAsString(t *testing.T) {
 func TestReadConfigAsStringForNonExistentFile(t *testing.T) {
 	dacr := AwsConfigReader{}
 
-	content, err := dacr.ReadConfigAsString("path")
+	_, err := dacr.ReadConfigAsString("path")
 
-	if content != "" {
-		t.Errorf("expected: NOTHING\ngot:\n%v", content)
-	}
 	if err == nil {
 		t.Errorf("expected:\nnot found error\ngot:\n%v", err)
 	}
@@ -74,6 +61,12 @@ type MockConfigReader struct {
 
 func (mcr MockConfigReader) ReadConfigAsString(path string) (string, error) {
 	return mcr.content, nil
+}
+
+type MockErrorConfigReader struct{}
+
+func (mecr MockErrorConfigReader) ReadConfigAsString(path string) (string, error) {
+	return "", errors.New("")
 }
 
 func TestProvideProfiles(t *testing.T) {
@@ -150,5 +143,15 @@ func TestProvideProfiles(t *testing.T) {
 				t.Errorf("%s error occured: %v", test.name, err)
 			}
 		})
+	}
+}
+
+func TestProvideProfilesError(t *testing.T) {
+	dapp := DefaultProfileProvider{configReader: MockErrorConfigReader{}}
+
+	_, err := dapp.ProvideProfiles("path")
+
+	if err == nil {
+		t.Errorf("expected:\nsome error\ngot:\n%v", err)
 	}
 }
