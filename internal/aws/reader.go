@@ -107,19 +107,20 @@ func (ar AwsReader) GetItems(itemType string, profiles []string, attrs []string,
 	if err != nil {
 		return nil, err
 	}
+	filterFunc, err := ar.getFilterFunc(typeDefinition, filters)
+	if err != nil {
+		return nil, err
+	}
 	baseItems, err := ar.listBaseItemsForEachProfile(profiles, itemType)
 	if err != nil {
 		return nil, err
 	}
-	baseItems, err = ar.maybeFilterIds(baseItems, filters, typeDefinition.IdentifierField)
+	baseItems = common.Filter(baseItems, filterFunc)
+	items, err := ar.getItems(baseItems, itemType, filterFunc)
 	if err != nil {
 		return nil, err
 	}
-	items, err := ar.getItems(baseItems, itemType)
-	if err != nil {
-		return nil, err
-	}
-	return items, nil
+	return common.Filter(items, func(r *reader.Item) bool { return r != nil }), nil
 }
 
 func (ar AwsReader) listBaseItemsForEachProfile(profiles []string, itemType string) ([]*reader.Item, error) {
@@ -134,12 +135,12 @@ func (ar AwsReader) listBaseItemsForEachProfile(profiles []string, itemType stri
 	return results, nil
 }
 
-func (ar AwsReader) getItems(baseItems []*reader.Item, itemType string) ([]*reader.Item, error) {
+func (ar AwsReader) getItems(baseItems []*reader.Item, itemType string, filterFunc func(*reader.Item) bool) ([]*reader.Item, error) {
 	r := make(chan *reader.Item, len(baseItems))
 	e := make(chan error)
 	results := make([]*reader.Item, len(baseItems))
 	for _, baseItem := range baseItems {
-		go ar.getItem(baseItem, itemType, r, e)
+		go ar.getItem(baseItem, itemType, filterFunc, r, e)
 	}
 	for i := 0; i < len(baseItems); i++ {
 		select {
@@ -152,37 +153,63 @@ func (ar AwsReader) getItems(baseItems []*reader.Item, itemType string) ([]*read
 	return results, nil
 }
 
-func (ar AwsReader) getItem(baseItem *reader.Item, itemType string, r chan *reader.Item, e chan error) {
+func (ar AwsReader) getItem(baseItem *reader.Item, itemType string, filterFunc func(*reader.Item) bool, r chan *reader.Item, e chan error) {
 	result, err := ar.pool.GetResource(baseItem.Profile, baseItem.Data.Identifier, itemType)
 	if err != nil {
 		e <- err
-	} else {
+	} else if filterFunc(result) {
 		r <- result
+	} else {
+		r <- nil
 	}
 }
 
-func (ar AwsReader) maybeFilterIds(baseItems []*reader.Item, filters []reader.Filter, idField string) ([]*reader.Item, error) {
-	if len(filters) == 0 {
-		return baseItems, nil
-	}
-	idFilters := common.Filter(filters, func(f reader.Filter) bool { return f.Attr == idField })
-
-	for _, idFilter := range idFilters {
-		var filterFunc func(*reader.Item) bool
-		regex := regexp.MustCompile(idFilter.Value)
-		switch idFilter.Op {
-		case reader.OpEquals:
-			filterFunc = func(r *reader.Item) bool { return r.Data.Identifier == idFilter.Value }
-		case reader.OpNotEquals:
-			filterFunc = func(r *reader.Item) bool { return r.Data.Identifier != idFilter.Value }
-		case reader.OpLike:
-			filterFunc = func(r *reader.Item) bool { return regex.MatchString(r.Data.Identifier) }
-		case reader.OpNotLike:
-			filterFunc = func(r *reader.Item) bool { return !regex.MatchString(r.Data.Identifier) }
-		default:
-			return nil, fmt.Errorf("cannot filter identifier for %v", idFilter.Op)
+func (ar AwsReader) getFilterFunc(td *definition.TypeDefinition, filters []reader.Filter) (func(*reader.Item) bool, error) {
+	funcChain := []func(*reader.Item) bool{}
+	getIdValue := func(r *reader.Item) string { return r.Data.Identifier }
+	attrNames := ar.getAllAttrNames(td)
+	fmt.Println(filters)
+	for _, filter := range filters {
+		var getAttrValue func(r *reader.Item) string
+		if filter.Attr == td.IdentifierField || filter.Attr == td.Alias {
+			getAttrValue = getIdValue
+		} else {
+			_, supported := attrNames[filter.Attr]
+			if !supported {
+				return nil, fmt.Errorf("invalid attribute to filter : %v, supported ones are %v", filter.Attr, attrNames)
+			}
+			getAttrValue = func(r *reader.Item) string { return (*r.Data.Properties)[filter.Attr] }
 		}
-		baseItems = common.Filter(baseItems, filterFunc)
+		var filterFunc func(*reader.Item) bool
+		regex := regexp.MustCompile(filter.Value)
+		value := filter.Value
+		switch filter.Op {
+		case reader.OpEquals:
+			filterFunc = func(r *reader.Item) bool { return getAttrValue(r) == value }
+		case reader.OpNotEquals:
+			filterFunc = func(r *reader.Item) bool { return getAttrValue(r) != value }
+		case reader.OpLike:
+			filterFunc = func(r *reader.Item) bool { return regex.MatchString(getAttrValue(r)) }
+		case reader.OpNotLike:
+			filterFunc = func(r *reader.Item) bool { return !regex.MatchString(getAttrValue(r)) }
+		default:
+			return nil, fmt.Errorf("filter operation \"%v\" is not supported", filter.Op)
+		}
+		funcChain = append(funcChain, filterFunc)
 	}
-	return baseItems, nil
+	return func(r *reader.Item) bool {
+		result := true
+		for _, f := range funcChain {
+			result = result && f(r)
+		}
+		return result
+	}, nil
+}
+
+func (ar AwsReader) getAllAttrNames(td *definition.TypeDefinition) map[string]bool {
+	result := make(map[string]bool, len(td.Attrs))
+	for _, a := range td.Attrs {
+		result[a.Field] = true
+	}
+	return result
 }
