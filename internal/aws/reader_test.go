@@ -441,6 +441,15 @@ const (
 )
 
 var (
+	baseItemData []reader.ItemData = []reader.ItemData{
+		{Identifier: fmt.Sprint(ID_1_1)},
+		{Identifier: fmt.Sprint(ID_1_2)},
+		{Identifier: fmt.Sprint(ID_1_3)},
+		{Identifier: fmt.Sprint(ID_2_1)},
+		{Identifier: fmt.Sprint(ID_2_2)},
+		{Identifier: fmt.Sprint(ID_3_1)},
+		{Identifier: fmt.Sprint(ID_3_ERR)},
+	}
 	itemData []reader.ItemData = []reader.ItemData{
 		{Identifier: fmt.Sprint(ID_1_1), Properties: &map[string]string{"a": "a_1_1", "b": "11", "c": "true"}},
 		{Identifier: fmt.Sprint(ID_1_2), Properties: &map[string]string{"a": "a_1_2", "b": "12", "c": "false"}},
@@ -468,9 +477,9 @@ const (
 
 var testDefinition definition.Definition = definition.Definition{
 	TypeDefinitions: []definition.TypeDefinition{
-		{Type: TYPE_1, IdentifierField: TYPE_1_ID_FIELD, Alias: "Alias1"},
-		{Type: TYPE_2, IdentifierField: TYPE_2_ID_FIELD, Alias: "Alias2"},
-		{Type: TYPE_3, IdentifierField: TYPE_3_ID_FIELD, Alias: "Alias2"},
+		{Type: TYPE_1, IdentifierField: TYPE_1_ID_FIELD, Alias: "Alias1", Attrs: []definition.Attr{{Field: "a"}, {Field: "b"}, {Field: "c"}}},
+		{Type: TYPE_2, IdentifierField: TYPE_2_ID_FIELD, Alias: "Alias2", Attrs: []definition.Attr{{Field: "a"}, {Field: "b"}, {Field: "c"}}},
+		{Type: TYPE_3, IdentifierField: TYPE_3_ID_FIELD, Alias: "Alias2", Attrs: []definition.Attr{{Field: "a"}, {Field: "b"}, {Field: "c"}}},
 		{Type: TYPE_THAT_CAUSES_ERR, IdentifierField: TYPE_THAT_CAUSES_ERR_ID_FIELD, Alias: "Alias2"},
 	},
 }
@@ -484,11 +493,11 @@ func (mp mockPool) ListResources(profile string, typeName string) ([]*reader.Ite
 	}
 	switch typeName {
 	case TYPE_1:
-		return []*reader.Item{{Profile: profile, Data: &itemData[ID_1_1]}, {Profile: profile, Data: &itemData[ID_1_2]}}, nil
+		return []*reader.Item{{Profile: profile, Data: &baseItemData[ID_1_1]}, {Profile: profile, Data: &baseItemData[ID_1_2]}, {Profile: profile, Data: &baseItemData[ID_1_3]}}, nil
 	case TYPE_2:
-		return []*reader.Item{{Profile: profile, Data: &itemData[ID_2_1]}, {Profile: profile, Data: &itemData[ID_2_2]}}, nil
+		return []*reader.Item{{Profile: profile, Data: &baseItemData[ID_2_1]}, {Profile: profile, Data: &baseItemData[ID_2_2]}}, nil
 	case TYPE_3:
-		return []*reader.Item{{Profile: profile, Data: &itemData[ID_3_1]}, {Profile: profile, Data: &itemData[ID_3_ERR]}}, nil
+		return []*reader.Item{{Profile: profile, Data: &baseItemData[ID_3_1]}, {Profile: profile, Data: &baseItemData[ID_3_ERR]}}, nil
 	}
 	panic("test setup error, unexpected type in mock " + typeName)
 }
@@ -506,7 +515,7 @@ func (mp mockPool) GetResource(profile string, id string, typeName string) (*rea
 		switch intId {
 		case ID_3_ERR:
 			return nil, errors.New("some error")
-		case ID_1_1, ID_1_2, ID_2_1, ID_2_2, ID_3_1:
+		case ID_1_1, ID_1_2, ID_1_3, ID_2_1, ID_2_2, ID_3_1:
 			return &reader.Item{Profile: profile, Data: &itemData[intId]}, nil
 		default:
 			panic("test setup error, unexpected id in mock " + id)
@@ -543,6 +552,7 @@ func TestAwsReader_GetItems(t *testing.T) {
 			want: []*reader.Item{
 				{Profile: PROFILE_1, Data: &itemData[ID_1_1]},
 				{Profile: PROFILE_1, Data: &itemData[ID_1_2]},
+				{Profile: PROFILE_1, Data: &itemData[ID_1_3]},
 			},
 			wantErr: false,
 		},
@@ -552,8 +562,10 @@ func TestAwsReader_GetItems(t *testing.T) {
 			want: []*reader.Item{
 				{Profile: PROFILE_1, Data: &itemData[ID_1_1]},
 				{Profile: PROFILE_1, Data: &itemData[ID_1_2]},
+				{Profile: PROFILE_1, Data: &itemData[ID_1_3]},
 				{Profile: PROFILE_2, Data: &itemData[ID_1_1]},
 				{Profile: PROFILE_2, Data: &itemData[ID_1_2]},
+				{Profile: PROFILE_2, Data: &itemData[ID_1_3]},
 			},
 			wantErr: false,
 		},
@@ -590,30 +602,58 @@ func TestAwsReader_GetItems(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "test attr filters",
+			args: args{
+				itemType: TYPE_1,
+				profiles: []string{PROFILE_1},
+				attrs:    nil,
+				filters: []reader.Filter{
+					{Attr: "a", Op: reader.OpLike, Value: "a_1_*"},
+					{Attr: "a", Op: reader.OpNotLike, Value: "a_1_2"},
+					{Attr: "b", Op: reader.OpNotEquals, Value: "13"},
+				},
+			},
+			want: []*reader.Item{
+				{Profile: PROFILE_1, Data: &itemData[ID_1_1]},
+			},
+			wantErr: false,
+		},
+		{
 			name:    "test error when type is not found in definition",
 			args:    args{itemType: TYPE_NOT_FOUND_IN_DEFINITION, profiles: []string{PROFILE_1}, attrs: nil, filters: nil},
 			want:    nil,
 			wantErr: true,
 		},
 		{
-			name:    "test error when on list error",
+			name:    "test error on list resources error",
 			args:    args{itemType: TYPE_THAT_CAUSES_ERR, profiles: []string{PROFILE_1}, attrs: nil, filters: nil},
 			want:    nil,
 			wantErr: true,
 		},
 		{
-			name:    "test error when on single item error",
+			name:    "test error on get resource error",
 			args:    args{itemType: TYPE_3, profiles: []string{PROFILE_1}, attrs: nil, filters: nil},
 			want:    nil,
 			wantErr: true,
 		},
 		{
-			name: "test error on not supported id filter",
+			name: "test error on not supported filter op",
 			args: args{
 				itemType: TYPE_1,
 				profiles: []string{PROFILE_1, PROFILE_2},
 				attrs:    nil,
 				filters:  []reader.Filter{{Attr: TYPE_1_ID_FIELD, Op: -1, Value: fmt.Sprint(ID_1_1)}},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "test error on not supported filter",
+			args: args{
+				itemType: TYPE_1,
+				profiles: []string{PROFILE_1, PROFILE_2},
+				attrs:    nil,
+				filters:  []reader.Filter{{Attr: "unknown", Op: reader.OpEquals, Value: fmt.Sprint(ID_1_1)}},
 			},
 			want:    nil,
 			wantErr: true,

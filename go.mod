@@ -22,6 +22,7 @@ require (
 	github.com/gabriel-vasile/mimetype v1.4.2 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
+	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/leodido/go-urn v1.2.4 // indirect
 	golang.org/x/crypto v0.7.0 // indirect
@@ -33,6 +34,5 @@ require (
 require (
 	github.com/aws/smithy-go v1.16.0
 	github.com/go-playground/validator/v10 v10.16.0
-	github.com/google/go-cmp v0.6.0
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d
 )

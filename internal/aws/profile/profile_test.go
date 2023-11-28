@@ -3,11 +3,11 @@ package profile
 import (
 	"errors"
 	"os"
+	"reflect"
 	"regexp"
 	"strings"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
 	"golang.org/x/exp/slices"
 )
 
@@ -34,7 +34,7 @@ func TestReadConfigAsString(t *testing.T) {
 
 			content, err := dacr.ReadConfigAsString(tempFile.Name())
 
-			if !cmp.Equal(test.inputContent, content) {
+			if !reflect.DeepEqual(test.inputContent, content) {
 				t.Errorf("%s expected:\n%v\ngot:\n%v", test.name, test.inputContent, content)
 			}
 			if err != nil {
@@ -109,7 +109,7 @@ func TestProvideProfiles(t *testing.T) {
 
 			slices.Sort(profiles)
 			slices.Sort(test.expectedProfiles)
-			if !cmp.Equal(test.expectedProfiles, profiles) {
+			if !reflect.DeepEqual(test.expectedProfiles, profiles) {
 				t.Errorf("%s expected:\n%v\ngot:\n%v", test.name, test.expectedProfiles, profiles)
 			}
 			if err != nil {

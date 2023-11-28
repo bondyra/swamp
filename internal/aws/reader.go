@@ -166,32 +166,45 @@ func (ar AwsReader) getItem(baseItem *reader.Item, itemType string, filterFunc f
 
 func (ar AwsReader) getFilterFunc(td *definition.TypeDefinition, filters []reader.Filter) (func(*reader.Item) bool, error) {
 	funcChain := []func(*reader.Item) bool{}
-	getIdValue := func(r *reader.Item) string { return r.Data.Identifier }
+	getIdValue := func(r *reader.Item) *string { return &r.Data.Identifier }
 	attrNames := ar.getAllAttrNames(td)
-	fmt.Println(filters)
 	for _, filter := range filters {
-		var getAttrValue func(r *reader.Item) string
-		if filter.Attr == td.IdentifierField || filter.Attr == td.Alias {
+		var getAttrValue func(r *reader.Item) *string
+		attr := filter.Attr
+		value := filter.Value
+		if attr == td.IdentifierField || attr == td.Alias {
 			getAttrValue = getIdValue
 		} else {
-			_, supported := attrNames[filter.Attr]
+			_, supported := attrNames[attr]
 			if !supported {
-				return nil, fmt.Errorf("invalid attribute to filter : %v, supported ones are %v", filter.Attr, attrNames)
+				return nil, fmt.Errorf("invalid attribute to filter : %v, supported ones are %v", attr, attrNames)
 			}
-			getAttrValue = func(r *reader.Item) string { return (*r.Data.Properties)[filter.Attr] }
+			getAttrValue = func(r *reader.Item) *string {
+				if r.Data.Properties != nil {
+					attrValue := (*r.Data.Properties)[attr]
+					return &attrValue
+				}
+				return nil
+			}
 		}
-		var filterFunc func(*reader.Item) bool
+		var filterOp func(*string) bool
+		filterFunc := func(r *reader.Item) bool {
+			a := getAttrValue(r)
+			if a != nil {
+				return filterOp(a)
+			}
+			return true
+		}
 		regex := regexp.MustCompile(filter.Value)
-		value := filter.Value
 		switch filter.Op {
 		case reader.OpEquals:
-			filterFunc = func(r *reader.Item) bool { return getAttrValue(r) == value }
+			filterOp = func(v *string) bool { return *v == value }
 		case reader.OpNotEquals:
-			filterFunc = func(r *reader.Item) bool { return getAttrValue(r) != value }
+			filterOp = func(v *string) bool { return *v != value }
 		case reader.OpLike:
-			filterFunc = func(r *reader.Item) bool { return regex.MatchString(getAttrValue(r)) }
+			filterOp = func(v *string) bool { return regex.MatchString(*v) }
 		case reader.OpNotLike:
-			filterFunc = func(r *reader.Item) bool { return !regex.MatchString(getAttrValue(r)) }
+			filterOp = func(v *string) bool { return !regex.MatchString(*v) }
 		default:
 			return nil, fmt.Errorf("filter operation \"%v\" is not supported", filter.Op)
 		}

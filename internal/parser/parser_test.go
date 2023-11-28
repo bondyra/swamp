@@ -1,9 +1,8 @@
 package parser
 
 import (
+	"reflect"
 	"testing"
-
-	"github.com/google/go-cmp/cmp"
 )
 
 func TestParseString(t *testing.T) {
@@ -138,7 +137,7 @@ func TestParseString(t *testing.T) {
 			if err != nil {
 				t.Fatalf("unexpected error when parsing %v: %v", test.input, err)
 			}
-			if !cmp.Equal(test.expected, *actual) {
+			if !reflect.DeepEqual(test.expected, *actual) {
 				t.Errorf("%s expected:\n%v\ngot:\n%v", test.name, test.expected, *actual)
 			}
 		})
