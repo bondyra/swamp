@@ -31,11 +31,10 @@ func (c Cli) Run(query string) {
 		log.Fatal(err)
 	}
 
-	profileProvider := profile.NewProvider()
+	profileProvider := profile.NewConfigFileProfileProvider(profile.DefaultReadConfig, loadConfigPaths()...)
 	poolFactory := client.LazyPoolFactory{}
 	defFactory := definition.DefaultFactory{}
-	configPaths := loadConfigPaths()
-	reader, err := aws.NewReader(profileProvider, poolFactory, defFactory, configPaths)
+	reader, err := aws.NewReader(profileProvider, poolFactory, defFactory)
 	if err != nil {
 		log.Fatal(err)
 	}
