@@ -14,15 +14,15 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-func NewReader(profileProvider profile.Provider, awsFactory client.PoolFactory, defFactory definition.Factory, configPaths []string) (*AwsReader, error) {
-	profiles, err := profileProvider.ProvideProfiles(configPaths...)
+func NewReader(profileProvider profile.ProfileProvider, awsFactory client.PoolFactory, defFactory definition.Factory) (*AwsReader, error) {
+	profiles, err := profileProvider()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("NewReader: %w", err)
 	}
 	_, filename, _, _ := runtime.Caller(0)
 	definition, err := defFactory.FromFile(path.Dir(filename) + "/definition.json")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("NewReader: %w", err)
 	}
 	return &AwsReader{
 		pool: awsFactory.NewPool(profiles...),
@@ -108,20 +108,20 @@ func (ar AwsReader) IsFilterSupported(itemType string, filter reader.Filter) boo
 func (ar AwsReader) GetItems(itemType string, profiles []string, attrs []string, filters []reader.Filter) ([]*reader.Item, error) {
 	typeDefinition, err := ar.typeDefinition(itemType)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("GetItems: %w", err)
 	}
 	filterFunc, err := ar.getFilterFunc(typeDefinition, filters)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("GetItems: %w", err)
 	}
 	baseItems, err := ar.listBaseItemsForEachProfile(profiles, itemType)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("GetItems: %w", err)
 	}
 	baseItems = common.Filter(baseItems, filterFunc)
 	items, err := ar.getItems(baseItems, itemType, filterFunc)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("GetItems: %w", err)
 	}
 	return common.Filter(items, func(r *reader.Item) bool { return r != nil }), nil
 }
@@ -131,7 +131,7 @@ func (ar AwsReader) listBaseItemsForEachProfile(profiles []string, itemType stri
 	for _, p := range profiles {
 		r, err := ar.pool.ListResources(p, itemType)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("listBaseItemsForEachProfile: %w", err)
 		}
 		results = append(results, r...)
 	}
@@ -150,7 +150,7 @@ func (ar AwsReader) getItems(baseItems []*reader.Item, itemType string, filterFu
 		case result := <-r:
 			results[i] = result
 		case err := <-e:
-			return nil, err
+			return nil, fmt.Errorf("getItems: %w", err)
 		}
 	}
 	return results, nil
@@ -180,7 +180,7 @@ func (ar AwsReader) getFilterFunc(td *definition.TypeDefinition, filters []reade
 		} else {
 			_, supported := attrNames[attr]
 			if !supported {
-				return nil, fmt.Errorf("invalid attribute to filter : %v, supported ones are %v", attr, attrNames)
+				return nil, fmt.Errorf("getFilterFunc: invalid attribute to filter : %v, supported ones are %v", attr, attrNames)
 			}
 			getAttrValue = func(r *reader.Item) *string {
 				if r.Data.Properties != nil {

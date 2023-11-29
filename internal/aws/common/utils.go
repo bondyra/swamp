@@ -3,6 +3,7 @@ package common
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 )
 
 func Union(inputs ...[]string) []string {
@@ -98,11 +99,11 @@ func Filter[T any](a []T, f func(T) bool) []T {
 func Unmarshal[T any](input []byte) (*T, error) {
 	var output T
 	if len(input) == 0 {
-		return nil, errors.New("cannot unmarshal empty input")
+		return nil, errors.New("Unmarshal: cannot process empty input")
 	}
 	err := json.Unmarshal([]byte(input), &output)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Unmarshal: %w", err)
 	}
 	return &output, err
 }

@@ -1,6 +1,7 @@
 package definition
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/bondyra/swamp/internal/aws/common"
@@ -19,7 +20,7 @@ func (df DefaultFactory) FromFile(jsonPath string) (*Definition, error) {
 	var err error
 	data, err := os.ReadFile(jsonPath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("FromFile: %w", err)
 	}
 	return common.Unmarshal[Definition](data)
 }

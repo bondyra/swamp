@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/cloudcontrol"
@@ -22,7 +23,7 @@ func (dcf DefaultClientFactory) NewClient(profile string) (AwsClientInterface, e
 	context := context.TODO()
 	cfg, err := config.LoadDefaultConfig(context, config.WithSharedConfigProfile(profile))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("NewClient: %w", err)
 	}
 	return &AwsClient{ccClient: cloudcontrol.NewFromConfig(cfg)}, nil
 }
@@ -55,7 +56,7 @@ func (lpf LazyPoolFactory) NewPool(profiles ...string) Pool {
 func (lp LazyPool) GetResource(profile string, id string, typeName string) (*reader.Item, error) {
 	client, err := lp.client(profile)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("GetResource: %w", err)
 	}
 	if client == nil {
 		return nil, nil
@@ -66,7 +67,7 @@ func (lp LazyPool) GetResource(profile string, id string, typeName string) (*rea
 			// todo: add debug logging
 			return nil, nil
 		}
-		return nil, err
+		return nil, fmt.Errorf("GetResource: %w", err)
 	}
 	return &reader.Item{Profile: profile, Data: resp}, nil
 }
@@ -74,7 +75,7 @@ func (lp LazyPool) GetResource(profile string, id string, typeName string) (*rea
 func (lp LazyPool) ListResources(profile string, typeName string) ([]*reader.Item, error) {
 	client, err := lp.client(profile)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("ListResources: %w", err)
 	}
 	if client == nil {
 		return nil, nil
@@ -85,7 +86,7 @@ func (lp LazyPool) ListResources(profile string, typeName string) ([]*reader.Ite
 			// todo: add debug logging
 			return []*reader.Item{}, nil
 		}
-		return nil, err
+		return nil, fmt.Errorf("ListResources: %w", err)
 	}
 	results := make([]*reader.Item, 0)
 	for _, r := range resp {
@@ -104,7 +105,7 @@ func (lp LazyPool) client(profile string) (AwsClientInterface, error) {
 	if client == nil {
 		newClient, err := lp.factory.NewClient(profile)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("client: %w", err)
 		}
 		lp.clients[profile] = newClient
 	}

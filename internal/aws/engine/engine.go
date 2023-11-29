@@ -23,7 +23,7 @@ func executeQuery(reader reader.Reader, d *DAG, opts ...any) (map[string]any, er
 	// 	items, err := reader.GetItems(..., parentContext)
 	// 	if err != nil {
 	// 		// todo some additional debug context, e.g. layer number
-	// 		return nil, err
+	// 		return nil, fmt.Errorf("executeQuery: %w", err)
 	// 	}
 	// 	parentContext := d.Context()
 	// }

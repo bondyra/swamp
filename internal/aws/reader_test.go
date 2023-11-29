@@ -10,21 +10,15 @@ import (
 
 	"github.com/bondyra/swamp/internal/aws/client"
 	"github.com/bondyra/swamp/internal/aws/definition"
+	"github.com/bondyra/swamp/internal/aws/profile"
 	"github.com/bondyra/swamp/internal/reader"
 	"golang.org/x/exp/slices"
 )
 
-type mockProfileProviderOutput struct {
-	profiles []string
-	err      error
-}
-
-type mockProfileProvider struct {
-	output mockProfileProviderOutput
-}
-
-func (mpp mockProfileProvider) ProvideProfiles(paths ...string) ([]string, error) {
-	return mpp.output.profiles, mpp.output.err
+func newMockProfileProvider(profiles []string, err error) profile.ProfileProvider {
+	return func() ([]string, error) {
+		return profiles, err
+	}
 }
 
 type mockPoolFactory struct{}
@@ -90,11 +84,11 @@ func TestNewReader(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			profileProvider := mockProfileProvider{mockProfileProviderOutput{tt.profileProviderProvideProfilesOutput, tt.profileProviderProvideProfilesError}}
+			profileProvider := newMockProfileProvider(tt.profileProviderProvideProfilesOutput, tt.profileProviderProvideProfilesError)
 			poolFactory := mockPoolFactory{}
 			defFactory := mockDefFactory{mockDefFactoryOutput{tt.defFactoryFromFileOutput, tt.defFactoryFromFileError}}
 
-			got, err := NewReader(profileProvider, poolFactory, defFactory, []string{})
+			got, err := NewReader(profileProvider, poolFactory, defFactory)
 
 			if tt.wantErr {
 				if err == nil {
