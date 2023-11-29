@@ -28,6 +28,10 @@ type DefaultProvider struct {
 	configReader ConfigReader
 }
 
+func NewProvider() Provider {
+	return DefaultProvider{AwsConfigReader{}}
+}
+
 func (dp DefaultProvider) ProvideProfiles(configPaths ...string) ([]string, error) {
 	resultsMap := make(map[string]bool)
 	for _, configPath := range configPaths {

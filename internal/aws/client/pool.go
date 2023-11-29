@@ -38,7 +38,7 @@ type LazyPool struct {
 }
 
 type PoolFactory interface {
-	NewPool(profiles []string) Pool
+	NewPool(profiles ...string) Pool
 }
 
 type LazyPoolFactory struct {

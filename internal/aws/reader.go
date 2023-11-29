@@ -2,7 +2,9 @@ package aws
 
 import (
 	"fmt"
+	"path"
 	"regexp"
+	"runtime"
 
 	"github.com/bondyra/swamp/internal/aws/client"
 	"github.com/bondyra/swamp/internal/aws/common"
@@ -17,12 +19,13 @@ func NewReader(profileProvider profile.Provider, awsFactory client.PoolFactory, 
 	if err != nil {
 		return nil, err
 	}
-	definition, err := defFactory.FromFile("definition.json")
+	_, filename, _, _ := runtime.Caller(0)
+	definition, err := defFactory.FromFile(path.Dir(filename) + "/definition.json")
 	if err != nil {
 		return nil, err
 	}
 	return &AwsReader{
-		pool: awsFactory.NewPool(profiles),
+		pool: awsFactory.NewPool(profiles...),
 		def:  definition,
 	}, nil
 }

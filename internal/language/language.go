@@ -1,4 +1,4 @@
-package parser
+package language
 
 import (
 	"github.com/alecthomas/participle/v2"
@@ -84,6 +84,10 @@ func (f SearchModifier) value() {}
 type Link struct {
 	From string `@Ident`
 	To   string `@Ident`
+}
+
+type Parser interface {
+	ParseString(string) (*AST, error)
 }
 
 func ParseString(input string) (*AST, error) {

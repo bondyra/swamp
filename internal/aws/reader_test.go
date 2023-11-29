@@ -29,7 +29,7 @@ func (mpp mockProfileProvider) ProvideProfiles(paths ...string) ([]string, error
 
 type mockPoolFactory struct{}
 
-func (maf mockPoolFactory) NewPool(profiles []string) client.Pool {
+func (maf mockPoolFactory) NewPool(profiles ...string) client.Pool {
 	return nil
 }
 

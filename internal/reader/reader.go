@@ -27,7 +27,6 @@ type Item struct {
 
 type Reader interface {
 	Name() string
-	KnownTypes() []string
 
 	IsTypeSupported(itemType string) bool
 	IsLinkSupported(itemType string, parentType string) bool
