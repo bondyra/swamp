@@ -13,8 +13,8 @@ func (b *Boolean) Capture(values []string) error {
 }
 
 type AST struct {
-	Profiles   Collection `( "in" @@)?`
-	Entitities []Entity   `@@*`
+	Profiles Collection `( "in" @@)?`
+	Entities []Entity   `@@*`
 }
 
 type Collection struct {

@@ -34,5 +34,5 @@ type Reader interface {
 	AreAttrsSupported(itemType string, attrs []string) bool
 	IsFilterSupported(itemType string, filter Filter) bool
 
-	GetItems(itemType string, profiles []string, attrs []string, filters []Filter) ([]*Item, error)
+	GetItems(itemType string, profiles []string, attrs []string, filters []Filter, parents []*Item) ([]*Item, error)
 }
