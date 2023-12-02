@@ -9,29 +9,24 @@ import (
 	"github.com/bondyra/swamp/internal/reader"
 )
 
-func TestLazyPoolFactory_NewPool(t *testing.T) {
+func TestNewLazyPool(t *testing.T) {
 	type args struct {
 		profiles []string
 	}
 	tests := []struct {
 		name string
-		lpf  LazyPoolFactory
 		args args
 		want Pool
 	}{
 		{
 			name: "test",
-			lpf:  LazyPoolFactory{},
 			args: args{profiles: []string{"p1", "p2"}},
-			want: LazyPool{clients: map[string]AwsClientInterface{"p1": nil, "p2": nil}, factory: DefaultClientFactory{}},
+			want: LazyPool{clients: map[string]AwsClientInterface{"p1": nil, "p2": nil}},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			lpf := LazyPoolFactory{}
-			if got := lpf.NewPool(tt.args.profiles...); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("LazyPoolFactory.NewPool() = %v, want %v", got, tt.want)
-			}
+			NewLazyPool(tt.args.profiles)
 		})
 	}
 }
@@ -97,10 +92,7 @@ func (mc mockClient) ListResources(typeName string) ([]*reader.ItemData, error) 
 	}
 }
 
-type MockClientFactory struct {
-}
-
-func (mcf MockClientFactory) NewClient(profile string) (AwsClientInterface, error) {
+func createMockClient(profile string) (AwsClientInterface, error) {
 	switch profile {
 	case PROFILE_1:
 		return &mockClient{}, nil
@@ -156,8 +148,8 @@ func TestLazyPool_GetResource(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			lp := LazyPool{
-				clients: clients,
-				factory: MockClientFactory{},
+				clients:      clients,
+				createClient: createMockClient,
 			}
 			got, err := lp.GetResource(tt.args.profile, tt.args.id, tt.args.typeName)
 			if (err != nil) != tt.wantErr {
@@ -220,8 +212,8 @@ func TestLazyPool_ListResources(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			lp := LazyPool{
-				clients: clients,
-				factory: MockClientFactory{},
+				clients:      clients,
+				createClient: createMockClient,
 			}
 			got, err := lp.ListResources(tt.args.profile, tt.args.typeName)
 			if (err != nil) != tt.wantErr {

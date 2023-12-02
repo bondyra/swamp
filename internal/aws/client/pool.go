@@ -11,14 +11,9 @@ import (
 	"github.com/bondyra/swamp/internal/reader"
 )
 
-type ClientFactory interface {
-	NewClient(string) (AwsClientInterface, error)
-}
+type newClient func(string) (AwsClientInterface, error)
 
-type DefaultClientFactory struct {
-}
-
-func (dcf DefaultClientFactory) NewClient(profile string) (AwsClientInterface, error) {
+func newDefaultClient(profile string) (AwsClientInterface, error) {
 	// todo test coverage for aws client
 	context := context.TODO()
 	cfg, err := config.LoadDefaultConfig(context, config.WithSharedConfigProfile(profile))
@@ -33,24 +28,19 @@ type Pool interface {
 	ListResources(profile string, typeName string) ([]*reader.Item, error)
 }
 
+type CreatePool func(profiles []string) Pool
+
 type LazyPool struct {
-	clients map[string]AwsClientInterface
-	factory ClientFactory
+	clients      map[string]AwsClientInterface
+	createClient newClient
 }
 
-type PoolFactory interface {
-	NewPool(profiles ...string) Pool
-}
-
-type LazyPoolFactory struct {
-}
-
-func (lpf LazyPoolFactory) NewPool(profiles ...string) Pool {
+func NewLazyPool(profiles []string) Pool {
 	clients := make(map[string]AwsClientInterface, len(profiles))
 	for _, p := range profiles {
 		clients[p] = nil
 	}
-	return LazyPool{clients, DefaultClientFactory{}}
+	return LazyPool{clients, newDefaultClient}
 }
 
 func (lp LazyPool) GetResource(profile string, id string, typeName string) (*reader.Item, error) {
@@ -103,7 +93,7 @@ func (lp LazyPool) client(profile string) (AwsClientInterface, error) {
 		return nil, nil
 	}
 	if client == nil {
-		newClient, err := lp.factory.NewClient(profile)
+		newClient, err := lp.createClient(profile)
 		if err != nil {
 			return nil, fmt.Errorf("client: %w", err)
 		}

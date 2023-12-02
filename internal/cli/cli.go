@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path"
+	"runtime"
 
 	"github.com/bondyra/swamp/internal/aws"
 	"github.com/bondyra/swamp/internal/aws/client"
@@ -12,6 +14,7 @@ import (
 	"github.com/bondyra/swamp/internal/aws/engine"
 	"github.com/bondyra/swamp/internal/aws/profile"
 	"github.com/bondyra/swamp/internal/language"
+	"github.com/bondyra/swamp/internal/reader"
 )
 
 func loadConfigPaths() []string {
@@ -30,16 +33,19 @@ func (c Cli) Run(query string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	profileProvider := profile.NewConfigFileProfileProvider(profile.DefaultReadConfig, loadConfigPaths()...)
-	poolFactory := client.LazyPoolFactory{}
-	defFactory := definition.DefaultFactory{}
-	reader, err := aws.NewReader(profileProvider, poolFactory, defFactory)
+	configPaths := loadConfigPaths()
+	profiles, err := profile.FromConfigFiles(configPaths...)
 	if err != nil {
 		log.Fatal(err)
 	}
+	_, filename, _, _ := runtime.Caller(0)
+	definition, err := definition.FromFile(path.Dir(filename) + "/definition.json")
+	if err != nil {
+		log.Fatal(err)
+	}
+	r := aws.NewReader(profiles, client.NewLazyPool, definition)
 
-	result, err := engine.Run(reader, ast)
+	result, err := engine.Run(ast, []reader.Reader{r})
 	if err != nil {
 		log.Fatal(err)
 	}

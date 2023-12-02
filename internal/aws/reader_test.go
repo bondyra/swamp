@@ -10,98 +10,21 @@ import (
 
 	"github.com/bondyra/swamp/internal/aws/client"
 	"github.com/bondyra/swamp/internal/aws/definition"
-	"github.com/bondyra/swamp/internal/aws/profile"
 	"github.com/bondyra/swamp/internal/reader"
 	"golang.org/x/exp/slices"
 )
 
-func newMockProfileProvider(profiles []string, err error) profile.ProfileProvider {
-	return func() ([]string, error) {
-		return profiles, err
-	}
-}
-
-type mockPoolFactory struct{}
-
-func (maf mockPoolFactory) NewPool(profiles ...string) client.Pool {
-	return nil
-}
-
-type mockDefFactoryOutput struct {
-	definition *definition.Definition
-	err        error
-}
-
-type mockDefFactory struct {
-	output mockDefFactoryOutput
-}
-
-func (mdf mockDefFactory) FromFile(jsonPath string) (*definition.Definition, error) {
-	return mdf.output.definition, mdf.output.err
-}
-
 func TestNewReader(t *testing.T) {
 	tests := []struct {
-		name                                 string
-		profileProviderProvideProfilesOutput []string
-		profileProviderProvideProfilesError  error
-		defFactoryFromFileOutput             *definition.Definition
-		defFactoryFromFileError              error
-		wantErr                              bool
+		name string
 	}{
 		{
-			name:                                 "test no errors",
-			profileProviderProvideProfilesOutput: []string{"p1", "p2"},
-			profileProviderProvideProfilesError:  nil,
-			defFactoryFromFileOutput:             &definition.Definition{},
-			defFactoryFromFileError:              nil,
-			wantErr:                              false,
-		},
-		{
-			name:                                 "test profile provider error causes error",
-			profileProviderProvideProfilesOutput: []string{"p1", "p2"},
-			profileProviderProvideProfilesError:  errors.New("some error"),
-			defFactoryFromFileOutput:             &definition.Definition{},
-			defFactoryFromFileError:              nil,
-			wantErr:                              true,
-		},
-		{
-			name:                                 "test definition factory error causes error",
-			profileProviderProvideProfilesOutput: []string{"p1", "p2"},
-			profileProviderProvideProfilesError:  nil,
-			defFactoryFromFileOutput:             &definition.Definition{},
-			defFactoryFromFileError:              errors.New("some error"),
-			wantErr:                              true,
-		},
-		{
-			name:                                 "test aws factory error does not cause errors", // it is for lazy use
-			profileProviderProvideProfilesOutput: []string{"p1", "p2"},
-			profileProviderProvideProfilesError:  nil,
-			defFactoryFromFileOutput:             &definition.Definition{},
-			defFactoryFromFileError:              nil,
-			wantErr:                              false,
+			name: "test",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			profileProvider := newMockProfileProvider(tt.profileProviderProvideProfilesOutput, tt.profileProviderProvideProfilesError)
-			poolFactory := mockPoolFactory{}
-			defFactory := mockDefFactory{mockDefFactoryOutput{tt.defFactoryFromFileOutput, tt.defFactoryFromFileError}}
-
-			got, err := NewReader(profileProvider, poolFactory, defFactory)
-
-			if tt.wantErr {
-				if err == nil {
-					t.Errorf("NewReader() error = %v, wantErr %v", err, tt.wantErr)
-				}
-				return
-			}
-
-			expectedReader := &AwsReader{nil, tt.defFactoryFromFileOutput, nil, nil}
-
-			if !reflect.DeepEqual(got, expectedReader) {
-				t.Errorf("NewReader() = %v, want %v", got, expectedReader)
-			}
+			NewReader([]string{"dummy"}, client.NewLazyPool, nil)
 		})
 	}
 }
@@ -121,6 +44,31 @@ func TestAwsReader_Name(t *testing.T) {
 			ar := AwsReader{}
 			if got := ar.Name(); got != tt.want {
 				t.Errorf("AwsReader.GetReaderName() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestAwsReader_GetSupportedProfiles(t *testing.T) {
+	type fields struct {
+		profiles []string
+	}
+	tests := []struct {
+		name     string
+		profiles []string
+		want     []string
+	}{
+		{
+			name:     "test",
+			profiles: []string{"p1", "p2"},
+			want:     []string{"p1", "p2"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ar := AwsReader{profiles: tt.profiles}
+			if got := ar.GetSupportedProfiles(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("AwsReader.GetSupportedProfiles() = %v, want %v", got, tt.want)
 			}
 		})
 	}

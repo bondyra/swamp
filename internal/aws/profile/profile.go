@@ -6,14 +6,35 @@ import (
 	"regexp"
 )
 
-type ProfileProvider func() ([]string, error)
 type ConfigReader func(string) ([]string, error)
 
-func DefaultReadConfig(path string) ([]string, error) {
+func FromConfigFiles(configPaths ...string) ([]string, error) {
+	return provideProfilesFromConfig(defaultReadConfig, configPaths...)
+}
+
+func provideProfilesFromConfig(readConfig ConfigReader, configPaths ...string) ([]string, error) {
+	resultsMap := make(map[string]bool)
+	for _, configPath := range configPaths {
+		profiles, err := readConfig(configPath)
+		if err != nil {
+			return nil, fmt.Errorf("provideProfilesFromConfig: %w", err)
+		}
+		for _, p := range profiles {
+			resultsMap[p] = true
+		}
+	}
+	results := make([]string, 0, len(resultsMap))
+	for r := range resultsMap {
+		results = append(results, r)
+	}
+	return results, nil
+}
+
+func defaultReadConfig(path string) ([]string, error) {
 	results := make([]string, 0)
 	bytes, err := os.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("read config file error: %w", err)
+		return nil, fmt.Errorf("defaultReadConfig: %w", err)
 	}
 	data := string(bytes)
 	regex := regexp.MustCompile(`([^[\s]+)\]`)
@@ -21,24 +42,4 @@ func DefaultReadConfig(path string) ([]string, error) {
 		results = append(results, match[1])
 	}
 	return results, nil
-}
-
-func NewConfigFileProfileProvider(readConfig ConfigReader, configPaths ...string) ProfileProvider {
-	return func() ([]string, error) {
-		resultsMap := make(map[string]bool)
-		for _, configPath := range configPaths {
-			profiles, err := readConfig(configPath)
-			if err != nil {
-				return nil, fmt.Errorf("config file profile provider error: %w", err)
-			}
-			for _, p := range profiles {
-				resultsMap[p] = true
-			}
-		}
-		results := make([]string, 0, len(resultsMap))
-		for r := range resultsMap {
-			results = append(results, r)
-		}
-		return results, nil
-	}
 }

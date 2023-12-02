@@ -6,6 +6,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"golang.org/x/exp/slices"
 )
 
 func multiline(args ...string) string {
@@ -49,7 +51,7 @@ func TestDefaultReadConfig(t *testing.T) {
 				tempFile.Write([]byte(tt.fileContent))
 				path = tempFile.Name()
 			}
-			got, err := DefaultReadConfig(path)
+			got, err := defaultReadConfig(path)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("DefaultReadConfig() error = %v, wantErr %v", err, tt.wantErr)
 			} else if !reflect.DeepEqual(got, tt.want) {
@@ -75,7 +77,7 @@ func newMockErrorConfigReader() ConfigReader {
 	}
 }
 
-func TestConfigFileProfileProvider(t *testing.T) {
+func TestProvideProfilesFromConfig(t *testing.T) {
 	tests := []struct {
 		name             string
 		mockConfigReader ConfigReader
@@ -117,10 +119,10 @@ func TestConfigFileProfileProvider(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			profileProvider := NewConfigFileProfileProvider(tt.mockConfigReader, tt.configPaths...)
+			got, err := provideProfilesFromConfig(tt.mockConfigReader, tt.configPaths...)
 
-			got, err := profileProvider()
-
+			slices.Sort(tt.want)
+			slices.Sort(got)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ConfigFileProfileProvider() error = %v, wantErr %v", err, tt.wantErr)
 			} else if !reflect.DeepEqual(got, tt.want) {

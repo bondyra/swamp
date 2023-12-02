@@ -9,7 +9,7 @@ import (
 
 const testFilePath string = "testing/"
 
-func TestDefaultFactory_NewDefinition(t *testing.T) {
+func TestFromFile(t *testing.T) {
 	tests := []struct {
 		name            string
 		inputFileExists bool
@@ -39,7 +39,6 @@ func TestDefaultFactory_NewDefinition(t *testing.T) {
 			wantErr:         true,
 		},
 	}
-	factory := DefaultFactory{}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var inputPath string
@@ -50,8 +49,7 @@ func TestDefaultFactory_NewDefinition(t *testing.T) {
 				tempFile.Close()
 				inputPath = tempFile.Name()
 			}
-
-			got, err := factory.FromFile(inputPath)
+			got, err := FromFile(inputPath)
 
 			if (err != nil) != tt.wantErr {
 				t.Errorf("DefaultFactory.NewDefinition() error = %v, wantErr %v", err, tt.wantErr)
@@ -67,7 +65,7 @@ func TestDefaultFactory_NewDefinition(t *testing.T) {
 	}
 }
 
-func TestDefaultFactory_NewDefinitionFull(t *testing.T) {
+func TestFromFile_Full(t *testing.T) {
 	expected := Definition{
 		TypeDefinitions: []TypeDefinition{
 			{Type: "Type1", IdentifierField: "Identifier1", Alias: "Alias1", Parents: []ParentDefinition{}, Attrs: []Attr{{Field: "Attribute1_1"}, {Field: "Attribute1_2"}}},
@@ -78,9 +76,8 @@ func TestDefaultFactory_NewDefinitionFull(t *testing.T) {
 			},
 		},
 	}
-	factory := DefaultFactory{}
 
-	got, err := factory.FromFile(testFilePath + "full_definition.json")
+	got, err := FromFile(testFilePath + "full_definition.json")
 
 	if err != nil {
 		t.Errorf("DefaultFactory.NewDefinition() error = %v", err)

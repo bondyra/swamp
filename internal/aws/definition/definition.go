@@ -10,23 +10,12 @@ import (
 
 var validate *validator.Validate
 
-type Factory interface {
-	FromFile(string) (*Definition, error)
-}
-
-type DefaultFactory struct{}
-
-func (df DefaultFactory) FromFile(jsonPath string) (*Definition, error) {
-	var err error
+func FromFile(jsonPath string) (*Definition, error) {
 	data, err := os.ReadFile(jsonPath)
 	if err != nil {
-		return nil, fmt.Errorf("FromFile: %w", err)
+		return nil, fmt.Errorf("NewDefinition: %w", err)
 	}
 	return common.Unmarshal[Definition](data)
-}
-
-type DefinitionInterface interface {
-	Validate() error
 }
 
 type Definition struct {

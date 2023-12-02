@@ -2,35 +2,25 @@ package aws
 
 import (
 	"fmt"
-	"path"
 	"regexp"
-	"runtime"
 
 	"github.com/bondyra/swamp/internal/aws/client"
 	"github.com/bondyra/swamp/internal/aws/common"
 	"github.com/bondyra/swamp/internal/aws/definition"
-	"github.com/bondyra/swamp/internal/aws/profile"
 	"github.com/bondyra/swamp/internal/reader"
 	"golang.org/x/exp/slices"
 )
 
-func NewReader(profileProvider profile.ProfileProvider, awsFactory client.PoolFactory, defFactory definition.Factory) (*AwsReader, error) {
-	profiles, err := profileProvider()
-	if err != nil {
-		return nil, fmt.Errorf("NewReader: %w", err)
-	}
-	_, filename, _, _ := runtime.Caller(0)
-	definition, err := defFactory.FromFile(path.Dir(filename) + "/definition.json")
-	if err != nil {
-		return nil, fmt.Errorf("NewReader: %w", err)
-	}
+func NewReader(profiles []string, createPool client.CreatePool, definition *definition.Definition) *AwsReader {
 	return &AwsReader{
-		pool: awsFactory.NewPool(profiles...),
-		def:  definition,
-	}, nil
+		profiles: profiles,
+		pool:     createPool(profiles),
+		def:      definition,
+	}
 }
 
 type AwsReader struct {
+	profiles     []string
 	pool         client.Pool
 	def          *definition.Definition
 	knownTypes   []string
@@ -68,6 +58,10 @@ func (ar AwsReader) typeDefinition(itemType string) (*definition.TypeDefinition,
 		}
 	}
 	return nil, fmt.Errorf("%v type is not supported", itemType)
+}
+
+func (ar AwsReader) GetSupportedProfiles() []string {
+	return ar.profiles
 }
 
 func (ar AwsReader) IsTypeSupported(itemType string) bool {
@@ -127,15 +121,32 @@ func (ar AwsReader) GetItems(itemType string, profiles []string, attrs []string,
 }
 
 func (ar AwsReader) listBaseItemsForEachProfile(profiles []string, itemType string) ([]*reader.Item, error) {
-	results := []*reader.Item{}
+	r := make(chan []*reader.Item, len(profiles))
+	e := make(chan error)
+	allResults := make([]*reader.Item, 0)
 	for _, p := range profiles {
-		r, err := ar.pool.ListResources(p, itemType)
-		if err != nil {
-			return nil, fmt.Errorf("listBaseItemsForEachProfile: %w", err)
-		}
-		results = append(results, r...)
+		go ar.listBaseItems(p, itemType, r, e)
 	}
-	return results, nil
+	for i := 0; i < len(profiles); i++ {
+		select {
+		case results := <-r:
+			allResults = append(allResults, results...)
+		case err := <-e:
+			if err != nil {
+				return nil, fmt.Errorf("listBaseItemsForEachProfile: %w", err)
+			}
+		}
+	}
+	return allResults, nil
+}
+
+func (ar AwsReader) listBaseItems(profile string, itemType string, r chan []*reader.Item, e chan error) {
+	results, err := ar.pool.ListResources(profile, itemType)
+	if err != nil {
+		e <- err
+	} else {
+		r <- results
+	}
 }
 
 func (ar AwsReader) getItems(baseItems []*reader.Item, itemType string, filterFunc func(*reader.Item) bool) ([]*reader.Item, error) {

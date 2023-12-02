@@ -28,6 +28,7 @@ type Item struct {
 type Reader interface {
 	Name() string
 
+	GetSupportedProfiles() []string
 	IsTypeSupported(itemType string) bool
 	IsLinkSupported(itemType string, parentType string) bool
 	AreAttrsSupported(itemType string, attrs []string) bool
