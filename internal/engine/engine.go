@@ -9,9 +9,17 @@ import (
 	"github.com/bondyra/swamp/internal/reader"
 )
 
-func Run(ast *language.AST, readers []reader.Reader) (map[string]any, error) {
-	g, _ := translate(ast, readers)
-	return execute(g, readers)
+func Run(ast *language.AST, readers []reader.Reader) error {
+	g, err := translate(ast, readers)
+	if err != nil {
+		return fmt.Errorf("Run: %w", err)
+	}
+	err = execute(g, readers)
+	if err != nil {
+		return fmt.Errorf("Run: %w", err)
+	}
+	printGraph(g)
+	return nil
 }
 
 func translate(ast *language.AST, readers []reader.Reader) (*ExecutionGraph, error) {
@@ -34,16 +42,54 @@ func translate(ast *language.AST, readers []reader.Reader) (*ExecutionGraph, err
 	return gb.Build(), nil
 }
 
-func execute(eg *ExecutionGraph, readers []reader.Reader, opts ...any) (map[string]any, error) {
-	return map[string]any{"a": "1", "b": 1, "c": true}, nil
+func execute(eg *ExecutionGraph, readers []reader.Reader, opts ...any) error {
+	layer, err := eg.GetRoots()
+	if err != nil {
+		return fmt.Errorf("execute: %w", err)
+	}
+	for len(layer) > 0 {
+		err := executeLayer(layer, readers, opts...)
+		if err != nil {
+			return fmt.Errorf("execute: %w", err)
+		}
+		layer = getNextLayer(eg, layer)
+	}
+	return nil
 }
 
-func executeLayer(layer []*Node, readers []reader.Reader, opts ...any) ([]*reader.Item, error) {
-	// r := make(chan []*reader.Item, len(profiles))
-	// e := make(chan error)
-	return nil, nil
+func executeLayer(nodes []*Node, readers []reader.Reader, opts ...any) error {
+	it := make(chan []*reader.Item, len(nodes))
+	e := make(chan error)
+	for _, node := range nodes {
+		go executeNode(node, readers, it, e)
+	}
+	for i := 0; i < len(nodes); i++ {
+		select {
+		case items := <-it:
+			nodes[i].items = items
+		case err := <-e:
+			return fmt.Errorf("executeLayer: %w", err)
+		}
+	}
+	return nil
 }
 
+func executeNode(node *Node, readers []reader.Reader, it chan []*reader.Item, e chan error) {
+	for _, r := range readers {
+		if r.Name() == node.ReaderName {
+			parentItems := []*reader.Item{}
+			for _, p := range node.parents {
+				parentItems = append(parentItems, p.items...)
+			}
+			items, err := r.GetItems(node.Type, node.Profiles, node.Attrs, node.Filters, parentItems)
+			if err != nil {
+				e <- fmt.Errorf("executeNode: %w", err)
+			}
+			it <- items
+		}
+	}
+	e <- fmt.Errorf("executeNode: reader %s not found", node.ReaderName)
+}
 func getNextLayer(eg *ExecutionGraph, parents []*Node) []*Node {
 	childSet := map[*Node]bool{}
 	for _, p := range parents {
@@ -63,11 +109,10 @@ func getNextLayer(eg *ExecutionGraph, parents []*Node) []*Node {
 type GraphBuilder struct {
 	profiles []string
 	nodeMap  map[string]*Node
-	edges    map[string]map[string]bool // map[from]to
 }
 
 func NewGraphBuilder() *GraphBuilder {
-	return &GraphBuilder{nodeMap: map[string]*Node{}, edges: map[string]map[string]bool{}}
+	return &GraphBuilder{nodeMap: map[string]*Node{}}
 }
 
 func (gb *GraphBuilder) ReadProfiles(ast *language.AST, readers []reader.Reader) error {
@@ -143,10 +188,11 @@ func (gb *GraphBuilder) linkNode(fromAlias string, toAlias string) error {
 		}
 		return fmt.Errorf("linkNode: %s", strings.Join(errors, ", "))
 	}
-	gb.edges[fromAlias][toAlias] = true
+	gb.nodeMap[fromAlias].children = append(gb.nodeMap[fromAlias].children, gb.nodeMap[toAlias])
+	gb.nodeMap[toAlias].parents = append(gb.nodeMap[toAlias].parents, gb.nodeMap[fromAlias])
 	return nil
 }
 
 func (gb *GraphBuilder) Build() *ExecutionGraph {
-	return &ExecutionGraph{nodeMap: gb.nodeMap, edges: gb.edges}
+	return &ExecutionGraph{nodeMap: gb.nodeMap}
 }

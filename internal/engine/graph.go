@@ -8,7 +8,6 @@ import (
 
 type ExecutionGraph struct {
 	nodeMap map[string]*Node
-	edges   map[string]map[string]bool // map[from]to
 }
 
 type Node struct {
@@ -19,20 +18,17 @@ type Node struct {
 	Filters    []reader.Filter
 	Attrs      []string
 
+	parents  []*Node
+	children []*Node
+
 	items []*reader.Item
 }
 
 func (eg *ExecutionGraph) GetRoots() ([]*Node, error) {
 	roots := []*Node{}
-	childAliases := map[string]bool{}
-	for _, edge := range eg.edges {
-		for to := range edge {
-			childAliases[to] = true
-		}
-	}
-	for v := range eg.nodeMap {
-		if _, exists := childAliases[v]; !exists {
-			roots = append(roots, eg.nodeMap[v])
+	for _, node := range eg.nodeMap {
+		if len(node.parents) == 0 {
+			roots = append(roots, node)
 		}
 	}
 	if len(roots) == 0 {
@@ -42,21 +38,9 @@ func (eg *ExecutionGraph) GetRoots() ([]*Node, error) {
 }
 
 func (eg *ExecutionGraph) GetChildren(parent *Node) []*Node {
-	children := []*Node{}
-	for _, child := range eg.nodeMap {
-		if _, exists := eg.edges[parent.Alias][child.Alias]; exists {
-			children = append(children, child)
-		}
-	}
-	return children
+	return parent.children
 }
 
 func (eg *ExecutionGraph) GetParents(child *Node) []*Node {
-	parents := []*Node{}
-	for _, parent := range eg.nodeMap {
-		if _, exists := eg.edges[parent.Alias][child.Alias]; exists {
-			parents = append(parents, parent)
-		}
-	}
-	return parents
+	return child.parents
 }
