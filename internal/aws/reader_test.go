@@ -84,41 +84,21 @@ func TestAwsReader_IsTypeSupported(t *testing.T) {
 		{
 			name: "test true when type matches",
 			def: &definition.Definition{TypeDefinitions: []definition.TypeDefinition{
-				{Type: "t1", IdentifierField: "id1", Alias: "a1"},
-				{Type: "t2", IdentifierField: "id2", Alias: "a2"},
-				{Type: "t3", IdentifierField: "id3", Alias: "a3"},
+				{Type: "t1", IdentifierField: "id1"},
+				{Type: "t2", IdentifierField: "id2"},
+				{Type: "t3", IdentifierField: "id3"},
 			}},
 			itemType: "t3",
 			want:     true,
 		},
 		{
-			name: "test true when alias matches",
-			def: &definition.Definition{TypeDefinitions: []definition.TypeDefinition{
-				{Type: "t1", IdentifierField: "id1", Alias: "a1"},
-				{Type: "t2", IdentifierField: "id2", Alias: "a2"},
-				{Type: "t3", IdentifierField: "id3", Alias: "a3"},
-			}},
-			itemType: "a1",
-			want:     true,
-		},
-		{
 			name: "test false when no type matches",
 			def: &definition.Definition{TypeDefinitions: []definition.TypeDefinition{
-				{Type: "t11", IdentifierField: "id1", Alias: "aa1"},
-				{Type: "t22", IdentifierField: "id2", Alias: "aa2"},
-				{Type: "t33", IdentifierField: "id3", Alias: "aa3"},
+				{Type: "t11", IdentifierField: "id1"},
+				{Type: "t22", IdentifierField: "id2"},
+				{Type: "t33", IdentifierField: "id3"},
 			}},
 			itemType: "t1",
-			want:     false,
-		},
-		{
-			name: "test false when no alias matches",
-			def: &definition.Definition{TypeDefinitions: []definition.TypeDefinition{
-				{Type: "t11", IdentifierField: "id1", Alias: "aa1"},
-				{Type: "t22", IdentifierField: "id2", Alias: "aa2"},
-				{Type: "t33", IdentifierField: "id3", Alias: "aa3"},
-			}},
-			itemType: "a1",
 			want:     false,
 		},
 	}
@@ -134,70 +114,91 @@ func TestAwsReader_IsTypeSupported(t *testing.T) {
 
 func TestAwsReader_IsLinkSupported(t *testing.T) {
 	tests := []struct {
-		name       string
-		def        *definition.Definition
-		itemType   string
-		parentType string
-		want       bool
+		name             string
+		def              *definition.Definition
+		itemType         string
+		parentReaderName string
+		parentType       string
+		want             bool
 	}{
 		{
 			name: "test false when there are no parents defined",
 			def: &definition.Definition{TypeDefinitions: []definition.TypeDefinition{
-				{Type: "t1", IdentifierField: "id1", Alias: "a1"},
+				{Type: "t1", IdentifierField: "id1"},
 			}},
-			itemType:   "t1",
-			parentType: "p1",
-			want:       false,
+			itemType:         "t1",
+			parentReaderName: "r1",
+			parentType:       "p1",
+			want:             false,
 		},
 		{
-			name: "test false when parent does not match",
+			name: "test false when parent type does not match",
 			def: &definition.Definition{TypeDefinitions: []definition.TypeDefinition{
-				{Type: "t1", IdentifierField: "id1", Alias: "a1"},
+				{Type: "t1", IdentifierField: "id1"},
 				{
-					Type: "t2", IdentifierField: "id1", Alias: "a1",
+					Type: "t2", IdentifierField: "id1",
 					Parents: []definition.ParentDefinition{
-						{Type: "p1", LinkType: "inline", Links: []definition.Link{{ParentField: "pf", Field: "f"}}},
+						{ReaderNameDotType: "r1.p1", Links: []definition.Link{{ParentField: "pf", Field: "f"}}},
 					},
 				},
 			}},
-			itemType:   "t2",
-			parentType: "p11",
-			want:       false,
+			itemType:         "t2",
+			parentReaderName: "r1",
+			parentType:       "p11",
+			want:             false,
+		},
+		{
+			name: "test false when parent reader name does not match",
+			def: &definition.Definition{TypeDefinitions: []definition.TypeDefinition{
+				{Type: "t1", IdentifierField: "id1"},
+				{
+					Type: "t2", IdentifierField: "id1",
+					Parents: []definition.ParentDefinition{
+						{ReaderNameDotType: "r1.p1", Links: []definition.Link{{ParentField: "pf", Field: "f"}}},
+					},
+				},
+			}},
+			itemType:         "t2",
+			parentReaderName: "r11",
+			parentType:       "p1",
+			want:             false,
 		},
 		{
 			name: "test false when type does not exist",
 			def: &definition.Definition{TypeDefinitions: []definition.TypeDefinition{
 				{
-					Type: "t1", IdentifierField: "id1", Alias: "a1",
+					Type: "t1", IdentifierField: "id1",
 					Parents: []definition.ParentDefinition{
-						{Type: "p1", LinkType: "inline", Links: []definition.Link{{ParentField: "pf", Field: "f"}}},
+						{ReaderNameDotType: "r1.p1", Links: []definition.Link{{ParentField: "pf", Field: "f"}}},
 					},
 				},
 			}},
-			itemType:   "t2",
-			parentType: "p1",
-			want:       false,
+			itemType:         "t2",
+			parentReaderName: "r1",
+			parentType:       "p1",
+			want:             false,
 		},
 		{
 			name: "test true",
 			def: &definition.Definition{TypeDefinitions: []definition.TypeDefinition{
 				{
-					Type: "t1", IdentifierField: "id1", Alias: "a1",
+					Type: "t1", IdentifierField: "id1",
 					Parents: []definition.ParentDefinition{
-						{Type: "p1", LinkType: "inline", Links: []definition.Link{{ParentField: "pf", Field: "f"}}},
-						{Type: "p2", LinkType: "inline", Links: []definition.Link{{ParentField: "pf", Field: "f"}}},
+						{ReaderNameDotType: "r1.p1", Links: []definition.Link{{ParentField: "pf", Field: "f"}}},
+						{ReaderNameDotType: "r1.p2", Links: []definition.Link{{ParentField: "pf", Field: "f"}}},
 					},
 				},
 			}},
-			itemType:   "t1",
-			parentType: "p2",
-			want:       true,
+			itemType:         "t1",
+			parentReaderName: "r1",
+			parentType:       "p2",
+			want:             true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ar := AwsReader{def: tt.def}
-			if got := ar.IsLinkSupported(tt.itemType, tt.parentType); got != tt.want {
+			if got := ar.IsLinkSupported(tt.itemType, tt.parentReaderName, tt.parentType); got != tt.want {
 				t.Errorf("AwsReader.IsLinkSupported() = %v, want %v", got, tt.want)
 			}
 		})
@@ -215,7 +216,7 @@ func TestAwsReader_AreAttrsSupported(t *testing.T) {
 		{
 			name: "test false when there are no attrs",
 			def: &definition.Definition{TypeDefinitions: []definition.TypeDefinition{
-				{Type: "t1", IdentifierField: "id1", Alias: "a1"},
+				{Type: "t1", IdentifierField: "id1"},
 			}},
 			itemType: "t1",
 			attrs:    []string{"a1"},
@@ -225,7 +226,7 @@ func TestAwsReader_AreAttrsSupported(t *testing.T) {
 			name: "test false when type does not exist",
 			def: &definition.Definition{TypeDefinitions: []definition.TypeDefinition{
 				{
-					Type: "t1", IdentifierField: "id1", Alias: "a1",
+					Type: "t1", IdentifierField: "id1",
 					Attrs: []definition.Attr{
 						{Field: "f1"},
 						{Field: "f2"},
@@ -241,7 +242,7 @@ func TestAwsReader_AreAttrsSupported(t *testing.T) {
 			name: "test false on non existent attrs",
 			def: &definition.Definition{TypeDefinitions: []definition.TypeDefinition{
 				{
-					Type: "t1", IdentifierField: "id1", Alias: "a1",
+					Type: "t1", IdentifierField: "id1",
 					Attrs: []definition.Attr{
 						{Field: "f1"},
 						{Field: "f2"},
@@ -257,7 +258,7 @@ func TestAwsReader_AreAttrsSupported(t *testing.T) {
 			name: "test false when input is superset",
 			def: &definition.Definition{TypeDefinitions: []definition.TypeDefinition{
 				{
-					Type: "t1", IdentifierField: "id1", Alias: "a1",
+					Type: "t1", IdentifierField: "id1",
 					Attrs: []definition.Attr{
 						{Field: "f1"},
 						{Field: "f2"},
@@ -273,7 +274,7 @@ func TestAwsReader_AreAttrsSupported(t *testing.T) {
 			name: "test true",
 			def: &definition.Definition{TypeDefinitions: []definition.TypeDefinition{
 				{
-					Type: "tt1", IdentifierField: "id1", Alias: "a1",
+					Type: "tt1", IdentifierField: "id1",
 					Attrs: []definition.Attr{
 						{Field: "f1"},
 						{Field: "f2"},
@@ -308,7 +309,7 @@ func TestAwsReader_IsFilterSupported(t *testing.T) {
 			name: "test false when type does not exist",
 			def: &definition.Definition{TypeDefinitions: []definition.TypeDefinition{
 				{
-					Type: "t1", IdentifierField: "id1", Alias: "a1",
+					Type: "t1", IdentifierField: "id1",
 					Attrs: []definition.Attr{
 						{Field: "a1"},
 						{Field: "a2"},
@@ -324,7 +325,7 @@ func TestAwsReader_IsFilterSupported(t *testing.T) {
 			name: "test false",
 			def: &definition.Definition{TypeDefinitions: []definition.TypeDefinition{
 				{
-					Type: "t1", IdentifierField: "id1", Alias: "a1",
+					Type: "t1", IdentifierField: "id1",
 					Attrs: []definition.Attr{
 						{Field: "a1"},
 						{Field: "a2"},
@@ -339,8 +340,7 @@ func TestAwsReader_IsFilterSupported(t *testing.T) {
 		{
 			name: "test false 2",
 			def: &definition.Definition{TypeDefinitions: []definition.TypeDefinition{
-				{Type: "t1", IdentifierField: "id1", Alias: "a1"},
-			}},
+				{Type: "t1", IdentifierField: "id1"}}},
 			itemType: "t1",
 			filter:   reader.Filter{Attr: "a1"},
 			want:     false,
@@ -349,7 +349,7 @@ func TestAwsReader_IsFilterSupported(t *testing.T) {
 			name: "test true",
 			def: &definition.Definition{TypeDefinitions: []definition.TypeDefinition{
 				{
-					Type: "t1", IdentifierField: "id1", Alias: "a1",
+					Type: "t1", IdentifierField: "id1",
 					Attrs: []definition.Attr{
 						{Field: "a1"},
 						{Field: "a2"},
@@ -419,10 +419,10 @@ const (
 
 var testDefinition definition.Definition = definition.Definition{
 	TypeDefinitions: []definition.TypeDefinition{
-		{Type: TYPE_1, IdentifierField: TYPE_1_ID_FIELD, Alias: "Alias1", Attrs: []definition.Attr{{Field: "a"}, {Field: "b"}, {Field: "c"}}},
-		{Type: TYPE_2, IdentifierField: TYPE_2_ID_FIELD, Alias: "Alias2", Attrs: []definition.Attr{{Field: "a"}, {Field: "b"}, {Field: "c"}}},
-		{Type: TYPE_3, IdentifierField: TYPE_3_ID_FIELD, Alias: "Alias2", Attrs: []definition.Attr{{Field: "a"}, {Field: "b"}, {Field: "c"}}},
-		{Type: TYPE_THAT_CAUSES_ERR, IdentifierField: TYPE_THAT_CAUSES_ERR_ID_FIELD, Alias: "Alias2"},
+		{Type: TYPE_1, IdentifierField: TYPE_1_ID_FIELD, Attrs: []definition.Attr{{Field: "a"}, {Field: "b"}, {Field: "c"}}},
+		{Type: TYPE_2, IdentifierField: TYPE_2_ID_FIELD, Attrs: []definition.Attr{{Field: "a"}, {Field: "b"}, {Field: "c"}}},
+		{Type: TYPE_3, IdentifierField: TYPE_3_ID_FIELD, Attrs: []definition.Attr{{Field: "a"}, {Field: "b"}, {Field: "c"}}},
+		{Type: TYPE_THAT_CAUSES_ERR, IdentifierField: TYPE_THAT_CAUSES_ERR_ID_FIELD},
 	},
 }
 
@@ -609,7 +609,7 @@ func TestAwsReader_GetItems(t *testing.T) {
 				knownTypes:   nil,
 				knownAliases: nil,
 			}
-			got, err := ar.GetItems(tt.args.itemType, tt.args.profiles, tt.args.attrs, tt.args.filters)
+			got, err := ar.GetItems(tt.args.itemType, tt.args.profiles, tt.args.attrs, tt.args.filters, nil)
 			slices.SortFunc(got, sortFunc)
 			slices.SortFunc(tt.want, sortFunc)
 			if (err != nil) != tt.wantErr {

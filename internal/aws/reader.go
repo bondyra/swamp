@@ -41,16 +41,6 @@ func (ar AwsReader) getKnownTypes() []string {
 	return ar.knownTypes
 }
 
-func (ar AwsReader) getKnownAliases() []string {
-	if ar.knownAliases == nil {
-		ar.knownAliases = make([]string, len(ar.def.TypeDefinitions))
-		for i := range ar.def.TypeDefinitions {
-			ar.knownAliases[i] = ar.def.TypeDefinitions[i].Alias
-		}
-	}
-	return ar.knownAliases
-}
-
 func (ar AwsReader) typeDefinition(itemType string) (*definition.TypeDefinition, error) {
 	for _, td := range ar.def.TypeDefinitions {
 		if td.Type == itemType {
@@ -65,16 +55,16 @@ func (ar AwsReader) GetSupportedProfiles() []string {
 }
 
 func (ar AwsReader) IsTypeSupported(itemType string) bool {
-	return slices.Contains(ar.getKnownTypes(), itemType) || slices.Contains(ar.getKnownAliases(), itemType)
+	return slices.Contains(ar.getKnownTypes(), itemType)
 }
 
-func (ar AwsReader) IsLinkSupported(itemType string, parentType string) bool {
+func (ar AwsReader) IsLinkSupported(itemType string, parentReaderName string, parentItemType string) bool {
 	td, err := ar.typeDefinition(itemType)
 	if err != nil {
 		return false
 	}
 	for _, l := range (*td).Parents {
-		if l.Type == parentType {
+		if l.ReaderNameDotType == fmt.Sprintf("%v.%v", parentReaderName, parentItemType) {
 			return true
 		}
 	}
@@ -99,12 +89,12 @@ func (ar AwsReader) IsFilterSupported(itemType string, filter reader.Filter) boo
 	return slices.Contains(fields, filter.Attr)
 }
 
-func (ar AwsReader) GetItems(itemType string, profiles []string, attrs []string, filters []reader.Filter) ([]*reader.Item, error) {
+func (ar AwsReader) GetItems(itemType string, profiles []string, attrs []string, filters []reader.Filter, parents []*reader.Item) ([]*reader.Item, error) {
 	typeDefinition, err := ar.typeDefinition(itemType)
 	if err != nil {
 		return nil, fmt.Errorf("GetItems: %w", err)
 	}
-	filterFunc, err := ar.getFilterFunc(typeDefinition, filters)
+	filterFunc, err := ar.getFilterFunc(typeDefinition, filters, parents)
 	if err != nil {
 		return nil, fmt.Errorf("GetItems: %w", err)
 	}
@@ -178,7 +168,8 @@ func (ar AwsReader) getItem(baseItem *reader.Item, itemType string, filterFunc f
 	}
 }
 
-func (ar AwsReader) getFilterFunc(td *definition.TypeDefinition, filters []reader.Filter) (func(*reader.Item) bool, error) {
+func (ar AwsReader) getFilterFunc(td *definition.TypeDefinition, filters []reader.Filter, parents []*reader.Item) (func(*reader.Item) bool, error) {
+	// todo: add support for parent filters
 	funcChain := []func(*reader.Item) bool{}
 	getIdValue := func(r *reader.Item) *string { return &r.Data.Identifier }
 	attrNames := ar.getAllAttrNames(td)
@@ -186,7 +177,7 @@ func (ar AwsReader) getFilterFunc(td *definition.TypeDefinition, filters []reade
 		var getAttrValue func(r *reader.Item) *string
 		attr := filter.Attr
 		value := filter.Value
-		if attr == td.IdentifierField || attr == td.Alias {
+		if attr == td.IdentifierField {
 			getAttrValue = getIdValue
 		} else {
 			_, supported := attrNames[attr]

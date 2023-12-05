@@ -1,8 +1,6 @@
 package cli
 
 import (
-	"encoding/json"
-	"fmt"
 	"log"
 	"os"
 	"path"
@@ -11,8 +9,8 @@ import (
 	"github.com/bondyra/swamp/internal/aws"
 	"github.com/bondyra/swamp/internal/aws/client"
 	"github.com/bondyra/swamp/internal/aws/definition"
-	"github.com/bondyra/swamp/internal/aws/engine"
 	"github.com/bondyra/swamp/internal/aws/profile"
+	"github.com/bondyra/swamp/internal/engine"
 	"github.com/bondyra/swamp/internal/language"
 	"github.com/bondyra/swamp/internal/reader"
 )
@@ -45,14 +43,8 @@ func (c Cli) Run(query string) {
 	}
 	r := aws.NewReader(profiles, client.NewLazyPool, definition)
 
-	result, err := engine.Run(ast, []reader.Reader{r})
+	err = engine.Run(ast, []reader.Reader{r})
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	output, err := json.MarshalIndent(result, "", " ")
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Print(string(output) + "\n")
 }

@@ -13,8 +13,8 @@ func (b *Boolean) Capture(values []string) error {
 }
 
 type AST struct {
-	Profiles   Collection `( "in" @@)?`
-	Entitities []Entity   `@@*`
+	Profiles Collection `( "in" @@)?`
+	Entities []Entity   `@@*`
 }
 
 type Collection struct {
@@ -37,7 +37,7 @@ type LinkEntity struct {
 func (f LinkEntity) value() {}
 
 type Item struct {
-	Type      []string   `@Ident ( "." @Ident )*`
+	Type      []string   `@Ident ( "." @Ident )?`
 	Alias     string     `@Ident`
 	Modifiers []Modifier `@@*`
 }

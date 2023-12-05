@@ -31,7 +31,7 @@ func TestParseString(t *testing.T) {
 			input: "item ns.res alias",
 			expected: AST{
 				Profiles: Collection{},
-				Entitities: []Entity{
+				Entities: []Entity{
 					ItemEntity{
 						Value: Item{
 							Type:  []string{"ns", "res"},
@@ -45,7 +45,7 @@ func TestParseString(t *testing.T) {
 			name:  "test attrs",
 			input: "item ns.res alias attr a1,a2 sub a1,a2 add a3 add a4 sub a4",
 			expected: AST{
-				Entitities: []Entity{
+				Entities: []Entity{
 					ItemEntity{
 						Value: Item{
 							Type:  []string{"ns", "res"},
@@ -66,7 +66,7 @@ func TestParseString(t *testing.T) {
 			name:  "test filter",
 			input: "item ns.res alias where a1 eq 'abc'",
 			expected: AST{
-				Entitities: []Entity{
+				Entities: []Entity{
 					ItemEntity{
 						Value: Item{
 							Type:  []string{"ns", "res"},
@@ -83,7 +83,7 @@ func TestParseString(t *testing.T) {
 			name:  "test filter neg",
 			input: "item ns.res alias where a1 ne 'abc'",
 			expected: AST{
-				Entitities: []Entity{
+				Entities: []Entity{
 					ItemEntity{
 						Value: Item{
 							Type:  []string{"ns", "res"},
@@ -100,7 +100,7 @@ func TestParseString(t *testing.T) {
 			name:  "test filter integer",
 			input: "item ns.res alias where a1 eq 1",
 			expected: AST{
-				Entitities: []Entity{
+				Entities: []Entity{
 					ItemEntity{
 						Value: Item{
 							Type:  []string{"ns", "res"},
@@ -117,7 +117,7 @@ func TestParseString(t *testing.T) {
 			name:  "test filter flag",
 			input: "item ns.res alias where a1 eq true",
 			expected: AST{
-				Entitities: []Entity{
+				Entities: []Entity{
 					ItemEntity{
 						Value: Item{
 							Type:  []string{"ns", "res"},
@@ -143,3 +143,5 @@ func TestParseString(t *testing.T) {
 		})
 	}
 }
+
+// todo test error cases

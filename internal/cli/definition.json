@@ -1,9 +1,8 @@
 {
   "types": [
     {
-      "type": "AWS::EC2::VPC",
+      "type": "vpc",
       "identifierField": "VpcId",
-      "abbr": "vpc",
       "parents": [],
       "attrs": [
         {
@@ -30,12 +29,11 @@
       ]
     },
     {
-      "type": "AWS::EC2::Subnet",
-      "abbr": "subnet",
+      "type": "subnet",
       "parents": [
         {
-          "type": "AWS::EC2::VPC",
-          "linkType": "inline",
+          "reader": "aws",
+          "type": "vpc",
           "links": [
             {
               "parentField": "VpcId",

@@ -68,10 +68,10 @@ func TestFromFile(t *testing.T) {
 func TestFromFile_Full(t *testing.T) {
 	expected := Definition{
 		TypeDefinitions: []TypeDefinition{
-			{Type: "Type1", IdentifierField: "Identifier1", Alias: "Alias1", Parents: []ParentDefinition{}, Attrs: []Attr{{Field: "Attribute1_1"}, {Field: "Attribute1_2"}}},
+			{Type: "Type1", IdentifierField: "Identifier1", Parents: []ParentDefinition{}, Attrs: []Attr{{Field: "Attribute1_1"}, {Field: "Attribute1_2"}}},
 			{
-				Type: "Type2", IdentifierField: "Identifier2", Alias: "Alias2",
-				Parents: []ParentDefinition{{Type: "Type1", LinkType: "inline", Links: []Link{{ParentField: "Link2_1ParentField1", Field: "Link2_1Field1"}}}},
+				Type: "Type2", IdentifierField: "Identifier2",
+				Parents: []ParentDefinition{{ReaderNameDotType: "r1.t1", Links: []Link{{ParentField: "Link2_1ParentField1", Field: "Link2_1Field1"}}}},
 				Attrs:   []Attr{{Field: "Attribute2_1"}, {Field: "Attribute2_2"}},
 			},
 		},
@@ -97,11 +97,37 @@ func TestValidate(t *testing.T) {
 		{
 			name: "test full definition",
 			tds: []TypeDefinition{
-				{Type: "t1", IdentifierField: "id1", Alias: "a1", Parents: []ParentDefinition{}, Attrs: []Attr{{Field: "a1_1"}, {Field: "a1_2"}}},
+				{Type: "t1", IdentifierField: "id1", Parents: []ParentDefinition{}, Attrs: []Attr{{Field: "a1_1"}, {Field: "a1_2"}}},
 				{
-					Type: "t2", IdentifierField: "id2", Alias: "a2",
-					Parents: []ParentDefinition{{Type: "t1", LinkType: "inline", Links: []Link{{ParentField: "l2_pf1", Field: "l2_f1"}}}},
+					Type: "t2", IdentifierField: "id2",
+					Parents: []ParentDefinition{{ReaderNameDotType: "r1.t1", Links: []Link{{ParentField: "l2_pf1", Field: "l2_f1"}}}},
 					Attrs:   []Attr{{Field: "a2_1"}, {Field: "a2_2"}},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "test pass when parent reader names are the same",
+			tds: []TypeDefinition{
+				{
+					Type: "t1", IdentifierField: "id1",
+					Parents: []ParentDefinition{
+						{ReaderNameDotType: "r1.t1", Links: []Link{{ParentField: "pf", Field: "f"}}},
+						{ReaderNameDotType: "r1.t2", Links: []Link{{ParentField: "pf", Field: "f"}}},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "test pass when parent reader names are differrent and parent types are the same",
+			tds: []TypeDefinition{
+				{
+					Type: "t1", IdentifierField: "id1",
+					Parents: []ParentDefinition{
+						{ReaderNameDotType: "r1.t1", Links: []Link{{ParentField: "pf", Field: "f"}}},
+						{ReaderNameDotType: "r2.t1", Links: []Link{{ParentField: "pf", Field: "f"}}},
+					},
 				},
 			},
 			wantErr: false,
@@ -109,16 +135,8 @@ func TestValidate(t *testing.T) {
 		{
 			name: "test error when types are duplicated",
 			tds: []TypeDefinition{
-				{Type: "t1", IdentifierField: "id1", Alias: "a1"},
-				{Type: "t1", IdentifierField: "id2", Alias: "a2"},
-			},
-			wantErr: true,
-		},
-		{
-			name: "test error when aliases are duplicated",
-			tds: []TypeDefinition{
-				{Type: "t1", IdentifierField: "id1", Alias: "a1"},
-				{Type: "t2", IdentifierField: "id2", Alias: "a1"},
+				{Type: "r1.t1", IdentifierField: "id1"},
+				{Type: "r1.t1", IdentifierField: "id2"},
 			},
 			wantErr: true,
 		},
@@ -126,23 +144,10 @@ func TestValidate(t *testing.T) {
 			name: "test error when parent types are duplicated",
 			tds: []TypeDefinition{
 				{
-					Type: "t1", IdentifierField: "id1", Alias: "a1",
+					Type: "t1", IdentifierField: "id1",
 					Parents: []ParentDefinition{
-						{Type: "t1", LinkType: "inline", Links: []Link{{ParentField: "pf", Field: "f"}}},
-						{Type: "t1", LinkType: "inline", Links: []Link{{ParentField: "pf", Field: "f"}}},
-					},
-				},
-			},
-			wantErr: true,
-		},
-		{
-			name: "test error when link type is invalid",
-			tds: []TypeDefinition{
-				{
-					Type: "t2", IdentifierField: "id2", Alias: "a2",
-					Parents: []ParentDefinition{
-						{Type: "t1", LinkType: "inline", Links: []Link{{ParentField: "pf1", Field: "lf2"}}},
-						{Type: "t1", LinkType: "invalidLinkType", Links: []Link{{ParentField: "pf1", Field: "lf2"}}},
+						{ReaderNameDotType: "r1.t1", Links: []Link{{ParentField: "pf", Field: "f"}}},
+						{ReaderNameDotType: "r1.t1", Links: []Link{{ParentField: "pf", Field: "f"}}},
 					},
 				},
 			},
@@ -151,16 +156,8 @@ func TestValidate(t *testing.T) {
 		{
 			name: "test error when any type is empty",
 			tds: []TypeDefinition{
-				{Type: "", IdentifierField: "Identifier1", Alias: "Alias1"},
-				{Type: "Type2", IdentifierField: "Identifier2", Alias: "Alias2"},
-			},
-			wantErr: true,
-		},
-		{
-			name: "test error when any alias is empty",
-			tds: []TypeDefinition{
-				{Type: "Type1", IdentifierField: "Identifier1", Alias: "Alias1"},
-				{Type: "Type2", IdentifierField: "Identifier2", Alias: ""},
+				{Type: "", IdentifierField: "Identifier1"},
+				{Type: "Type2", IdentifierField: "Identifier2"},
 			},
 			wantErr: true,
 		},

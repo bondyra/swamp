@@ -19,21 +19,19 @@ func FromFile(jsonPath string) (*Definition, error) {
 }
 
 type Definition struct {
-	TypeDefinitions []TypeDefinition `json:"types" validate:"required,unique=Type,unique=Alias,dive"`
+	TypeDefinitions []TypeDefinition `json:"types" validate:"required,unique=Type,dive"`
 }
 
 type TypeDefinition struct {
 	Type            string             `json:"type" validate:"required"`
 	IdentifierField string             `json:"identifierField" validate:"required"`
-	Alias           string             `json:"alias" validate:"required"`
-	Parents         []ParentDefinition `json:"parents,omitempty" validate:"unique=Type,dive"`
+	Parents         []ParentDefinition `json:"parents,omitempty" validate:"unique=ReaderNameDotType,dive"`
 	Attrs           []Attr             `json:"attrs,omitempty" validate:"dive"`
 }
 
 type ParentDefinition struct {
-	Type     string `json:"type" validate:"required"`
-	LinkType string `json:"linkType" validate:"required,oneof=inline resourceModel"`
-	Links    []Link `json:"links" validate:"required"`
+	ReaderNameDotType string `json:"readerNameDotType" validate:"required"`
+	Links             []Link `json:"links" validate:"required"`
 }
 
 type Link struct {
