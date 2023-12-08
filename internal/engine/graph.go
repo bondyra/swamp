@@ -9,11 +9,11 @@ type ExecutionGraph struct {
 }
 
 type Node struct {
-	Alias    string
-	Type     string
-	Profiles []string
-	Filters  []reader.Filter
-	Attrs    []string
+	Alias      string
+	Type       string
+	Profiles   []string
+	Filters    []reader.Filter
+	Transforms []reader.Transform
 
 	Reader reader.Reader
 	Items  []*reader.Item

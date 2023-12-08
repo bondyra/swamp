@@ -1,9 +1,7 @@
 {
-  "types": [
+  "items": [
     {
-      "type": "vpc",
-      "identifierField": "VpcId",
-      "parents": [],
+      "type": "aws.vpc",
       "attrs": [
         {
           "field": "CidrBlock"
@@ -29,19 +27,7 @@
       ]
     },
     {
-      "type": "subnet",
-      "parents": [
-        {
-          "reader": "aws",
-          "type": "vpc",
-          "links": [
-            {
-              "parentField": "VpcId",
-              "field": "VpcId"
-            }
-          ]
-        }
-      ],
+      "type": "aws.subnet",
       "attrs": [
         {
           "field": "AssignIpv6AddressOnCreation"
@@ -84,6 +70,18 @@
         },
         {
           "field": "VpcId"
+        }
+      ]
+    }
+  ],
+  "links": [
+    {
+      "from": "aws.vpc",
+      "to": "aws.subnet",
+      "mappings": [
+        {
+          "from": "VpcId",
+          "to": "VpcId"
         }
       ]
     }

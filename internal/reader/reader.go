@@ -1,23 +1,10 @@
 package reader
 
-type Filter struct {
-	Attr  string
-	Op    int
-	Value string
-}
-
-const (
-	OpEquals int = iota
-	OpNotEquals
-	OpLike
-	OpNotLike
-)
-
-type ParentContext struct{}
+type Properties *map[string]string
 
 type ItemData struct {
 	Identifier string
-	Properties *map[string]string
+	Properties Properties
 }
 
 type Item struct {
@@ -25,14 +12,13 @@ type Item struct {
 	Data    *ItemData
 }
 
+type Filter func(i *Item) bool
+type Transform func(props Properties) Properties
+
 type Reader interface {
 	Name() string
 
 	GetSupportedProfiles() []string
-	IsTypeSupported(itemType string) bool
-	IsLinkSupported(itemType string, parentReaderName string, parentItemType string) bool
-	AreAttrsSupported(itemType string, attrs []string) bool
-	IsFilterSupported(itemType string, filter Filter) bool
 
-	GetItems(itemType string, profiles []string, attrs []string, filters []Filter, parents []*Item) ([]*Item, error)
+	GetItems(itemType string, profiles []string, ids []string, filters []Filter, transforms []Transform) ([]*Item, error)
 }

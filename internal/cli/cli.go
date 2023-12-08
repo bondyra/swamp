@@ -3,16 +3,14 @@ package cli
 import (
 	"log"
 	"os"
-	"path"
-	"runtime"
 
 	"github.com/bondyra/swamp/internal/aws"
 	"github.com/bondyra/swamp/internal/aws/client"
-	"github.com/bondyra/swamp/internal/aws/definition"
 	"github.com/bondyra/swamp/internal/aws/profile"
 	"github.com/bondyra/swamp/internal/engine"
 	"github.com/bondyra/swamp/internal/language"
 	"github.com/bondyra/swamp/internal/reader"
+	"github.com/bondyra/swamp/internal/schema"
 )
 
 func loadConfigPaths() []string {
@@ -36,14 +34,12 @@ func (c Cli) Run(query string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	_, filename, _, _ := runtime.Caller(0)
-	definition, err := definition.FromFile(path.Dir(filename) + "/definition.json")
+	r, err := aws.NewReader(profiles, client.NewLazyPool)
 	if err != nil {
 		log.Fatal(err)
 	}
-	r := aws.NewReader(profiles, client.NewLazyPool, definition)
 
-	err = engine.Run(ast, []reader.Reader{r})
+	err = engine.Run(ast, []reader.Reader{r}, schema.DefaultSchemaLoader())
 	if err != nil {
 		log.Fatal(err)
 	}

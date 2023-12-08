@@ -9,22 +9,69 @@ import (
 	"testing"
 
 	"github.com/bondyra/swamp/internal/aws/client"
-	"github.com/bondyra/swamp/internal/aws/definition"
+	"github.com/bondyra/swamp/internal/aws/schema"
 	"github.com/bondyra/swamp/internal/reader"
 	"golang.org/x/exp/slices"
 )
 
+func mockSchemaReader(err bool) schema.SchemaReader {
+	return func() (*schema.Schema, error) {
+		if err {
+			return nil, errors.New("some error")
+		}
+		return &schema.Schema{
+			TypeSchemas: []schema.TypeSchema{{Type: "t1"}},
+		}, nil
+	}
+}
+
 func TestNewReader(t *testing.T) {
+	type args struct {
+		profiles   []string
+		createPool client.CreatePool
+		sr         schema.SchemaReader
+	}
 	tests := []struct {
-		name string
+		name    string
+		args    args
+		want    *AwsReader
+		wantErr bool
 	}{
 		{
 			name: "test",
+			args: args{
+				profiles:   []string{"p1", "p2"},
+				createPool: client.NewLazyPool,
+				sr:         mockSchemaReader(false),
+			},
+			want: &AwsReader{
+				profiles: []string{"p1", "p2"},
+				pool:     client.NewLazyPool([]string{"p1", "p2"}),
+				s:        &schema.Schema{TypeSchemas: []schema.TypeSchema{{Type: "t1"}}},
+			},
+			wantErr: false,
+		},
+		{
+			name: "test error when schema reader returns error",
+			args: args{
+				profiles:   []string{"p1", "p2"},
+				createPool: client.NewLazyPool,
+				sr:         mockSchemaReader(true),
+			},
+			want:    nil,
+			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			NewReader([]string{"dummy"}, client.NewLazyPool, nil)
+			got, err := NewReader(tt.args.profiles, tt.args.createPool, tt.args.sr)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("NewReader() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("NewReader() = %v, want %v", got, tt.want)
+			}
 		})
 	}
 }
@@ -74,304 +121,6 @@ func TestAwsReader_GetSupportedProfiles(t *testing.T) {
 	}
 }
 
-func TestAwsReader_IsTypeSupported(t *testing.T) {
-	tests := []struct {
-		name     string
-		def      *definition.Definition
-		itemType string
-		want     bool
-	}{
-		{
-			name: "test true when type matches",
-			def: &definition.Definition{TypeDefinitions: []definition.TypeDefinition{
-				{Type: "t1", IdentifierField: "id1"},
-				{Type: "t2", IdentifierField: "id2"},
-				{Type: "t3", IdentifierField: "id3"},
-			}},
-			itemType: "t3",
-			want:     true,
-		},
-		{
-			name: "test false when no type matches",
-			def: &definition.Definition{TypeDefinitions: []definition.TypeDefinition{
-				{Type: "t11", IdentifierField: "id1"},
-				{Type: "t22", IdentifierField: "id2"},
-				{Type: "t33", IdentifierField: "id3"},
-			}},
-			itemType: "t1",
-			want:     false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ar := AwsReader{def: tt.def}
-			if got := ar.IsTypeSupported(tt.itemType); got != tt.want {
-				t.Errorf("AwsReader.IsTypeSupported() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestAwsReader_IsLinkSupported(t *testing.T) {
-	tests := []struct {
-		name             string
-		def              *definition.Definition
-		itemType         string
-		parentReaderName string
-		parentType       string
-		want             bool
-	}{
-		{
-			name: "test false when there are no parents defined",
-			def: &definition.Definition{TypeDefinitions: []definition.TypeDefinition{
-				{Type: "t1", IdentifierField: "id1"},
-			}},
-			itemType:         "t1",
-			parentReaderName: "r1",
-			parentType:       "p1",
-			want:             false,
-		},
-		{
-			name: "test false when parent type does not match",
-			def: &definition.Definition{TypeDefinitions: []definition.TypeDefinition{
-				{Type: "t1", IdentifierField: "id1"},
-				{
-					Type: "t2", IdentifierField: "id1",
-					Parents: []definition.ParentDefinition{
-						{ReaderNameDotType: "r1.p1", Links: []definition.Link{{ParentField: "pf", Field: "f"}}},
-					},
-				},
-			}},
-			itemType:         "t2",
-			parentReaderName: "r1",
-			parentType:       "p11",
-			want:             false,
-		},
-		{
-			name: "test false when parent reader name does not match",
-			def: &definition.Definition{TypeDefinitions: []definition.TypeDefinition{
-				{Type: "t1", IdentifierField: "id1"},
-				{
-					Type: "t2", IdentifierField: "id1",
-					Parents: []definition.ParentDefinition{
-						{ReaderNameDotType: "r1.p1", Links: []definition.Link{{ParentField: "pf", Field: "f"}}},
-					},
-				},
-			}},
-			itemType:         "t2",
-			parentReaderName: "r11",
-			parentType:       "p1",
-			want:             false,
-		},
-		{
-			name: "test false when type does not exist",
-			def: &definition.Definition{TypeDefinitions: []definition.TypeDefinition{
-				{
-					Type: "t1", IdentifierField: "id1",
-					Parents: []definition.ParentDefinition{
-						{ReaderNameDotType: "r1.p1", Links: []definition.Link{{ParentField: "pf", Field: "f"}}},
-					},
-				},
-			}},
-			itemType:         "t2",
-			parentReaderName: "r1",
-			parentType:       "p1",
-			want:             false,
-		},
-		{
-			name: "test true",
-			def: &definition.Definition{TypeDefinitions: []definition.TypeDefinition{
-				{
-					Type: "t1", IdentifierField: "id1",
-					Parents: []definition.ParentDefinition{
-						{ReaderNameDotType: "r1.p1", Links: []definition.Link{{ParentField: "pf", Field: "f"}}},
-						{ReaderNameDotType: "r1.p2", Links: []definition.Link{{ParentField: "pf", Field: "f"}}},
-					},
-				},
-			}},
-			itemType:         "t1",
-			parentReaderName: "r1",
-			parentType:       "p2",
-			want:             true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ar := AwsReader{def: tt.def}
-			if got := ar.IsLinkSupported(tt.itemType, tt.parentReaderName, tt.parentType); got != tt.want {
-				t.Errorf("AwsReader.IsLinkSupported() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestAwsReader_AreAttrsSupported(t *testing.T) {
-	tests := []struct {
-		name     string
-		def      *definition.Definition
-		itemType string
-		attrs    []string
-		want     bool
-	}{
-		{
-			name: "test false when there are no attrs",
-			def: &definition.Definition{TypeDefinitions: []definition.TypeDefinition{
-				{Type: "t1", IdentifierField: "id1"},
-			}},
-			itemType: "t1",
-			attrs:    []string{"a1"},
-			want:     false,
-		},
-		{
-			name: "test false when type does not exist",
-			def: &definition.Definition{TypeDefinitions: []definition.TypeDefinition{
-				{
-					Type: "t1", IdentifierField: "id1",
-					Attrs: []definition.Attr{
-						{Field: "f1"},
-						{Field: "f2"},
-						{Field: "f3"},
-					},
-				},
-			}},
-			itemType: "t111",
-			attrs:    []string{"f1", "f2"},
-			want:     false,
-		},
-		{
-			name: "test false on non existent attrs",
-			def: &definition.Definition{TypeDefinitions: []definition.TypeDefinition{
-				{
-					Type: "t1", IdentifierField: "id1",
-					Attrs: []definition.Attr{
-						{Field: "f1"},
-						{Field: "f2"},
-						{Field: "f3"},
-					},
-				},
-			}},
-			itemType: "t1",
-			attrs:    []string{"f1", "f4"},
-			want:     false,
-		},
-		{
-			name: "test false when input is superset",
-			def: &definition.Definition{TypeDefinitions: []definition.TypeDefinition{
-				{
-					Type: "t1", IdentifierField: "id1",
-					Attrs: []definition.Attr{
-						{Field: "f1"},
-						{Field: "f2"},
-						{Field: "f3"},
-					},
-				},
-			}},
-			itemType: "t1",
-			attrs:    []string{"f1", "f2", "f3", "f4"},
-			want:     false,
-		},
-		{
-			name: "test true",
-			def: &definition.Definition{TypeDefinitions: []definition.TypeDefinition{
-				{
-					Type: "tt1", IdentifierField: "id1",
-					Attrs: []definition.Attr{
-						{Field: "f1"},
-						{Field: "f2"},
-						{Field: "f3"},
-					},
-				},
-			}},
-			itemType: "tt1",
-			attrs:    []string{"f1", "f3"},
-			want:     true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ar := AwsReader{def: tt.def}
-			if got := ar.AreAttrsSupported(tt.itemType, tt.attrs); got != tt.want {
-				t.Errorf("AwsReader.AreAttrsSupported() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestAwsReader_IsFilterSupported(t *testing.T) {
-	tests := []struct {
-		name     string
-		def      *definition.Definition
-		itemType string
-		filter   reader.Filter
-		want     bool
-	}{
-		{
-			name: "test false when type does not exist",
-			def: &definition.Definition{TypeDefinitions: []definition.TypeDefinition{
-				{
-					Type: "t1", IdentifierField: "id1",
-					Attrs: []definition.Attr{
-						{Field: "a1"},
-						{Field: "a2"},
-						{Field: "a3"},
-					},
-				},
-			}},
-			itemType: "t111",
-			filter:   reader.Filter{Attr: "a1"},
-			want:     false,
-		},
-		{
-			name: "test false",
-			def: &definition.Definition{TypeDefinitions: []definition.TypeDefinition{
-				{
-					Type: "t1", IdentifierField: "id1",
-					Attrs: []definition.Attr{
-						{Field: "a1"},
-						{Field: "a2"},
-						{Field: "a3"},
-					},
-				},
-			}},
-			itemType: "t1",
-			filter:   reader.Filter{Attr: "a4"},
-			want:     false,
-		},
-		{
-			name: "test false 2",
-			def: &definition.Definition{TypeDefinitions: []definition.TypeDefinition{
-				{Type: "t1", IdentifierField: "id1"}}},
-			itemType: "t1",
-			filter:   reader.Filter{Attr: "a1"},
-			want:     false,
-		},
-		{
-			name: "test true",
-			def: &definition.Definition{TypeDefinitions: []definition.TypeDefinition{
-				{
-					Type: "t1", IdentifierField: "id1",
-					Attrs: []definition.Attr{
-						{Field: "a1"},
-						{Field: "a2"},
-						{Field: "a3"},
-					},
-				},
-			}},
-			itemType: "t1",
-			filter:   reader.Filter{Attr: "a3"},
-			want:     true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ar := AwsReader{def: tt.def}
-			if got := ar.IsFilterSupported(tt.itemType, tt.filter); got != tt.want {
-				t.Errorf("AwsReader.IsFilterSupported() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 const (
 	ID_1_1 = iota
 	ID_1_2
@@ -416,15 +165,6 @@ const (
 	TYPE_THAT_CAUSES_ERR_ID_FIELD = "type_err_id_field"
 	TYPE_NOT_FOUND_IN_DEFINITION  = "type_def_err"
 )
-
-var testDefinition definition.Definition = definition.Definition{
-	TypeDefinitions: []definition.TypeDefinition{
-		{Type: TYPE_1, IdentifierField: TYPE_1_ID_FIELD, Attrs: []definition.Attr{{Field: "a"}, {Field: "b"}, {Field: "c"}}},
-		{Type: TYPE_2, IdentifierField: TYPE_2_ID_FIELD, Attrs: []definition.Attr{{Field: "a"}, {Field: "b"}, {Field: "c"}}},
-		{Type: TYPE_3, IdentifierField: TYPE_3_ID_FIELD, Attrs: []definition.Attr{{Field: "a"}, {Field: "b"}, {Field: "c"}}},
-		{Type: TYPE_THAT_CAUSES_ERR, IdentifierField: TYPE_THAT_CAUSES_ERR_ID_FIELD},
-	},
-}
 
 type mockPool struct {
 }
@@ -604,10 +344,8 @@ func TestAwsReader_GetItems(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ar := AwsReader{
-				pool:         mockPool{},
-				def:          &testDefinition,
-				knownTypes:   nil,
-				knownAliases: nil,
+				pool: mockPool{},
+				s:    &testSchema,
 			}
 			got, err := ar.GetItems(tt.args.itemType, tt.args.profiles, tt.args.attrs, tt.args.filters, nil)
 			slices.SortFunc(got, sortFunc)

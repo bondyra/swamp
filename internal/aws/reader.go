@@ -2,108 +2,42 @@ package aws
 
 import (
 	"fmt"
-	"regexp"
+	"slices"
 
 	"github.com/bondyra/swamp/internal/aws/client"
 	"github.com/bondyra/swamp/internal/aws/common"
-	"github.com/bondyra/swamp/internal/aws/definition"
 	"github.com/bondyra/swamp/internal/reader"
-	"golang.org/x/exp/slices"
 )
 
-func NewReader(profiles []string, createPool client.CreatePool, definition *definition.Definition) *AwsReader {
+func NewReader(profiles []string, createPool client.CreatePool) (*AwsReader, error) {
 	return &AwsReader{
 		profiles: profiles,
 		pool:     createPool(profiles),
-		def:      definition,
-	}
+	}, nil
 }
 
 type AwsReader struct {
-	profiles     []string
-	pool         client.Pool
-	def          *definition.Definition
-	knownTypes   []string
-	knownAliases []string
+	profiles []string
+	pool     client.Pool
 }
 
 func (ar AwsReader) Name() string {
 	return "aws"
 }
 
-func (ar AwsReader) getKnownTypes() []string {
-	if ar.knownTypes == nil {
-		ar.knownTypes = make([]string, len(ar.def.TypeDefinitions))
-		for i := range ar.def.TypeDefinitions {
-			ar.knownTypes[i] = ar.def.TypeDefinitions[i].Type
-		}
-	}
-	return ar.knownTypes
-}
-
-func (ar AwsReader) typeDefinition(itemType string) (*definition.TypeDefinition, error) {
-	for _, td := range ar.def.TypeDefinitions {
-		if td.Type == itemType {
-			return &td, nil
-		}
-	}
-	return nil, fmt.Errorf("%v type is not supported", itemType)
-}
-
 func (ar AwsReader) GetSupportedProfiles() []string {
 	return ar.profiles
 }
 
-func (ar AwsReader) IsTypeSupported(itemType string) bool {
-	return slices.Contains(ar.getKnownTypes(), itemType)
-}
-
-func (ar AwsReader) IsLinkSupported(itemType string, parentReaderName string, parentItemType string) bool {
-	td, err := ar.typeDefinition(itemType)
-	if err != nil {
-		return false
-	}
-	for _, l := range (*td).Parents {
-		if l.ReaderNameDotType == fmt.Sprintf("%v.%v", parentReaderName, parentItemType) {
-			return true
-		}
-	}
-	return false
-}
-
-func (ar AwsReader) AreAttrsSupported(itemType string, attrs []string) bool {
-	td, err := ar.typeDefinition(itemType)
-	if err != nil {
-		return false
-	}
-	supported := common.Map((*td).Attrs, func(a definition.Attr) string { return a.Field })
-	return len(common.Difference(attrs, supported)) == 0
-}
-
-func (ar AwsReader) IsFilterSupported(itemType string, filter reader.Filter) bool {
-	td, err := ar.typeDefinition(itemType)
-	if err != nil {
-		return false
-	}
-	fields := common.Map((*td).Attrs, func(a definition.Attr) string { return a.Field })
-	return slices.Contains(fields, filter.Attr)
-}
-
-func (ar AwsReader) GetItems(itemType string, profiles []string, attrs []string, filters []reader.Filter, parents []*reader.Item) ([]*reader.Item, error) {
-	typeDefinition, err := ar.typeDefinition(itemType)
-	if err != nil {
-		return nil, fmt.Errorf("GetItems: %w", err)
-	}
-	filterFunc, err := ar.getFilterFunc(typeDefinition, filters, parents)
-	if err != nil {
-		return nil, fmt.Errorf("GetItems: %w", err)
-	}
+func (ar AwsReader) GetItems(itemType string, profiles []string, ids []string, filters []reader.Filter, transforms []reader.Transform) ([]*reader.Item, error) {
 	baseItems, err := ar.listBaseItemsForEachProfile(profiles, itemType)
 	if err != nil {
 		return nil, fmt.Errorf("GetItems: %w", err)
 	}
-	baseItems = common.Filter(baseItems, filterFunc)
-	items, err := ar.getItems(baseItems, itemType, filterFunc)
+	if len(ids) > 0 {
+		baseItems = filterByIds(baseItems, ids)
+	}
+	items, err := ar.getItems(baseItems, itemType, filters, transforms)
 	if err != nil {
 		return nil, fmt.Errorf("GetItems: %w", err)
 	}
@@ -139,12 +73,12 @@ func (ar AwsReader) listBaseItems(profile string, itemType string, r chan []*rea
 	}
 }
 
-func (ar AwsReader) getItems(baseItems []*reader.Item, itemType string, filterFunc func(*reader.Item) bool) ([]*reader.Item, error) {
+func (ar AwsReader) getItems(baseItems []*reader.Item, itemType string, filters []reader.Filter, transforms []reader.Transform) ([]*reader.Item, error) {
 	r := make(chan *reader.Item, len(baseItems))
 	e := make(chan error)
 	results := make([]*reader.Item, len(baseItems))
 	for _, baseItem := range baseItems {
-		go ar.getItem(baseItem, itemType, filterFunc, r, e)
+		go ar.getItem(baseItem, itemType, filters, transforms, r, e)
 	}
 	for i := 0; i < len(baseItems); i++ {
 		select {
@@ -157,77 +91,39 @@ func (ar AwsReader) getItems(baseItems []*reader.Item, itemType string, filterFu
 	return results, nil
 }
 
-func (ar AwsReader) getItem(baseItem *reader.Item, itemType string, filterFunc func(*reader.Item) bool, r chan *reader.Item, e chan error) {
+func (ar AwsReader) getItem(baseItem *reader.Item, itemType string, filters []reader.Filter, transforms []reader.Transform, r chan *reader.Item, e chan error) {
 	result, err := ar.pool.GetResource(baseItem.Profile, baseItem.Data.Identifier, itemType)
 	if err != nil {
 		e <- err
-	} else if filterFunc(result) {
+	} else if filterItem(result, filters) {
+		result = transformItem(result, transforms)
 		r <- result
 	} else {
 		r <- nil
 	}
 }
 
-func (ar AwsReader) getFilterFunc(td *definition.TypeDefinition, filters []reader.Filter, parents []*reader.Item) (func(*reader.Item) bool, error) {
-	// todo: add support for parent filters
-	funcChain := []func(*reader.Item) bool{}
-	getIdValue := func(r *reader.Item) *string { return &r.Data.Identifier }
-	attrNames := ar.getAllAttrNames(td)
-	for _, filter := range filters {
-		var getAttrValue func(r *reader.Item) *string
-		attr := filter.Attr
-		value := filter.Value
-		if attr == td.IdentifierField {
-			getAttrValue = getIdValue
-		} else {
-			_, supported := attrNames[attr]
-			if !supported {
-				return nil, fmt.Errorf("getFilterFunc: invalid attribute to filter : %v, supported ones are %v", attr, attrNames)
-			}
-			getAttrValue = func(r *reader.Item) *string {
-				if r.Data.Properties != nil {
-					attrValue := (*r.Data.Properties)[attr]
-					return &attrValue
-				}
-				return nil
-			}
+func filterByIds(items []*reader.Item, ids []string) []*reader.Item {
+	result := make([]*reader.Item, 0)
+	for _, item := range items {
+		if slices.Contains(ids, item.Data.Identifier) {
+			result = append(result, item)
 		}
-		var filterOp func(*string) bool
-		filterFunc := func(r *reader.Item) bool {
-			a := getAttrValue(r)
-			if a != nil {
-				return filterOp(a)
-			}
-			return true
-		}
-		regex := regexp.MustCompile(filter.Value)
-		switch filter.Op {
-		case reader.OpEquals:
-			filterOp = func(v *string) bool { return *v == value }
-		case reader.OpNotEquals:
-			filterOp = func(v *string) bool { return *v != value }
-		case reader.OpLike:
-			filterOp = func(v *string) bool { return regex.MatchString(*v) }
-		case reader.OpNotLike:
-			filterOp = func(v *string) bool { return !regex.MatchString(*v) }
-		default:
-			return nil, fmt.Errorf("filter operation \"%v\" is not supported", filter.Op)
-		}
-		funcChain = append(funcChain, filterFunc)
-	}
-	return func(r *reader.Item) bool {
-		result := true
-		for _, f := range funcChain {
-			result = result && f(r)
-		}
-		return result
-	}, nil
-}
-
-func (ar AwsReader) getAllAttrNames(td *definition.TypeDefinition) map[string]bool {
-	result := make(map[string]bool, len(td.Attrs))
-	for _, a := range td.Attrs {
-		result[a.Field] = true
 	}
 	return result
+}
+
+func filterItem(item *reader.Item, filters []reader.Filter) bool {
+	matches := true
+	for _, filter := range filters {
+		matches = matches && filter(item)
+	}
+	return matches
+}
+
+func transformItem(item *reader.Item, transforms []reader.Transform) *reader.Item {
+	for _, transform := range transforms {
+		item.Data.Properties = transform(item.Data.Properties)
+	}
+	return item
 }
