@@ -2,7 +2,8 @@ package aws
 
 import (
 	"fmt"
-	"slices"
+	"path"
+	"runtime"
 
 	"github.com/bondyra/swamp/internal/aws/client"
 	"github.com/bondyra/swamp/internal/aws/common"
@@ -21,27 +22,40 @@ type AwsReader struct {
 	pool     client.Pool
 }
 
-func (ar AwsReader) Name() string {
+func (ar AwsReader) GetNamespace() string {
 	return "aws"
+}
+
+func (ar AwsReader) GetItemSchemaPath() string {
+	_, filename, _, _ := runtime.Caller(0)
+	return path.Dir(filename) + "/item_schema.json"
+}
+
+func (ar AwsReader) GetLinkSchemaPath() string {
+	_, filename, _, _ := runtime.Caller(0)
+	return path.Dir(filename) + "/link_schema.json"
 }
 
 func (ar AwsReader) GetSupportedProfiles() []string {
 	return ar.profiles
 }
 
-func (ar AwsReader) GetItems(itemType string, profiles []string, ids []string, filters []reader.Filter, transforms []reader.Transform) ([]*reader.Item, error) {
+func (ar AwsReader) GetItems(itemType string, profiles []string, attrs []string, conditions []reader.Condition) ([]*reader.Item, error) {
 	baseItems, err := ar.listBaseItemsForEachProfile(profiles, itemType)
 	if err != nil {
 		return nil, fmt.Errorf("GetItems: %w", err)
 	}
-	if len(ids) > 0 {
-		baseItems = filterByIds(baseItems, ids)
-	}
-	items, err := ar.getItems(baseItems, itemType, filters, transforms)
+	// optimization: filter baseItems by id before getting full items
+	idFilter := reader.CreateInlineIdFilter(conditions)
+	baseItems = common.Filter(baseItems, idFilter)
+	//
+	transformer := reader.CreateInlineTransformer(attrs)
+	filter := reader.CreateInlineFilter(conditions)
+	items, err := ar.getItems(baseItems, itemType, transformer, filter)
 	if err != nil {
 		return nil, fmt.Errorf("GetItems: %w", err)
 	}
-	return common.Filter(items, func(r *reader.Item) bool { return r != nil }), nil
+	return items, nil
 }
 
 func (ar AwsReader) listBaseItemsForEachProfile(profiles []string, itemType string) ([]*reader.Item, error) {
@@ -73,12 +87,15 @@ func (ar AwsReader) listBaseItems(profile string, itemType string, r chan []*rea
 	}
 }
 
-func (ar AwsReader) getItems(baseItems []*reader.Item, itemType string, filters []reader.Filter, transforms []reader.Transform) ([]*reader.Item, error) {
+func (ar AwsReader) getItems(
+	baseItems []*reader.Item, itemType string,
+	transform reader.InlineTransformer, filter reader.InlineFilter,
+) ([]*reader.Item, error) {
 	r := make(chan *reader.Item, len(baseItems))
 	e := make(chan error)
 	results := make([]*reader.Item, len(baseItems))
 	for _, baseItem := range baseItems {
-		go ar.getItem(baseItem, itemType, filters, transforms, r, e)
+		go ar.getItem(baseItem, itemType, transform, filter, r, e)
 	}
 	for i := 0; i < len(baseItems); i++ {
 		select {
@@ -91,39 +108,18 @@ func (ar AwsReader) getItems(baseItems []*reader.Item, itemType string, filters 
 	return results, nil
 }
 
-func (ar AwsReader) getItem(baseItem *reader.Item, itemType string, filters []reader.Filter, transforms []reader.Transform, r chan *reader.Item, e chan error) {
+func (ar AwsReader) getItem(
+	baseItem *reader.Item, itemType string,
+	transform reader.InlineTransformer, filter reader.InlineFilter,
+	r chan *reader.Item, e chan error,
+) {
 	result, err := ar.pool.GetResource(baseItem.Profile, baseItem.Data.Identifier, itemType)
 	if err != nil {
 		e <- err
-	} else if filterItem(result, filters) {
-		result = transformItem(result, transforms)
+	} else if filter(result) {
+		result.Data.Properties = transform(result.Data.Properties)
 		r <- result
 	} else {
 		r <- nil
 	}
-}
-
-func filterByIds(items []*reader.Item, ids []string) []*reader.Item {
-	result := make([]*reader.Item, 0)
-	for _, item := range items {
-		if slices.Contains(ids, item.Data.Identifier) {
-			result = append(result, item)
-		}
-	}
-	return result
-}
-
-func filterItem(item *reader.Item, filters []reader.Filter) bool {
-	matches := true
-	for _, filter := range filters {
-		matches = matches && filter(item)
-	}
-	return matches
-}
-
-func transformItem(item *reader.Item, transforms []reader.Transform) *reader.Item {
-	for _, transform := range transforms {
-		item.Data.Properties = transform(item.Data.Properties)
-	}
-	return item
 }

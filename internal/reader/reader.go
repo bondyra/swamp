@@ -1,10 +1,12 @@
 package reader
 
-type Properties *map[string]string
+import "github.com/bondyra/swamp/internal/common"
+
+type Properties map[string]string
 
 type ItemData struct {
 	Identifier string
-	Properties Properties
+	Properties *Properties
 }
 
 type Item struct {
@@ -12,13 +14,18 @@ type Item struct {
 	Data    *ItemData
 }
 
-type Filter func(i *Item) bool
-type Transform func(props Properties) Properties
+type Condition struct {
+	Attr  string
+	Op    common.Operator
+	Value string
+}
 
 type Reader interface {
-	Name() string
+	GetNamespace() string
+	GetItemSchemaPath() string
+	GetLinkSchemaPath() string
 
 	GetSupportedProfiles() []string
 
-	GetItems(itemType string, profiles []string, ids []string, filters []Filter, transforms []Transform) ([]*Item, error)
+	GetItems(itemType string, profiles []string, attrs []string, conditions []Condition) ([]*Item, error)
 }

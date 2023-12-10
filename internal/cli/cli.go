@@ -10,7 +10,7 @@ import (
 	"github.com/bondyra/swamp/internal/engine"
 	"github.com/bondyra/swamp/internal/language"
 	"github.com/bondyra/swamp/internal/reader"
-	"github.com/bondyra/swamp/internal/schema"
+	"github.com/bondyra/swamp/internal/topology"
 )
 
 func loadConfigPaths() []string {
@@ -38,8 +38,12 @@ func (c Cli) Run(query string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	err = engine.Run(ast, []reader.Reader{r}, schema.DefaultSchemaLoader())
+	err = engine.NewEngine(
+		topology.ReaderTopologyLoader([]reader.Reader{r}),
+		engine.DefaultExecutionPlanner,
+		engine.ParallelExecutionRunner,
+		engine.PrintJsonPlotter,
+	).Run(ast, map[string]reader.Reader{"aws": r})
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -69,12 +69,12 @@ func (ac *AwsClient) ListResources(typeName string) ([]*reader.ItemData, error) 
 	return outputs, nil
 }
 
-func (ac *AwsClient) parseProperties(response string) (*map[string]string, error) {
+func (ac *AwsClient) parseProperties(response string) (*reader.Properties, error) {
 	output, err := common.Unmarshal[map[string]any]([]byte(response))
 	if err != nil {
 		return nil, fmt.Errorf("parseProperties: %w", err)
 	}
-	processedOutput := map[string]string{}
+	processedOutput := reader.Properties{}
 	for k := range *output {
 		processedOutput[k] = fmt.Sprintf("%v", (*output)[k])
 	}

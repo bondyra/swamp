@@ -42,8 +42,8 @@ const (
 	TYPE_THAT_CAUSES_ERR       = "type_err"
 )
 
-var dummyProps1 map[string]string = map[string]string{"a": "1", "b": "1"}
-var dummyProps2 map[string]string = map[string]string{"a": "2", "b": "2"}
+var dummyProps1 reader.Properties = reader.Properties{"a": "1", "b": "1"}
+var dummyProps2 reader.Properties = reader.Properties{"a": "2", "b": "2"}
 
 type mockClient struct {
 }

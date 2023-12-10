@@ -9,27 +9,14 @@ import (
 	"testing"
 
 	"github.com/bondyra/swamp/internal/aws/client"
-	"github.com/bondyra/swamp/internal/aws/schema"
 	"github.com/bondyra/swamp/internal/reader"
 	"golang.org/x/exp/slices"
 )
-
-func mockSchemaReader(err bool) schema.SchemaReader {
-	return func() (*schema.Schema, error) {
-		if err {
-			return nil, errors.New("some error")
-		}
-		return &schema.Schema{
-			TypeSchemas: []schema.TypeSchema{{Type: "t1"}},
-		}, nil
-	}
-}
 
 func TestNewReader(t *testing.T) {
 	type args struct {
 		profiles   []string
 		createPool client.CreatePool
-		sr         schema.SchemaReader
 	}
 	tests := []struct {
 		name    string
@@ -42,55 +29,23 @@ func TestNewReader(t *testing.T) {
 			args: args{
 				profiles:   []string{"p1", "p2"},
 				createPool: client.NewLazyPool,
-				sr:         mockSchemaReader(false),
 			},
 			want: &AwsReader{
 				profiles: []string{"p1", "p2"},
 				pool:     client.NewLazyPool([]string{"p1", "p2"}),
-				s:        &schema.Schema{TypeSchemas: []schema.TypeSchema{{Type: "t1"}}},
 			},
 			wantErr: false,
-		},
-		{
-			name: "test error when schema reader returns error",
-			args: args{
-				profiles:   []string{"p1", "p2"},
-				createPool: client.NewLazyPool,
-				sr:         mockSchemaReader(true),
-			},
-			want:    nil,
-			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := NewReader(tt.args.profiles, tt.args.createPool, tt.args.sr)
+			got, err := NewReader(tt.args.profiles, tt.args.createPool)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewReader() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("NewReader() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestAwsReader_Name(t *testing.T) {
-	tests := []struct {
-		name string
-		want string
-	}{
-		{
-			name: "test",
-			want: "aws",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ar := AwsReader{}
-			if got := ar.Name(); got != tt.want {
-				t.Errorf("AwsReader.GetReaderName() = %v, want %v", got, tt.want)
 			}
 		})
 	}
