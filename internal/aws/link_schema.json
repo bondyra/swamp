@@ -1,0 +1,12 @@
+{
+    "links": [
+        {
+            "from": "aws.vpc",
+            "to": "aws.subnet",
+            "mapping": {
+                "from": "VpcId",
+                "to": "VpcId"
+            }
+        }
+    ]
+}

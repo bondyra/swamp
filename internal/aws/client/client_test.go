@@ -57,7 +57,7 @@ func TestGetResource(t *testing.T) {
 			mockccClient: mockccClient{getResourceOutput: &cloudcontrol.GetResourceOutput{
 				ResourceDescription: &cctypes.ResourceDescription{Identifier: &dummyId, Properties: &someProperties},
 			}},
-			expectedProperties: &reader.ItemData{Identifier: dummyId, Properties: &map[string]string{"str": "abc", "int": "1", "float": "1.23", "bool": "true"}},
+			expectedProperties: &reader.ItemData{Identifier: dummyId, Properties: &reader.Properties{"str": "abc", "int": "1", "float": "1.23", "bool": "true"}},
 			returnsErr:         false,
 		},
 		{
@@ -161,8 +161,8 @@ func TestListResources(t *testing.T) {
 				},
 			}},
 			expectedOutput: []*reader.ItemData{
-				{Identifier: dummyId, Properties: &map[string]string{"str": "abc", "int": "1", "float": "1.23", "bool": "true"}},
-				{Identifier: dummyId, Properties: &map[string]string{"str": "abc", "int": "1", "float": "1.23", "bool": "true"}},
+				{Identifier: dummyId, Properties: &reader.Properties{"str": "abc", "int": "1", "float": "1.23", "bool": "true"}},
+				{Identifier: dummyId, Properties: &reader.Properties{"str": "abc", "int": "1", "float": "1.23", "bool": "true"}},
 			},
 			returnsErr: false,
 		},

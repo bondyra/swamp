@@ -73,17 +73,5 @@
         }
       ]
     }
-  ],
-  "links": [
-    {
-      "from": "aws.vpc",
-      "to": "aws.subnet",
-      "mappings": [
-        {
-          "from": "VpcId",
-          "to": "VpcId"
-        }
-      ]
-    }
   ]
 }

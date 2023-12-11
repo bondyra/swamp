@@ -1,8 +1,11 @@
 package language
 
 import (
+	"regexp"
+
 	"github.com/alecthomas/participle/v2"
 	"github.com/alecthomas/participle/v2/lexer"
+	"github.com/bondyra/swamp/internal/common"
 )
 
 type Boolean bool
@@ -13,77 +16,53 @@ func (b *Boolean) Capture(values []string) error {
 }
 
 type AST struct {
-	Profiles Collection `( "in" @@)?`
-	Entities []Entity   `@@*`
+	Profiles Collection `parser:"( \"in\" @@)?"`
+	Query    Query      `parser:"@@"`
 }
 
 type Collection struct {
-	All      bool     `  @"*"`
-	Elements []string `| @Ident ( "," @Ident )*`
+	All      bool     `parser:"  @\"*\""`
+	Elements []string `parser:"| @Ident ( \",\" @Ident )*"`
 }
 
-type Entity interface{ value() }
-
-type ItemEntity struct {
-	Value Item `"item" @@`
+type Query struct {
+	Root     Item         `parser:"@@*"`
+	Sequence []LinkedItem `parser:"@@*"`
 }
-
-func (f ItemEntity) value() {}
-
-type LinkEntity struct {
-	Value Link `"item" @@`
-}
-
-func (f LinkEntity) value() {}
 
 type Item struct {
-	Type      []string   `@Ident ( "." @Ident )?`
-	Alias     string     `@Ident`
-	Modifiers []Modifier `@@*`
+	Type      []string   `parser:"@Ident ( \".\" @Ident )?"`
+	Modifiers []Modifier `parser:"@@*"`
+}
+
+type LinkedItem struct {
+	Link Link `parser:"@@"`
+	Item Item `parser:"@@"`
 }
 
 type Modifier interface{ value() }
 
-type SetModifier struct {
-	Value Collection `"attr" @@`
+type AttrModifier struct {
+	Value Collection `parser:"\":\" @@"`
 }
 
-func (f SetModifier) value() {}
-
-type AddModifier struct {
-	Value Collection `"add" @@`
-}
-
-func (f AddModifier) value() {}
-
-type SubModifier struct {
-	Value Collection `"sub" @@`
-}
-
-func (f SubModifier) value() {}
+func (f AttrModifier) value() {}
 
 type SearchModifier struct {
-	Value SearchExpression `"where" @@`
+	Value SearchExpression `parser:"\"?\" @@"`
 }
 
 type SearchExpression struct {
-	Attr  string      `@Ident`
-	Op    string      `@("eq"|"ne")`
-	Value SearchValue `@@`
-}
-
-type SearchValue struct {
-	Number  float64 ` @Number`
-	String  string  ` | @String`
-	Boolean Boolean ` | @("true" | "false")`
-	Null    bool    ` | @("nil" | "null")`
+	Attr  string          `parser:"@Ident"`
+	Op    common.Operator `parser:"@Ident"`
+	Value string          `parser:"@String"`
 }
 
 func (f SearchModifier) value() {}
 
 type Link struct {
-	From string `@Ident`
-	To   string `@Ident`
+	FullOutput  bool `parser:"( @\"=\""`
+	ShortOutput bool `parser:"| @\"-\" )"`
 }
 
 type Parser interface {
@@ -96,16 +75,30 @@ func ParseString(input string) (*AST, error) {
 
 func parseString(input string) (*AST, error) {
 	var lexer = lexer.MustSimple([]lexer.SimpleRule{
-		{`Ident`, `[a-zA-Z_][a-zA-Z0-9_]*`},
-		{`Number`, `[-+]?\d*\.?\d+([eE][-+]?\d+)?`},
-		{`String`, `'[^']*'|"[^"]*"`},
-		{"Punct", `[-[@#$%^&*()+_\|:;,.?/]|]`},
-		{"whitespace", `\s+`},
+		{Name: `Ident`, Pattern: `[a-zA-Z_][a-zA-Z0-9_]*`},
+		{Name: `Number`, Pattern: `[-+]?\d*\.?\d+([eE][-+]?\d+)?`},
+		{Name: `String`, Pattern: `'[^']*'|"[^"]*"`},
+		{Name: "Punct", Pattern: `[=\-[@#$%^&*()+_\|:;,.?/]|]`},
+		{Name: "whitespace", Pattern: `\s+`},
 	})
 	var parser = participle.MustBuild[AST](
 		participle.Lexer(lexer),
-		participle.Union[Modifier](SetModifier{}, SubModifier{}, AddModifier{}, SearchModifier{}),
-		participle.Union[Entity](ItemEntity{}, LinkEntity{}),
+		participle.Union[Modifier](AttrModifier{}, SearchModifier{}),
 	)
+	preprocess(input)
 	return parser.ParseString("", input)
+}
+
+func preprocess(input string) string {
+	output := input
+	output = replace(output, `^\s+`, "")
+	output = replace(output, `\s+$`, "")
+	output = replace(output, `\s`, " ")
+	output = replace(output, `  +`, " ")
+	return output
+}
+
+func replace(input string, regex string, new string) string {
+	r := regexp.MustCompile(regex)
+	return r.ReplaceAllString(input, new)
 }
