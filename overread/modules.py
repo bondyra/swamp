@@ -11,7 +11,7 @@ def load_modules() -> Dict:
         if os.getenv("OVERREAD_MODULE_PATHS"):
             module_paths = os.environ["OVERREAD_MODULE_PATHS"].split(",")
             sys.path += module_paths
-        ov_modules = {m for m in find_ov_modules()}
+        ov_modules = {m for m in _discover()}
         for m in ov_modules:
             mod = importlib.import_module(m)
             yield m.split("overread_", 1)[-1], mod
@@ -19,9 +19,21 @@ def load_modules() -> Dict:
     return dict(_load_modules())
 
 
-def find_ov_modules() -> Iterable[str]:
+def _discover() -> Iterable[str]:
     for dir in sys.path:
         yield from {
             os.path.splitext(os.path.basename(full_path))[0]
             for full_path in glob.glob(os.path.join(dir, "overread_*.py"))
         }
+
+def find_module(thing: str, available_modules) -> str:
+    matches = set()
+    for name, mod in available_modules.items():
+        if thing in mod.thing_types():
+            matches.add(name)
+    if len(matches) > 1:
+        # warning
+        pass
+    if not matches:
+        raise Exception(f"Cannot find thing {thing} in the modules: {available_modules.keys()}!")
+    return matches.pop()

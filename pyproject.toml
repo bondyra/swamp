@@ -9,7 +9,9 @@ readme = "README.md"
 ov = 'overread.__main__:main'
 
 [tool.poetry.dependencies]
+argcomplete = "^3.5.1"
 python = "^3.8"
+jsonpath_ng = "^1.7.0"
 aioboto3 = "^12.3.0"
 kubernetes-asyncio = "^29.0.0"
 
