@@ -37,7 +37,7 @@ _config  = {
 }
 
 
-async def get(thing_type):
+async def get(thing_type, id):
     thing = _config["things"][thing_type]
     async with await config.new_client_from_config() as api:
         client = await DynamicClient(api)

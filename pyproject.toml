@@ -6,7 +6,7 @@ authors = ["Jakub Bondyra"]
 readme = "README.md"
 
 [tool.poetry.scripts]
-ov = 'overread.__main__:main'
+ov = 'overread.cli:run'
 
 [tool.poetry.dependencies]
 argcomplete = "^3.5.1"

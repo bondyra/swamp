@@ -94,7 +94,7 @@ _config = {
 }
 
 
-async def get(thing_type):
+async def get(thing_type, id):  # TODO: support id
     t = _config[thing_type]
     async with aioboto3.Session().client(t["client"]) as c:
         response = await getattr(c, t["method"])()
@@ -114,16 +114,17 @@ async def schema(thing_type):
     t = _config[thing_type]
     async with aioboto3.Session().client(t["client"]) as c:
         shp = c.meta.service_model.shape_for(t["shape"])
-    return _schema_rec(shp)
+    return list(json_paths(shp))
 
 
-def _schema_rec(obj):
-    if obj.type_name == "list":
-        return _schema_rec(obj.member)
-    if obj.type_name == "structure":
-        return {
-            name: _schema_rec(member)
-            for name, member in obj.members.items()
-        }
+def json_paths(obj, path=""):
+    if "type_name" in dir(obj) and obj.type_name == "structure":
+        for name, member in obj.members.items():
+            new_path = f"{path}.{name}" if path else name
+            yield from json_paths(member, new_path)
+    elif "type_name" in dir(obj) and obj.type_name == "list":
+        for name, member in obj.member.members.items():
+            new_path = f"{path}[*].{name}"
+            yield from json_paths(member, new_path)
     else:
-        return obj.name
+        yield path
