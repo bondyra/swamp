@@ -1,21 +1,27 @@
 import aioboto3
-from pprint import pprint
 
 
 _config = {
     "vpc": {
         "client": "ec2",
-        "method": "describe_vpcs",
+        "ls": {
+            "request": lambda c: c.describe_vpcs(),
+            "response": lambda r: ((i["VpcId"], i) for i in r["Vpcs"])
+        },
+        "get": {
+            "request": lambda c, i: c.describe_vpcs(VpcIds=[i]),
+            "response": lambda r: (r["Vpcs"][0]["VpcId"], r["Vpcs"][0])
+        },
         "shape": "Vpc",
-        "field": "Vpcs",
-        "id": "VpcId",
         "default_props": [
             "CidrBlock"
         ]
     },
     "subnet": {
         "client": "ec2",
-        "method": "describe_subnets",
+        "list": {
+            "method": "describe_subnets"
+        },
         "shape": "Subnet",
         "field": "Subnets",
         "id": "SubnetId",
@@ -25,7 +31,9 @@ _config = {
     },
     "rtb": {
         "client": "ec2",
-        "method": "describe_route_tables",
+        "list": {
+            "method": "describe_route_tables"
+        },
         "shape": "Dupa",
         "field": "RouteTables",
         "id": "RouteTableId",
@@ -35,7 +43,9 @@ _config = {
     },
     "sg": {
         "client": "ec2",
-        "method": "describe_security_groups",
+        "list": {
+            "method": "describe_security_groups"
+        },
         "shape": "Dupa",
         "field": "SecurityGroups",
         "id": "GroupId",
@@ -45,7 +55,9 @@ _config = {
     },
     "igw": {
         "client": "ec2",
-        "method": "describe_internet_gateways",
+        "list": {
+            "method": "describe_internet_gateways"
+        },
         "shape": "Dupa",
         "field": "InternetGateways",
         "id": "InternetGatewayId",
@@ -55,7 +67,9 @@ _config = {
     },
     "nat": {
         "client": "ec2",
-        "method": "describe_nat_gateways",
+        "list": {
+            "method": "describe_nat_gateways"
+        },
         "shape": "Dupa",
         "field": "NatGateways",
         "id": "NatGatewayId",
@@ -63,7 +77,9 @@ _config = {
     },
     "eip": {
         "client": "ec2",
-        "method": "describe_addresses",
+        "list": {
+            "method": "describe_addresses"
+        },
         "shape": "Dupa",
         "field": "Addresses",
         "id": "AllocationId",
@@ -73,7 +89,9 @@ _config = {
     },
     "eni": {
         "client": "ec2",
-        "method": "describe_network_interfaces",
+        "list": {
+            "method": "describe_network_interfaces"
+        },
         "shape": "Dupa",
         "field": "NetworkInterfaces",
         "id": "NetworkInterfaceId",
@@ -83,7 +101,9 @@ _config = {
     },
     "nacl": {
         "client": "ec2",
-        "method": "describe_network_acls",
+        "list": {
+            "method": "describe_network_acls"
+        },
         "shape": "Dupa",
         "field": "NetworkAcls",
         "id": "NetworkAclId",
@@ -94,12 +114,19 @@ _config = {
 }
 
 
-async def get(thing_type, id):  # TODO: support id
+async def ls(thing_type):
     t = _config[thing_type]
     async with aioboto3.Session().client(t["client"]) as c:
-        response = await getattr(c, t["method"])()
-        for item in response[t["field"]]:
-            yield item[t["id"]], item
+        response = await t["ls"]["request"](c)
+    for _ in t["ls"]["response"](response):
+        yield _
+
+
+async def get(thing_type, id):
+    t = _config[thing_type]
+    async with aioboto3.Session().client(t["client"]) as c:
+        response = await t["get"]["request"](c, id)
+        return t["get"]["response"](response)
 
 
 def thing_types():
@@ -110,11 +137,14 @@ def default_props(thing_type):
     return _config[thing_type].get("default_props", []) if thing_type in _config else []
 
 
-async def schema(thing_type):
+async def list_schema(thing_type):
     t = _config[thing_type]
     async with aioboto3.Session().client(t["client"]) as c:
         shp = c.meta.service_model.shape_for(t["shape"])
     return list(json_paths(shp))
+
+
+get_schema = list_schema
 
 
 def json_paths(obj, path=""):
