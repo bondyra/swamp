@@ -137,14 +137,14 @@ def default_props(thing_type):
     return _config[thing_type].get("default_props", []) if thing_type in _config else []
 
 
-async def list_schema(thing_type):
+async def schema_ls(thing_type):
     t = _config[thing_type]
     async with aioboto3.Session().client(t["client"]) as c:
         shp = c.meta.service_model.shape_for(t["shape"])
     return list(json_paths(shp))
 
 
-get_schema = list_schema
+schema_get = schema_ls
 
 
 def json_paths(obj, path=""):

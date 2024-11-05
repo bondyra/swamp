@@ -45,7 +45,7 @@ def parse_thing_type(thing: str):
 
 
 def suggest_thing_type(prefix, *args, **kwargs):
-    return [f"{mod}/{thing}" for mod in modules for thing in modules[mod].thing_types() if f"{mod}/{thing}".startswith(prefix)]
+    return [f"{mod}/{thing}" for mod in modules for thing in modules[mod].thing_types() if f"{mod}/{thing}".startswith(prefix)][:5]
 
 
 def suggest_id(prefix, parsed_args, **kwargs):
@@ -54,7 +54,7 @@ def suggest_id(prefix, parsed_args, **kwargs):
     except Exception:
         return []
     data = asyncio.run(execute_ls(module, thing_type))
-    return [result.id for result in data if result.id.startswith(prefix)]
+    return [result.id for result in data if result.id.startswith(prefix)][:5]
 
 
 def suggest_prop(prefix, parsed_args, **kwargs):
@@ -62,19 +62,19 @@ def suggest_prop(prefix, parsed_args, **kwargs):
         module, thing_type = parse_thing_type(parsed_args.thing_type)
     except Exception:
         return []
-    schema = asyncio.run(module.schema(thing_type))
-    return [p for p in schema if p.startswith(prefix)]
+    schema = asyncio.run(module.schema_ls(thing_type))
+    return [p for p in schema if p.startswith(prefix)][:5]
 
 
-parser = argparse.ArgumentParser(prog="s", add_help=False)
+parser = argparse.ArgumentParser(prog="s", add_help=False, usage=argparse.SUPPRESS)
 subparsers = parser.add_subparsers(dest='op')
-get_parser = subparsers.add_parser('get')
+get_parser = subparsers.add_parser('get', add_help=False, usage=argparse.SUPPRESS)
 get_parser.add_argument("thing_type").completer = suggest_thing_type
-get_parser.add_argument("id", nargs="?").completer = suggest_id
-get_parser.add_argument("--props", "-p", nargs="*", default=[]).completer = suggest_prop
-ls_parser = subparsers.add_parser('ls')
+get_parser.add_argument("id").completer = suggest_id
+get_parser.add_argument("props", nargs="*", default=[]).completer = suggest_prop
+ls_parser = subparsers.add_parser('ls', add_help=False, usage=argparse.SUPPRESS)
 ls_parser.add_argument("thing_type").completer = suggest_thing_type
-ls_parser.add_argument("--props", "-p", nargs="*", default=[]).completer = suggest_prop
+ls_parser.add_argument("props", nargs="*", default=[]).completer = suggest_prop
 argcomplete.autocomplete(parser, append_space=False)
 
 
@@ -87,5 +87,5 @@ def run():
         render_results(data, args.props, default_props)
     if args.op == "get":
         result = asyncio.run(execute_get(module, thing_type, args.id))
-        default_props = {}  # todo
+        default_props = {'*'}  # todo?
         render_result(result, args.props, default_props)

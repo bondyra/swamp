@@ -14,5 +14,13 @@ def _trunc(s: str, length: int) -> str:
     return s[:max(0,length-5)] + "..." if len(s) > length else s
 
 
-def render_result(result, *args, **kwargs):
-    print(yaml.dump(result.content))
+def render_result(result, props, default_props, indent=4):
+    exprs = [parse(p) for p in props or default_props]
+    print(exprs)
+    content = {}
+    for e in exprs:
+        dupaa = e.filter(lambda d: True, result.content)
+        print(dupaa)
+        print('*')
+        content.update(dupaa)
+    print(yaml.dump(content, sort_keys=False, indent=indent, width=0).strip())
