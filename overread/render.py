@@ -1,5 +1,5 @@
 from jsonpath_ng import parse
-import yaml
+import json
 
 
 def render_results(results, props, default_props, w=32):
@@ -14,13 +14,7 @@ def _trunc(s: str, length: int) -> str:
     return s[:max(0,length-5)] + "..." if len(s) > length else s
 
 
-def render_result(result, props, default_props, indent=4):
+def render_result(result, props, default_props, indent=2):
     exprs = [parse(p) for p in props or default_props]
-    print(exprs)
-    content = {}
-    for e in exprs:
-        dupaa = e.filter(lambda d: True, result.content)
-        print(dupaa)
-        print('*')
-        content.update(dupaa)
-    print(yaml.dump(content, sort_keys=False, indent=indent, width=0).strip())
+    values = {str(m.path): m.value for e in exprs for m in e.find(result.content)}
+    print(json.dumps(values, indent=indent).strip())

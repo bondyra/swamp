@@ -87,5 +87,5 @@ def run():
         render_results(data, args.props, default_props)
     if args.op == "get":
         result = asyncio.run(execute_get(module, thing_type, args.id))
-        default_props = {'*'}  # todo?
+        default_props = module.default_props(thing_type)  # todo
         render_result(result, args.props, default_props)
