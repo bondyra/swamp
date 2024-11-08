@@ -19,82 +19,104 @@ _config = {
     },
     "subnet": {
         "client": "ec2",
-        "list": {
-            "method": "describe_subnets"
+        "ls": {
+            "request": lambda c: c.describe_subnets(),
+            "response": lambda r: ((i["SubnetId"], i) for i in r["Subnets"])
+        },
+        "get": {
+            "request": lambda c, i: c.describe_subnets(SubnetIds=[i]),
+            "response": lambda r: (r["Subnets"][0]["SubnetId"], r["Subnets"][0])
         },
         "shape": "Subnet",
-        "field": "Subnets",
         "id": "SubnetId",
         "default_props": [
-            "AvailabilityZone", "CidrBlock"
+            "VpcId", "AvailabilityZone", "CidrBlock"
         ]
     },
     "rtb": {
         "client": "ec2",
-        "list": {
-            "method": "describe_route_tables"
+        "ls": {  # todo - more complex than this
+            "request": lambda c: c.describe_route_tables(),
+            "response": lambda r: ((i["RouteTableId"], i) for i in r["RouteTables"])
         },
-        "shape": "Dupa",
-        "field": "RouteTables",
-        "id": "RouteTableId",
+        "get": {
+            "request": lambda c, i: c.describe_route_tables(RouteTableIds=[i]),
+            "response": lambda r: (r["RouteTables"][0]["RouteTableId"], r["RouteTables"][0])
+        },
+        "shape": "RouteTable",
         "default_props": [
             "Routes"
         ]
     },
     "sg": {
         "client": "ec2",
-        "list": {
-            "method": "describe_security_groups"
+        "ls": {  # todo - more complex than this
+            "request": lambda c: c.describe_security_groups(),
+            "response": lambda r: ((i["GroupId"], i) for i in r["SecurityGroups"])
         },
-        "shape": "Dupa",
-        "field": "SecurityGroups",
-        "id": "GroupId",
+        "get": {
+            "request": lambda c, i: c.describe_security_groups(GroupIds=[i]),
+            "response": lambda r: (r["SecurityGroups"][0]["GroupId"], r["SecurityGroups"][0])
+        },
+        "shape": "SecurityGroup",
         "default_props": [
             "GroupName", "IpPermissions"
         ]
     },
     "igw": {
         "client": "ec2",
-        "list": {
-            "method": "describe_internet_gateways"
+        "ls": {
+            "request": lambda c: c.describe_internet_gateways(),
+            "response": lambda r: ((i["InternetGatewayId"], i) for i in r["InternetGateways"])
         },
-        "shape": "Dupa",
-        "field": "InternetGateways",
-        "id": "InternetGatewayId",
+        "get": {
+            "request": lambda c, i: c.describe_internet_gateways(InternetGatewayIds=[i]),
+            "response": lambda r: (r["InternetGateways"][0]["InternetGatewayId"], r["InternetGateways"][0])
+        },
+        "shape": "InternetGateway",
         "default_props": [
             "Attachments"
         ]
     },
     "nat": {
         "client": "ec2",
-        "list": {
-            "method": "describe_nat_gateways"
+        "ls": {
+            "request": lambda c: c.describe_nat_gateways(),
+            "response": lambda r: ((i["NatGatewayId"], i) for i in r["NatGateways"])
         },
-        "shape": "Dupa",
-        "field": "NatGateways",
-        "id": "NatGatewayId",
+        "get": {
+            "request": lambda c, i: c.describe_nat_gateways(NatGatewayIds=[i]),
+            "response": lambda r: (r["NatGateways"][0]["NatGatewayId"], r["NatGateways"][0])
+        },
+        "shape": "NatGateway",
         "default_props": []
     },
     "eip": {
         "client": "ec2",
-        "list": {
-            "method": "describe_addresses"
+        "ls": {
+            "request": lambda c: c.describe_addresses(),
+            "response": lambda r: ((i["AllocationId"], i) for i in r["Addresses"])
         },
-        "shape": "Dupa",
-        "field": "Addresses",
-        "id": "AllocationId",
+        "get": {
+            "request": lambda c, i: c.describe_addresses(AllocationIds=[i]),
+            "response": lambda r: (r["Addresses"][0]["AllocationId"], r["Addresses"][0])
+        },
+        "shape": "Address",
         "default_props": [
             "PublicIp"
         ]
     },
     "eni": {
         "client": "ec2",
-        "list": {
-            "method": "describe_network_interfaces"
+        "ls": {
+            "request": lambda c: c.describe_network_interfaces(),
+            "response": lambda r: ((i["NetworkInterfaceId"], i) for i in r["NetworkInterfaces"])
         },
-        "shape": "Dupa",
-        "field": "NetworkInterfaces",
-        "id": "NetworkInterfaceId",
+        "get": {
+            "request": lambda c, i: c.describe_network_interfaces(NetworkInterfaceIds=[i]),
+            "response": lambda r: (r["NetworkInterfaces"][0]["NetworkInterfaceId"], r["NetworkInterfaces"][0])
+        },
+        "shape": "NetworkInterface",
         "default_props": [
             "PrivateIpAddresses", "Association"
         ]
@@ -104,9 +126,15 @@ _config = {
         "list": {
             "method": "describe_network_acls"
         },
-        "shape": "Dupa",
-        "field": "NetworkAcls",
-        "id": "NetworkAclId",
+        "ls": {
+            "request": lambda c: c.describe_network_acls(),
+            "response": lambda r: ((i["NetworkAclId"], i) for i in r["NetworkAcls"])
+        },
+        "get": {
+            "request": lambda c, i: c.describe_network_acls(NetworkAclIds=[i]),
+            "response": lambda r: (r["NetworkAcls"][0]["NetworkAclId"], r["NetworkAcls"][0])
+        },
+        "shape": "NetworkAcl",
         "default_props": [
             "Entries", "IsDefault"
         ]
