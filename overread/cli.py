@@ -7,22 +7,22 @@ from collections import namedtuple
 from datetime import datetime, date
 import json
 
-from overread.render import render_results, render_result
-from overread.builtin_modules import overread_aws, overread_k8s
+from overread.modules import aws, k8s
+from overread.render import render_ls, render_get
 
 
 Result = namedtuple("Result", "id content blob")
 
 
-modules = {"aws": overread_aws, "k8s": overread_k8s}
+modules = {"aws": aws, "k8s": k8s}
 
 
-async def execute_ls(module, thing_type):
-    return [Result(id, content, json.dumps(content, default=_serializer)) async for id, content in module.ls(thing_type)]
+async def execute_ls(module, resource_type):
+    return [Result(id, content, json.dumps(content, default=_serializer)) async for id, content in modules[module].ls(resource_type)]
 
 
-async def execute_get(module, thing_type, id=None):
-    id, content = await module.get(thing_type, id)
+async def execute_get(module, resource_type, id=None):
+    id, content = await modules[module].get(resource_type, id)
     return Result(id, content, json.dumps(content, default=_serializer))
 
 
@@ -32,65 +32,70 @@ def _serializer(obj):
     raise TypeError(f"Type {type(obj)} not serializable")
 
 
-def parse_thing(module_name: str, thing_type: str):
+def validate_resource_type(module_name: str, resource_type: str):
     if module_name not in modules:
         raise Exception(f"Unsupported module {module_name}. Available ones are: {modules.keys()}")
-    module = modules[module_name]
-    if thing_type not in module.thing_types():
-        raise Exception(f"Thing type {thing_type} does not have any matches in configured module: {module_name}!")
-    return module, thing_type
+    if resource_type not in modules[module_name].resource_types():
+        raise Exception(f"Resource type {resource_type} does not have any matches in configured module: {module_name}!")
 
 
 def suggest_module(prefix, *args, **kwargs):
-    return [m for m in modules if m.startswith(prefix)]
+    return {name: mod.description  for name, mod in modules.items() if name.startswith(prefix)}
 
 
-def suggest_thing(prefix, parsed_args, **kwargs):
+def suggest_resource_type(prefix, parsed_args, **kwargs):
     if parsed_args.module in modules:
-        return [thing for mod in modules for thing in modules[parsed_args.module].thing_types() if f"{thing}".startswith(prefix)]
-    return []
+        return {r: d for r, d in modules[parsed_args.module].resource_types().items()  if f"{r}".startswith(prefix)}
+    return {}
 
 
-def suggest_id(prefix, parsed_args, **kwargs):
+def suggest_resource_id(prefix, parsed_args, **kwargs):
     try:
-        module, thing_type = parse_thing(parsed_args.module, parsed_args.thing)
+        validate_resource_type(parsed_args.module, parsed_args.resource_type)
     except Exception:
         return []
-    data = asyncio.run(execute_ls(module, thing_type))
+    data = asyncio.run(execute_ls(parsed_args.module, parsed_args.resource_type))
     return [result.id for result in data if result.id.startswith(prefix)]
 
 
-def suggest_prop(prefix, parsed_args, **kwargs):
+def suggest_prop_ls(prefix, parsed_args, **kwargs):
     try:
-        module, thing_type = parse_thing(parsed_args.module, parsed_args.thing)
+        validate_resource_type(parsed_args.module, parsed_args.resource_type)
+    except Exception as e:
+        print("KURWA")
+        print(e)
+        return []
+    return {p: d for (p, d) in modules[parsed_args.module].schema_ls(parsed_args.resource_type) if p.startswith(prefix)}
+
+
+def suggest_prop_get(prefix, parsed_args, **kwargs):
+    try:
+        validate_resource_type(parsed_args.module, parsed_args.resource_type)
     except Exception:
         return []
-    schema = asyncio.run(module.schema_ls(thing_type))
-    return [p for p in schema if p.startswith(prefix)][:5]
+    return {p: d for (p, d) in modules[parsed_args.module].schema_get(parsed_args.resource_type) if p.startswith(prefix)}
 
 
 parser = argparse.ArgumentParser(prog="s", add_help=False, usage=argparse.SUPPRESS)
 subparsers = parser.add_subparsers(dest='op')
 get_parser = subparsers.add_parser('get', add_help=False, usage=argparse.SUPPRESS)
 get_parser.add_argument("module").completer = suggest_module
-get_parser.add_argument("thing").completer = suggest_thing
-get_parser.add_argument("id").completer = suggest_id
-get_parser.add_argument("props", nargs="*", default=[]).completer = suggest_prop
+get_parser.add_argument("resource_type").completer = suggest_resource_type
+get_parser.add_argument("resource_id").completer = suggest_resource_id
+get_parser.add_argument("props", nargs="*", default=[]).completer = suggest_prop_get
 ls_parser = subparsers.add_parser('ls', add_help=False, usage=argparse.SUPPRESS)
 ls_parser.add_argument("module").completer = suggest_module
-ls_parser.add_argument("thing").completer = suggest_thing
-ls_parser.add_argument("props", nargs="*", default=[]).completer = suggest_prop
+ls_parser.add_argument("resource_type").completer = suggest_resource_type
+ls_parser.add_argument("props", nargs="*", default=[]).completer = suggest_prop_ls
 argcomplete.autocomplete(parser, append_space=False)
 
 
 def run():
     args = parser.parse_args()
-    module, thing_type = parse_thing(args.module, args.thing)
+    validate_resource_type(args.module, args.resource_type)
     if args.op == "ls":
-        data = asyncio.run(execute_ls(module, thing_type))
-        default_props = module.default_props(thing_type)  # todo
-        render_results(data, args.props, default_props)
+        data = asyncio.run(execute_ls(args.module, args.resource_type))
+        render_ls(data, args.props)
     if args.op == "get":
-        result = asyncio.run(execute_get(module, thing_type, args.id))
-        default_props = module.default_props(thing_type)  # todo
-        render_result(result, args.props, default_props)
+        result = asyncio.run(execute_get(args.module, args.resource_type, args.resource_id))
+        render_get(result, args.props)

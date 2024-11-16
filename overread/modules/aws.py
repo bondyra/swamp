@@ -1,4 +1,8 @@
 import aioboto3
+import boto3
+
+
+description = "Module for interacting with AWS resources"
 
 
 _config = {
@@ -6,13 +10,14 @@ _config = {
         "client": "ec2",
         "ls": {
             "request": lambda c: c.describe_vpcs(),
-            "response": lambda r: ((i["VpcId"], i) for i in r["Vpcs"])
+            "response": lambda r: ((i["VpcId"], i) for i in r["Vpcs"]),
+            "shape": "Vpc",
         },
         "get": {
             "request": lambda c, i: c.describe_vpcs(VpcIds=[i]),
-            "response": lambda r: (r["Vpcs"][0]["VpcId"], r["Vpcs"][0])
+            "response": lambda r: (r["Vpcs"][0]["VpcId"], r["Vpcs"][0]),
+            "shape": "Vpc",
         },
-        "shape": "Vpc",
         "default_props": [
             "CidrBlock"
         ]
@@ -21,13 +26,14 @@ _config = {
         "client": "ec2",
         "ls": {
             "request": lambda c: c.describe_subnets(),
-            "response": lambda r: ((i["SubnetId"], i) for i in r["Subnets"])
+            "response": lambda r: ((i["SubnetId"], i) for i in r["Subnets"]),
+            "shape": "Subnet",
         },
         "get": {
             "request": lambda c, i: c.describe_subnets(SubnetIds=[i]),
-            "response": lambda r: (r["Subnets"][0]["SubnetId"], r["Subnets"][0])
+            "response": lambda r: (r["Subnets"][0]["SubnetId"], r["Subnets"][0]),
+            "shape": "Subnet",
         },
-        "shape": "Subnet",
         "id": "SubnetId",
         "default_props": [
             "VpcId", "AvailabilityZone", "CidrBlock"
@@ -37,13 +43,14 @@ _config = {
         "client": "ec2",
         "ls": {  # todo - more complex than this
             "request": lambda c: c.describe_route_tables(),
-            "response": lambda r: ((i["RouteTableId"], i) for i in r["RouteTables"])
+            "response": lambda r: ((i["RouteTableId"], i) for i in r["RouteTables"]),
+            "shape": "RouteTable",
         },
         "get": {
             "request": lambda c, i: c.describe_route_tables(RouteTableIds=[i]),
-            "response": lambda r: (r["RouteTables"][0]["RouteTableId"], r["RouteTables"][0])
+            "response": lambda r: (r["RouteTables"][0]["RouteTableId"], r["RouteTables"][0]),
+            "shape": "RouteTable",
         },
-        "shape": "RouteTable",
         "default_props": [
             "Routes"
         ]
@@ -52,13 +59,14 @@ _config = {
         "client": "ec2",
         "ls": {  # todo - more complex than this
             "request": lambda c: c.describe_security_groups(),
-            "response": lambda r: ((i["GroupId"], i) for i in r["SecurityGroups"])
+            "response": lambda r: ((i["GroupId"], i) for i in r["SecurityGroups"]),
+            "shape": "SecurityGroup",
         },
         "get": {
             "request": lambda c, i: c.describe_security_groups(GroupIds=[i]),
-            "response": lambda r: (r["SecurityGroups"][0]["GroupId"], r["SecurityGroups"][0])
+            "response": lambda r: (r["SecurityGroups"][0]["GroupId"], r["SecurityGroups"][0]),
+            "shape": "SecurityGroup",
         },
-        "shape": "SecurityGroup",
         "default_props": [
             "GroupName", "IpPermissions"
         ]
@@ -67,13 +75,14 @@ _config = {
         "client": "ec2",
         "ls": {
             "request": lambda c: c.describe_internet_gateways(),
-            "response": lambda r: ((i["InternetGatewayId"], i) for i in r["InternetGateways"])
+            "response": lambda r: ((i["InternetGatewayId"], i) for i in r["InternetGateways"]),
+            "shape": "InternetGateway",
         },
         "get": {
             "request": lambda c, i: c.describe_internet_gateways(InternetGatewayIds=[i]),
-            "response": lambda r: (r["InternetGateways"][0]["InternetGatewayId"], r["InternetGateways"][0])
+            "response": lambda r: (r["InternetGateways"][0]["InternetGatewayId"], r["InternetGateways"][0]),
+            "shape": "InternetGateway",
         },
-        "shape": "InternetGateway",
         "default_props": [
             "Attachments"
         ]
@@ -82,26 +91,28 @@ _config = {
         "client": "ec2",
         "ls": {
             "request": lambda c: c.describe_nat_gateways(),
-            "response": lambda r: ((i["NatGatewayId"], i) for i in r["NatGateways"])
+            "response": lambda r: ((i["NatGatewayId"], i) for i in r["NatGateways"]),
+            "shape": "NatGateway",
         },
         "get": {
             "request": lambda c, i: c.describe_nat_gateways(NatGatewayIds=[i]),
-            "response": lambda r: (r["NatGateways"][0]["NatGatewayId"], r["NatGateways"][0])
+            "response": lambda r: (r["NatGateways"][0]["NatGatewayId"], r["NatGateways"][0]),
+            "shape": "NatGateway",
         },
-        "shape": "NatGateway",
         "default_props": []
     },
     "eip": {
         "client": "ec2",
         "ls": {
             "request": lambda c: c.describe_addresses(),
-            "response": lambda r: ((i["AllocationId"], i) for i in r["Addresses"])
+            "response": lambda r: ((i["AllocationId"], i) for i in r["Addresses"]),
+            "shape": "Address",
         },
         "get": {
             "request": lambda c, i: c.describe_addresses(AllocationIds=[i]),
-            "response": lambda r: (r["Addresses"][0]["AllocationId"], r["Addresses"][0])
+            "response": lambda r: (r["Addresses"][0]["AllocationId"], r["Addresses"][0]),
+            "shape": "Address",
         },
-        "shape": "Address",
         "default_props": [
             "PublicIp"
         ]
@@ -110,11 +121,13 @@ _config = {
         "client": "ec2",
         "ls": {
             "request": lambda c: c.describe_network_interfaces(),
-            "response": lambda r: ((i["NetworkInterfaceId"], i) for i in r["NetworkInterfaces"])
+            "response": lambda r: ((i["NetworkInterfaceId"], i) for i in r["NetworkInterfaces"]),
+            "shape": "NetworkInterface",
         },
         "get": {
             "request": lambda c, i: c.describe_network_interfaces(NetworkInterfaceIds=[i]),
-            "response": lambda r: (r["NetworkInterfaces"][0]["NetworkInterfaceId"], r["NetworkInterfaces"][0])
+            "response": lambda r: (r["NetworkInterfaces"][0]["NetworkInterfaceId"], r["NetworkInterfaces"][0]),
+            "shape": "NetworkInterface",
         },
         "shape": "NetworkInterface",
         "default_props": [
@@ -128,13 +141,14 @@ _config = {
         },
         "ls": {
             "request": lambda c: c.describe_network_acls(),
-            "response": lambda r: ((i["NetworkAclId"], i) for i in r["NetworkAcls"])
+            "response": lambda r: ((i["NetworkAclId"], i) for i in r["NetworkAcls"]),
+            "shape": "NetworkAcl",
         },
         "get": {
             "request": lambda c, i: c.describe_network_acls(NetworkAclIds=[i]),
-            "response": lambda r: (r["NetworkAcls"][0]["NetworkAclId"], r["NetworkAcls"][0])
+            "response": lambda r: (r["NetworkAcls"][0]["NetworkAclId"], r["NetworkAcls"][0]),
+            "shape": "NetworkAcl",
         },
-        "shape": "NetworkAcl",
         "default_props": [
             "Entries", "IsDefault"
         ]
@@ -150,39 +164,43 @@ async def ls(thing_type):
         yield _
 
 
-async def get(thing_type, id):
-    t = _config[thing_type]
+async def get(resource_type, id):
+    t = _config[resource_type]
     async with aioboto3.Session().client(t["client"]) as c:
         response = await t["get"]["request"](c, id)
         return t["get"]["response"](response)
 
 
-def thing_types():
-    return list(_config.keys())
+def resource_types():
+    clients = {c: boto3.client(c) for c in set(v["client"] for v in _config.values())}
+    return {r: clients[t["client"]].meta.service_model.shape_for(t["ls"]["shape"]).documentation for r, t in _config.items()}
 
 
-def default_props(thing_type):
-    return _config[thing_type].get("default_props", []) if thing_type in _config else []
+def default_props(resource_type):
+    return _config[resource_type].get("default_props", []) if resource_type in _config else []
 
 
-async def schema_ls(thing_type):
-    t = _config[thing_type]
-    async with aioboto3.Session().client(t["client"]) as c:
-        shp = c.meta.service_model.shape_for(t["shape"])
-    return list(json_paths(shp))
+def schema_ls(resource_type):
+    print("kurwa")
+    t = _config[resource_type]
+    shp = boto3.client(t["client"]).meta.service_model.shape_for(t["ls"]["shape"])
+    return list(_schema_rec(shp))
 
 
-schema_get = schema_ls
+def schema_get(resource_type):
+    t = _config[resource_type]
+    shp = boto3.client(t["client"]).meta.service_model.shape_for(t["ls"]["shape"])
+    return list(_schema_rec(shp))
 
 
-def json_paths(obj, path=""):
+def _schema_rec(obj, path=""):
     if "type_name" in dir(obj) and obj.type_name == "structure":
         for name, member in obj.members.items():
             new_path = f"{path}.{name}" if path else name
-            yield from json_paths(member, new_path)
+            yield from _schema_rec(member, new_path)
     elif "type_name" in dir(obj) and obj.type_name == "list":
         for name, member in obj.member.members.items():
             new_path = f"{path}[*].{name}"
-            yield from json_paths(member, new_path)
+            yield from _schema_rec(member, new_path)
     else:
-        yield path
+        yield (path, obj.documentation)

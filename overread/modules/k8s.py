@@ -2,6 +2,8 @@ from kubernetes_asyncio import config
 from kubernetes_asyncio.dynamic import DynamicClient
 
 
+description = "Module for interacting with Kubernetes resources"
+
 _config  = {
     "cm": {
         "kind": "ConfigMap",
@@ -37,8 +39,8 @@ _config  = {
 }
 
 
-async def get(thing_type, id):
-    thing = _config["things"][thing_type]
+async def get(resource_type, id):
+    thing = _config[resource_type]
     async with await config.new_client_from_config() as api:
         client = await DynamicClient(api)
         v1 = await client.resources.get(api_version="v1", kind=thing["kind"])
@@ -47,7 +49,7 @@ async def get(thing_type, id):
             yield item.metadata.name, item.to_dict()
 
 
-def thing_types():
+def resource_types():
     return list(_config.keys())
 
 
