@@ -2,51 +2,81 @@ from collections import namedtuple
 from typing import AsyncGenerator, Dict
 
 
-Result = namedtuple("Result", "id content blob")
-
-modules = {}
+__all__ = ["Module", "Result"]
 
 
-class ResourceMeta(type):
+Result = namedtuple("Result", "id obj")
+
+_module_registry = {}
+_handler_registry = {}
+
+
+def modules():
+    return _module_registry
+
+
+def resource_types(module: str):
+    return {r: rr.description() for r, rr in _handler_registry[module].items()}
+
+
+def handler(module: str, resource_type: str):
+    return _handler_registry[module][resource_type]
+
+
+class _ModuleMeta(type):
     def __new__(cls, *args, **kwargs):
-        inst = super().__new__(cls, *args, **kwargs)
-        if "name" not in kwargs:
-            raise ValueError("Resource must have a name")
-        setattr(inst, "__ov_name", kwargs["name"])
-        if "module" not in kwargs:
-            raise ValueError("Resource must have a module")
-        kwargs["module"].__ov_resource_types.append(inst)
+        inst = super().__new__(cls, *args)
+        if inst.name():
+            if inst.name() in _module_registry:
+                raise ValueError(f"Module name {inst.name()} already registered")
+            _module_registry[inst.name()] = inst
         return inst
 
 
-class Resource(metaclass=ResourceMeta):
-    def description(cls) -> str:
+class Module(metaclass=_ModuleMeta):
+    @staticmethod
+    def description() -> str:
         pass
 
-    async def ls(cls) -> AsyncGenerator[Result]:
+    @staticmethod
+    def name() -> str:
         pass
 
-    async def get(cls, resource_id) -> Result:
+
+class _HandlerMeta(type):
+    def __new__(cls, name, bases, *args, **kwargs):
+        inst = super().__new__(cls, name, bases, *args)
+        if inst.module() and inst.resource_type():
+            _handler_registry.setdefault(inst.module(), {})
+            _handler_registry[inst.module()][inst.resource_type()] = inst
+        return inst
+
+
+class Handler(metaclass=_HandlerMeta):
+    @staticmethod
+    def module() -> str:
+        pass
+    
+    @staticmethod
+    def resource_type() -> str:
         pass
 
+    @staticmethod
+    def description() -> str:
+        pass
+
+    @classmethod
+    async def ls(cls) -> AsyncGenerator[Result, None]:
+        pass
+
+    @classmethod
+    async def get(cls, resource_id: str) -> Result:
+        pass
+
+    @classmethod
     def schema_ls(cls) -> Dict[str, str]:
         pass
 
+    @classmethod
     def schema_get(cls) -> Dict[str, str]:
         pass
-
-
-class ModuleMeta(type):
-    def __new__(cls, *args, **kwargs):
-        if "name" not in kwargs:
-            raise ValueError("Module must have a name")
-        inst = super().__new__(cls, *args, **kwargs)
-        setattr(inst, "__ov_name", kwargs["name"])
-        setattr(inst, "__ov_resource_types", [])
-        modules[kwargs["name"]] = inst
-        return inst
-
-
-class Module(metaclass=ModuleMeta):
-    def resource_types(self) -> Dict[str, Resource]:
-        return {r.__ov_name: r for r in self.__ov_resource_types}
