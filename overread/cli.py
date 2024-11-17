@@ -3,18 +3,11 @@
 
 import asyncio
 import argparse, argcomplete
-from collections import namedtuple
 from datetime import datetime, date
 import json
 
-from overread.modules import aws, k8s
+from overread.model import modules, Result
 from overread.render import render_ls, render_get
-
-
-Result = namedtuple("Result", "id content blob")
-
-
-modules = {"aws": aws, "k8s": k8s}
 
 
 async def execute_ls(module, resource_type):
