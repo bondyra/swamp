@@ -1,12 +1,11 @@
 [tool.poetry]
-name = "overread"
-version = "0.0.8"
+name = "swamp"
+version = "0.0.1"
 description = ""
 authors = ["Jakub Bondyra"]
-readme = "README.md"
 
 [tool.poetry.scripts]
-ov = 'overread.cli:run'
+swamp = 'swamp._cli:run'
 
 [tool.poetry.dependencies]
 argcomplete = "^3.5.1"

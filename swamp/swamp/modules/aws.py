@@ -3,7 +3,7 @@ from typing import AsyncGenerator, Dict
 import aioboto3
 import boto3
 
-from overread.model import Handler, Module, Result
+from swamp.model import Handler, Module, Result
 
 
 class AWS(Module):
@@ -108,7 +108,7 @@ class SubnetHandler(LegacyAWSAPIHandler):
     async def _ls(cls, client) -> AsyncGenerator[Result, None]:
         response = await client.describe_subnets()
         for item in response["Subnets"]:
-            yield Result(item["VpcId"], item)
+            yield Result(item["SubnetId"], item)
 
     @classmethod
     async def _get(cls, client, resource_id: str) -> Result:
