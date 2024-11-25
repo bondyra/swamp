@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import {
   Background,
+  BackgroundVariant,
   ReactFlow,
   addEdge,
   ConnectionLineType,
@@ -84,41 +85,36 @@ function App() {
 
   const query = useCallback(
     () => {
-    const q = document.getElementById('queryy').value;
-    const things = q.split('\n');
-    var promises = [];
-    var results = [];
-    things.forEach(thing => {
-      const [mod, resource_type] = thing.trim().split('.');
-      promises.push(
-        fetch('http://localhost:8000/' + mod + '/' + resource_type)
+      var newNodes = [];
+      var newEdges = [];
+      const q = document.getElementById('main_query').value;
+      const [mod, resource_type] = q.split('.');
+      fetch(`http://localhost:8000/${mod}/${resource_type}?pattern=`)
         .then(response => response.json())
-        .then(r => {
-          results.push({module: mod, resource_type: resource_type, results: r});
+        .then(response => {
+          console.log(response)
+          response.results.forEach(function(result) {
+            newNodes.push({
+              id: `${mod}.${resource_type}.${result.id}`,
+              position: { x: 0, y: 0 },
+              type: 'resource',
+              data: {
+                id: `${mod}.${resource_type}.${result.id}`,
+                module: mod,
+                resource_type: resource_type,
+                resource_id: result.id,
+                obj: result.obj,
+                icon: `./icons/aws/${resource_type}.svg` 
+              },
+            });
+          })
         })
-      );
-    })
-    var newNodes = [];
-    Promise.all(promises).then(() => {
-      results.forEach(r => {
-
-        Object.keys(r.results).forEach(function(key, index) {
-          console.log(key, r.results[key]);
-          newNodes.push({
-            id: r.module + '.' + r.resource_type + '.' + key,
-            position: { x: 0, y: 0 },
-            type: 'resource',
-            data: { 
-              id: key, module: r.module, resource_type: r.resource_type, 
-              content: r.results[key], 
-              icon: "./icons/aws/" + r.resource_type + ".svg" 
-            }
-          }); 
+        .then(() => {
+          setNodes(newNodes);
+          setEdges(newEdges);
         });
-      });
-      setNodes(newNodes);
-    });
-  });
+    }
+  );
 
   const onChange = (evt) => {
     setColorMode(evt.target.value);
@@ -139,7 +135,7 @@ function App() {
       >
 
       <Panel position='top-center'>
-          <textarea placeholder="Enter query" id="queryy" />
+          <textarea placeholder="Enter query" id="main_query" />
           <button onClick={() => query()}>QUERY</button>
       </Panel>
 
@@ -155,7 +151,7 @@ function App() {
         </Panel>
         <MiniMap />
         <Controls />
-        <Background  />
+        <Background variant={BackgroundVariant.Lines} color='#222222'  />
       </ReactFlow>
     </div>
   );
