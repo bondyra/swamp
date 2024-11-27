@@ -17,11 +17,12 @@ app.add_middleware(
 cache = {}
 
 
+# fixme add sane serialization
 @app.get("/{module}/{resource_type}")
-async def query(module: str, resource_type: str, pattern: str = None):
-    all_results = await ls(module, resource_type)
-    print(all_results)
-    return {"results": [{"id": r.id, "obj": r.obj} for r in all_results if not pattern or pattern in str(r.obj)]}
+async def query(module: str, resource_type: str):
+    results = await ls(module, resource_type)
+    print(results)
+    return {"results": results}
 
 
 async def ls(module, resource_type):
@@ -29,7 +30,10 @@ async def ls(module, resource_type):
         cache[module] = {}
     elif cache[module].get(resource_type) is not None:
         return cache[module][resource_type]
-    results = [r async for r in handler(module, resource_type).ls()]
+    results = [{"id": r.id, "obj": r.obj} async for r in handler(module, resource_type).ls()]
+    for r in results:
+        r["parents"] = [{"module": p.module, "resource_type": p.resource_type, "id": p.id} for p in handler(module, resource_type).parents(r["obj"])]
+        # r["children"] = [{"module": c.module, "resource_type": c.resource_type, "id": c.id} for c in handler(module, resource_type).children(r["obj"])]
     cache[module][resource_type] = results
     return results
 

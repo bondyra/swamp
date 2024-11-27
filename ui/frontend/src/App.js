@@ -83,23 +83,23 @@ function App() {
     [nodes, edges],
   );
 
-  const query = useCallback(
-    () => {
-      var newNodes = [];
-      var newEdges = [];
-      const q = document.getElementById('main_query').value;
-      const [mod, resource_type] = q.split('.');
-      fetch(`http://localhost:8000/${mod}/${resource_type}?pattern=`)
+  const scan = useCallback(
+  () => {
+    var newNodes = [];
+    var newEdges = [];
+    const mod = 'aws';
+    const promises = ['vpc', 'subnet', 'rtb', 'igw', 'sg', 'nat', 'eip', 'eni', 'nacl'].map(function(resource_type) {
+      return fetch(`http://localhost:8000/${mod}/${resource_type}`)
         .then(response => response.json())
         .then(response => {
-          console.log(response)
           response.results.forEach(function(result) {
+            const newId = `${mod}.${resource_type}.${result.id}`;
             newNodes.push({
-              id: `${mod}.${resource_type}.${result.id}`,
+              id: newId,
               position: { x: 0, y: 0 },
               type: 'resource',
               data: {
-                id: `${mod}.${resource_type}.${result.id}`,
+                id: newId,
                 module: mod,
                 resource_type: resource_type,
                 resource_id: result.id,
@@ -107,14 +107,23 @@ function App() {
                 icon: `./icons/aws/${resource_type}.svg` 
               },
             });
+            result.parents.forEach(function(parent) {
+              const parentId = `${parent.module}.${parent.resource_type}.${parent.id}`;
+              newEdges.push({id: `${parentId}-${newId}`, source: parentId, target: newId, style: {strokeWidth: 5} });
+            return newNodes;
           })
         })
-        .then(() => {
-          setNodes(newNodes);
-          setEdges(newEdges);
-        });
-    }
-  );
+      })
+    });
+    Promise.all(promises).then(() => {
+      console.log(`Adding a total of ${newNodes.length} nodes and ${newEdges.length} edges`);
+      console.log(newNodes);
+      console.log(newEdges);
+      setNodes(newNodes);
+      setEdges(newEdges);
+    });
+  }, []
+);
 
   const onChange = (evt) => {
     setColorMode(evt.target.value);
@@ -135,14 +144,13 @@ function App() {
       >
 
       <Panel position='top-center'>
-          <textarea placeholder="Enter query" id="main_query" />
-          <button onClick={() => query()}>QUERY</button>
+          <button onClick={() => scan()}>PLZ CLICK ME TO FETCH STUFF</button>
       </Panel>
 
-      <Panel position="top-left">
-        <button onClick={() => onLayout()}>Refresh layout</button>
+      <Panel position="top-right">
+        <button onClick={() => onLayout()}>PLZ CLICK ME TO ORDER STUFF</button>
       </Panel>
-        <Panel position="top-right">
+        <Panel position="top-left">
           <select onChange={onChange} data-testid="colormode-select">
             <option value="dark">dark</option>
             <option value="light">light</option>
