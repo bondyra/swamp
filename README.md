@@ -48,19 +48,15 @@ Please press tabs often - this way you can see what resource types are supported
 ## UI
 I'm also trying to visualize resources and build some sensible graphs out of them
 
-### Setup
-For the time being I've bundled everything in a single docker image that you should run locally:
-```
-docker pull ghcr.io/bondyra/swamp:latest
-```
-
-This image spins up python backend server (that uses the same library CLI above uses) and react (reactflow based) frontend UI.
-
 ### How to use
+For the time being I've bundled everything in a single docker image that you should run locally.
+
 You'll need to expose two ports and mount your AWS creds for the container (I know it sounds stupid, but a normal support is on the way):
 ```
 docker run -p 8000:8000 -p 3000:3000 -v $HOME/.aws:/root/.aws ghcr.io/bondyra/swamp:latest
 ```
+
+This image spins up python backend server (that uses the same library CLI above uses) and react (reactflow based) frontend UI you access.
 
 Go to `localhost:8000`, click fetch button to load the resources. Then you can organize stuff with another button, or change the theme.
 
