@@ -88,7 +88,7 @@ function App() {
     var newNodes = [];
     var newEdges = [];
     const mod = 'aws';
-    const promises = ['vpc', 'subnet', 'rtb', 'igw', 'sg', 'nat', 'eip', 'eni', 'nacl'].map(function(resource_type) {
+    const promises = ['vpc', 'subnet', 'rtb', 'igw', 'sg', 'nat', 'eni', 'nacl'].map(function(resource_type) {
       return fetch(`http://localhost:8000/${mod}/${resource_type}`)
         .then(response => response.json())
         .then(response => {
