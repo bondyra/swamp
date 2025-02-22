@@ -1,5 +1,5 @@
-from swamp.model import handler
-from swamp.modules.aws import AWS
+from backend.model import handler
+from backend.modules.aws import AWS
 
 import uvicorn
 from fastapi import FastAPI
@@ -26,14 +26,11 @@ async def query(module: str, resource_type: str):
 
 
 async def ls(module, resource_type):
-    if cache.get(module) is None:
+    if not cache.get(module):
         cache[module] = {}
     elif cache[module].get(resource_type) is not None:
         return cache[module][resource_type]
     results = [{"id": r.id, "obj": r.obj} async for r in handler(module, resource_type).ls()]
-    for r in results:
-        r["parents"] = [{"module": p.module, "resource_type": p.resource_type, "id": p.id} for p in handler(module, resource_type).parents(r["obj"])]
-        # r["children"] = [{"module": c.module, "resource_type": c.resource_type, "id": c.id} for c in handler(module, resource_type).children(r["obj"])]
     cache[module][resource_type] = results
     return results
 

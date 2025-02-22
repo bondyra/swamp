@@ -3,7 +3,7 @@ from typing import AsyncGenerator, Dict, List
 import aioboto3
 import boto3
 
-from swamp.model import Handler, Module, ResourceDesc, Result
+from backend.model import Handler, Module, ResourceDesc, Result
 
 
 class AWS(Module):
@@ -122,14 +122,6 @@ class SubnetHandler(LegacyAWSAPIHandler):
     async def _get(cls, client, resource_id: str) -> Result:
         response = await client.describe_subnets(SubnetIds=[resource_id])
         return Result(response["Subnets"][0]["SubnetId"], response["Subnets"][0])
-    
-    @classmethod
-    def parents(cls, obj: Dict) -> List[ResourceDesc]:
-        return [ResourceDesc("aws", "vpc", obj["VpcId"])]
-    
-    @classmethod
-    def children(cls, obj: Dict) -> List[ResourceDesc]:
-        return []
 
 
 class RouteTableHandler(LegacyAWSAPIHandler):
@@ -151,14 +143,6 @@ class RouteTableHandler(LegacyAWSAPIHandler):
     async def _get(cls, client, resource_id: str) -> Result:
         response = await client.describe_route_tables(RouteTableIds=[resource_id])
         return Result(response["RouteTables"][0]["RouteTableId"], response["RouteTables"][0])
-    
-    @classmethod
-    def parents(cls, obj: Dict) -> List[ResourceDesc]:
-        return [ResourceDesc("aws", "vpc", obj["VpcId"])]
-    
-    @classmethod
-    def children(cls, obj: Dict) -> List[ResourceDesc]:
-        return []
 
 
 class InternetGatewayHandler(LegacyAWSAPIHandler):
@@ -180,14 +164,6 @@ class InternetGatewayHandler(LegacyAWSAPIHandler):
     async def _get(cls, client, resource_id: str) -> Result:
         response = await client.describe_internet_gateways(InternetGatewayIds=[resource_id])
         return Result(response["InternetGateways"][0]["InternetGatewayId"], response["InternetGateways"][0])
-    
-    @classmethod
-    def parents(cls, obj: Dict) -> List[ResourceDesc]:
-        return [ResourceDesc("aws", "vpc", att["VpcId"]) for att in obj["Attachments"]]
-    
-    @classmethod
-    def children(cls, obj: Dict) -> List[ResourceDesc]:
-        return []
 
 
 class SecurityGroupHandler(LegacyAWSAPIHandler):
@@ -209,14 +185,6 @@ class SecurityGroupHandler(LegacyAWSAPIHandler):
     async def _get(cls, client, resource_id: str) -> Result:
         response = await client.describe_security_groups(GroupIds=[resource_id])
         return Result(response["SecurityGroups"][0]["GroupId"], response["SecurityGroups"][0])
-    
-    @classmethod
-    def parents(cls, obj: Dict) -> List[ResourceDesc]:
-        return [ResourceDesc("aws", "vpc", obj["VpcId"])]
-    
-    @classmethod
-    def children(cls, obj: Dict) -> List[ResourceDesc]:
-        return []
 
 
 class NATGatewayHandler(LegacyAWSAPIHandler):
@@ -238,17 +206,6 @@ class NATGatewayHandler(LegacyAWSAPIHandler):
     async def _get(cls, client, resource_id: str) -> Result:
         response = await client.describe_nat_gateways(NatGatewayIds=[resource_id])
         return Result(response["NatGateways"][0]["NatGatewayId"], response["NatGateways"][0])
-    
-    @classmethod
-    def parents(cls, obj: Dict) -> List[ResourceDesc]:
-        return [
-            ResourceDesc("aws", "vpc", obj["VpcId"]),
-            ResourceDesc("aws", "subnet", obj["SubnetId"])
-        ]
-
-    @classmethod
-    def children(cls, obj: Dict) -> List[ResourceDesc]:
-        return []
 
 
 class ElasticIpHandler(LegacyAWSAPIHandler):
@@ -270,14 +227,6 @@ class ElasticIpHandler(LegacyAWSAPIHandler):
     async def _get(cls, client, resource_id: str) -> Result:
         response = await client.describe_addresses(AllocationIds=[resource_id])
         return Result(response["Addresses"][0]["AllocationId"], response["Addresses"][0])
-    
-    @classmethod
-    def parents(cls, obj: Dict) -> List[ResourceDesc]:
-        return [ResourceDesc("aws", "eni", obj["NetworkInterfaceId"])]
-
-    @classmethod
-    def children(cls, obj: Dict) -> List[ResourceDesc]:
-        return []
 
 
 class NetworkInterfaceHandler(LegacyAWSAPIHandler):
@@ -299,17 +248,6 @@ class NetworkInterfaceHandler(LegacyAWSAPIHandler):
     async def _get(cls, client, resource_id: str) -> Result:
         response = await client.describe_network_interfaces(NetworkInterfaceIds=[resource_id])
         return Result(response["NetworkInterfaces"][0]["NetworkInterfaceId"], response["NetworkInterfaces"][0])
-    
-    @classmethod
-    def parents(cls, obj: Dict) -> List[ResourceDesc]:
-        return [
-            ResourceDesc("aws", "vpc", obj["VpcId"]),
-            ResourceDesc("aws", "subnet", obj["SubnetId"])
-        ]
-
-    @classmethod
-    def children(cls, obj: Dict) -> List[ResourceDesc]:
-        return []
 
 
 class NetworkAclHandler(LegacyAWSAPIHandler):
@@ -331,17 +269,3 @@ class NetworkAclHandler(LegacyAWSAPIHandler):
     async def _get(cls, client, resource_id: str) -> Result:
         response = await client.describe_network_acls(NetworkAclIds=[resource_id])
         return Result(response["NetworkAcls"][0]["NetworkAclId"], response["NetworkAcls"][0])
-
-    @classmethod
-    def parents(cls, obj: Dict) -> List[ResourceDesc]:
-        return [
-            ResourceDesc("aws", "vpc", obj["VpcId"]),
-            *[
-                ResourceDesc("aws", "subnet", ass["SubnetId"])
-                for ass in obj["Associations"]
-            ]
-        ]
-
-    @classmethod
-    def children(cls, obj: Dict) -> List[ResourceDesc]:
-        return []

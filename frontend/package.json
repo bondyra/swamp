@@ -4,15 +4,25 @@
   "private": true,
   "dependencies": {
     "@dagrejs/dagre": "^1.1.4",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@microlink/react-json-view": "^1.25.0",
+    "@mui/icons-material": "^6.4.5",
+    "@mui/material": "^6.4.1",
+    "@mui/x-tree-view": "^7.26.0",
     "@testing-library/jest-dom": "^5.17.0",
     "@testing-library/react": "^13.4.0",
     "@testing-library/user-event": "^13.5.0",
     "@xyflow/react": "^12.3.5",
+    "jsonpath-plus": "^10.2.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-json-tree": "^0.19.0",
+    "react-native-json-tree": "^1.5.0",
     "react-scripts": "^5.0.1",
-    "web-vitals": "^2.1.4"
+    "tailwindcss": "^4.0.3",
+    "web-vitals": "^2.1.4",
+    "yaml": "^2.7.0"
   },
   "scripts": {
     "start": "react-scripts start",

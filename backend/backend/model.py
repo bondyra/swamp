@@ -1,5 +1,5 @@
 from collections import namedtuple
-from typing import AsyncGenerator, Dict, List
+from typing import AsyncGenerator, Dict
 
 
 __all__ = ["Module", "Result"]
@@ -72,14 +72,6 @@ class Handler(metaclass=_HandlerMeta):
 
     @classmethod
     async def get(cls, resource_id: str) -> Result:
-        pass
-
-    @classmethod
-    def parents(cls, obj: Dict) -> List[ResourceDesc]:
-        pass
-
-    @classmethod
-    def children(cls, obj: Dict) -> List[ResourceDesc]:
         pass
 
     @classmethod

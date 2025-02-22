@@ -12,6 +12,7 @@ backend = "backend.main:start"
 python = "^3.11"
 fastapi = "^0.115.5"
 uvicorn = "^0.32.1"
+aioboto3 = "^12.3.0"
 
 
 [build-system]
