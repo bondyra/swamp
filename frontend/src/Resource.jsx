@@ -1,61 +1,179 @@
-import React, { memo } from 'react';
+import React, { memo, useCallback, useState } from 'react';
+import { styled } from '@mui/material/styles';
 import { Handle, Position, useReactFlow } from '@xyflow/react';
-import { useState } from 'react';
-import Button from '@mui/material/Button';
+import ButtonBase from '@mui/material/ButtonBase';
 import Collapse from '@mui/material/Collapse';
-import TextField from '@mui/material/TextField';
-import ReactJsonView from '@microlink/react-json-view'
-import {JSONPath} from 'jsonpath-plus';
+import DatasetIcon from '@mui/icons-material/Dataset';
+import DatasetLinkedIcon from '@mui/icons-material/DatasetLinked';
+import SettingsEthernetIcon from '@mui/icons-material/SettingsEthernet';
 
-import EmbedWizard from './EmbedWizard'
+import DataDisplay from './DataDisplay';
+import QueryWizard from './QueryWizard';
+import FieldPicker from './FieldPicker';
+import { Box } from '@mui/material';
 
-const themeFunction = (theme) => ({
-  background: "#000000",
-  color: "#ffffff",
-  width: "100%",
-  '& input': {
-    color: "#aaaaaa",
-    padding: "4px 4px",
-    fontFamily: "Monospace"
-  }
-})
 
-function getByJsonPointers(obj, pointers) {
-  function getValueByPointer(obj, pointer) {
-      if (pointer === "") return obj; // Root object case
-      const parts = pointer.split("/").slice(1); // Remove initial empty string from split
-      let current = obj;
-      for (const part of parts) {
-          if (current === undefined) return undefined;
-          current = current[decodeURIComponent(part)];
-      }
-      return current;
-  }
+let linkId = 1;
+const newLinkId = () => `link-${linkId++}`;
 
-  const result = {};
-  for (const pointer of pointers) {
-      result[pointer] = getValueByPointer(obj, pointer);
-  }
-  return result;
-}
+let inlineLabelId = 1;
+const newInlineLabelId = () => inlineLabelId++;
 
 // const themeFunction = (theme) => ({
-//   width: 250,
+//   background: "#000000",
 //   color: "#ffffff",
-//   padding: "2px",
-//   '& textarea': {
-//     color: "#ffffff",
-//     fontFamily: "Monospace",
-//     fontSize: "8px",
-//     padding: "1px",
-//     lineHeight: "1.3"
-//   },
+//   width: "100%",
+//   '& input': {
+//     color: "#aaaaaa",
+//     padding: "4px 4px",
+//     fontFamily: "Monospace"
+//   }
 // })
 
+
+const Button = styled(ButtonBase)(({ theme }) => ({
+  fontSize: 13,
+  width: '100%',
+  textAlign: 'left',
+  paddingBottom: 8,
+  fontWeight: 600,
+  color: '#586069',
+  ...theme.applyStyles('dark', {
+    color: '#8b949e',
+  }),
+  '&:hover,&:focus': {
+    color: '#0366d6',
+    ...theme.applyStyles('dark', {
+      color: '#58a6ff',
+    }),
+  },
+  '& span': {
+    width: '100%',
+  },
+  '& svg': {
+    width: 16,
+    height: 16,
+  },
+}));
+
 export default memo(({ id, data, isConnectable }) => {
-  const { updateNodeData } = useReactFlow();
+  const reactFlow = useReactFlow();
   const [embedding, setEmbedding] = useState(false);
   const onEmbed = (_) => setEmbedding(!embedding)
+
+  const addQuery = useCallback((event) => {
+    const sourceNodeId = id
+    const sourceNode = reactFlow.getNodes().filter(n=> n.id === sourceNodeId)[0]
+    const targetNodeId = `${id}-${newLinkId()}`
+    // we need to remove the wrapper bounds, in order to get the correct position
+    const { clientX, clientY } = 'changedTouches' in event ? event.changedTouches[0] : event;
+    
+    const newNode = {
+      id: targetNodeId,
+      position: reactFlow.screenToFlowPosition({
+        x: clientX,
+        y: clientY,
+      }),
+      type: 'query',
+      data: {resourceType: null, labels: [], nodeData: sourceNode.data},
+      origin: [0.5, 0.0],
+    };
+
+    reactFlow.setNodes((nds) => nds.concat(newNode));
+    reactFlow.setEdges((eds) =>
+      eds.concat({ id: `${sourceNodeId}-${targetNodeId}`, source: sourceNodeId, target: targetNodeId, style: {strokeWidth: 5} }),
+    );
+  }, [id, reactFlow]);
+
+  const inlineResources = useCallback(
+    (results) => {
+      reactFlow.updateNodeData(id, (node) => {
+        return { 
+          ...node.data,
+          inline: {...node.data.inline, results: results}
+        };
+      })
+    }, [id, reactFlow]
+  );
+
+  const updateInlineResourceType = useCallback(
+    (newValue) => {
+      reactFlow.updateNodeData(id, (node) => {
+        return { 
+          ...node.data,
+          inline: {...node.data.inline, resourceType: newValue}
+        };
+      })
+    }, [id, reactFlow]);
+
+  const updateSelectedFields = useCallback(
+    (newValue) => {
+      reactFlow.updateNodeData(id, (node) => {
+        return { 
+          ...node.data,
+          selectedFields: newValue
+        };
+      })
+    }, [id, reactFlow]
+  )
+
+  const updateInlineSelectedFields = useCallback(
+    (newValue) => {
+      reactFlow.updateNodeData(id, (node) => {
+        return { 
+          ...node.data,
+          inline: {...node.data.inline, selectedFields: newValue}
+        };
+      })
+    }, [id, reactFlow]
+  );
+
+  const _updateInlineLabel = useCallback(
+  ({labelId, newKey, newVal}) => {
+    reactFlow.updateNodeData(id, (node) => {
+      var labels = node.data.inline.labels ?? []
+      return { 
+        ...node.data,
+        inline: {
+          ...node.data.inline,
+          labels: labels.map(l => {
+            if (l.id === labelId){
+              l.key = newKey ?? l.key
+              l.val = newVal ?? l.val
+            }
+            return l;
+          })
+        }
+      };
+    })
+  }, [id, reactFlow]);
+
+  const updateInlineLabelKey = (labelId, newKey) => _updateInlineLabel({labelId: labelId, newKey: newKey})
+  const updateInlineLabelVal = (labelId, newVal) => _updateInlineLabel({labelId: labelId, newVal: newVal})
+
+  const addInlineLabel = useCallback(
+    () => {
+      reactFlow.updateNodeData(id, (node) => {
+        var labels = node.data.inline.labels ?? []
+        return { 
+          ...node.data,
+          inline: {...node.data.inline, labels: labels.concat({id: newInlineLabelId(), key: "", val: ""}) }
+        };
+      });
+    }, [id, reactFlow]
+  )
+
+  const deleteInlineLabel = useCallback(
+    (labelId) => {
+      reactFlow.updateNodeData(id, (node) => {
+        var labels = node.data.inline.labels ?? []
+        return {
+          ...node.data,
+          inline: {...node.data.inline, labels: labels.filter(x => x.id !== labelId) }
+        };
+      });
+    }, [id, reactFlow]
+  )
 
   return (
     <>
@@ -71,44 +189,49 @@ export default memo(({ id, data, isConnectable }) => {
                 <div className="header-label-row"><label className="swamp-resource-id">{data.resource_id}</label></div>
               </div>
             </div>
+            <hr/>
             <div className="resource-row">
-            <TextField 
-              variant="outlined" 
-              sx={themeFunction}
-              value={data._dataFilter}
-              onChange={(event) => {
-                var pointers = JSONPath({path: event.target.value, json: data.obj, resultType: "pointer"});
-                var newData = data.obj
-                if (pointers !== undefined && pointers.length > 0){
-                  newData = getByJsonPointers(data.obj, pointers)
-                }
-                updateNodeData(id, (node) => {
-                  return { ...node.data, _dataFilter: event.target.value, _displayedData: newData } ;
-                });
-              }}
-            />
+              <FieldPicker data={data.obj} selectedFields={data.selectedFields || []} updateSelectedFields={updateSelectedFields}/>
+              {/* to do - button to apply jsonpaths to other siblings */}
+              <Button disableRipple aria-describedby={id} sx={{width: "auto"}}> 
+                <SettingsEthernetIcon/>
+              </Button>
             </div>
             <div className="resource-row">
-            <ReactJsonView
-              name={null}
-              collapsed={1}
-              displayDataTypes={false}
-              displayObjectSize={false}
-              displayArrayKey={false}
-              theme="shapeshifter"
-              src={data._displayedData}
-            />
+              <DataDisplay nodeId={id} data={data.obj} selectedFields={data.selectedFields || []}/>
             </div>
             <div className="resource-row">
-              <Button color="primary" size="small" variant="contained" fullWidth onClick={onEmbed}>Embed resources</Button>
+            <Button disableRipple aria-describedby={id} onClick={onEmbed}>
+              <DatasetIcon />
+              <span>Inline</span>
+            </Button>
+            {/* to do - button to apply embeddings to other siblings */}
+            <Button disableRipple aria-describedby={id} sx={{width:"auto"}}> 
+              <SettingsEthernetIcon />
+            </Button>
             </div>
             <div className="resource-row">
               <Collapse in={embedding} timeout="auto" unmountOnExit>
-                <EmbedWizard/>
+              <Box sx={{borderLeft: "1px solid gray", marginLeft: "12px", paddingLeft:"12px"}}>
+                <QueryWizard 
+                nodeId={id} resourceType={data.inline.resourceType} labels={data.inline.labels || []} doSomethingWithResults={inlineResources} onResourceTypeUpdate={updateInlineResourceType}
+                sourceData={data.obj}
+                addLabel={addInlineLabel} deleteLabel={deleteInlineLabel} updateLabelKey={updateInlineLabelKey} updateLabelVal={updateInlineLabelVal}
+                />
+                <FieldPicker data={data.inline.results} selectedFields={data.inline.selectedFields || []} updateSelectedFields={updateInlineSelectedFields} header="Results"/>
+                <DataDisplay multiple nodeId={id} data={data.inline.results || []} selectedFields={data.inline.selectedFields || []}/>
+              </Box>
               </Collapse>
             </div>
+            <div className="resource-row">
+            {/* to do - replace edge on drop from App with this button */}
+            <Button disableRipple aria-describedby={id} onClick={addQuery}>
+              <DatasetLinkedIcon/>
+              <span>Link</span>
+            </Button>
+            </div>
+            <Handle type="source" position={Position.Bottom} id="b"/>
             <Handle type="target" position={Position.Top} id="a" style={{opacity: 0}} />
-            <Handle type="source" position={Position.Bottom} id="b" style={{ background: "white" }} />
           </div>
         </div>
       </div>

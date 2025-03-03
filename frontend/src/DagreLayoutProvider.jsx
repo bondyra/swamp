@@ -70,7 +70,7 @@ export const DagreLayoutProvider = (props) => {
     setRecomputeTriggered(false);
 
     // getLayoutedElements calls dagre to compute the layout. height and width correspond to 
-    // dagreGraph.graph().height and width, which allows us to fit the viewport to the layout 
+    // dagreGraph.graph().height and width, which allows us to fit the viewport to the layout
     const { nodes, edges, height, width } = getLayoutedElements(getNodes(), getEdges());
 
     setEdges(edges.map(e => ({ ...e, hidden: false })));

@@ -1,139 +1,120 @@
-import AddIcon from '@mui/icons-material/Add';
-import Autocomplete from '@mui/material/Autocomplete';
-import CloseIcon from '@mui/icons-material/Close';
-import IconButton from '@mui/material/IconButton';
-import CircularProgress from '@mui/material/CircularProgress';
+import Box from '@mui/material/Box';
+import Alert from '@mui/material/Alert';
+import AddCircleIcon from '@mui/icons-material/AddCircle';
+import RemoveCircleIcon from '@mui/icons-material/RemoveCircle';
+import IconButton, {iconButtonClasses} from '@mui/material/IconButton';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import List from '@mui/material/List';
+import ListItem from '@mui/material/ListItem';
 import Stack from '@mui/material/Stack';
-import TextField from '@mui/material/TextField';
-import React, { useCallback } from 'react';
-import { useReactFlow } from '@xyflow/react';
+import TextField, { textFieldClasses} from '@mui/material/TextField';
+import React, { useCallback, useState } from 'react';
 
-
-let labelId = 1;
-const newLabelId = () => labelId++;
+import GenericPicker from './GenericPicker'
+import SingleLabelValPicker from './SingleLabelValPicker'
 
 const themeFunction = (theme) => ({
-  width: 200,
 	padding: 0,
-  color: "#ffffff",
-  '& input': {
-    color: "#ffffff",
-    padding: "4px 4px",
-    fontFamily: "Monospace"
-  },
-	'.MuiAutocomplete-root': {
-    padding: 0
+  	color: "#ffffff",
+	'& input': {
+		color: "#ffffff",
+		padding: "0px 0px 0px 5px",
+		fontFamily: "Monospace",
+		fontSize: "10px",
+		height: "20px"
 	},
-	'.MuiAutocomplete-input': {
-    padding: 0
-	},
-	'.MuiOutlinedInput-root': {
-    padding: 0
-	}
+	[`&.${textFieldClasses.root}`]: {
+		width: "100px",
+		minWidth:"10px",
+	  },
+	  [`&.${iconButtonClasses.root}`]: {
+		  width: "100px",
+		  minWidth:"10px",
+		},
 })
 
-export default function LabelPicker({ nodeId, resource, labels, sourceData, disabled }) {
-	const { updateNodeData } = useReactFlow();
+export default function LabelPicker({ resourceType, labels, sourceData, disabled, addLabel, deleteLabel, updateLabelKey, updateLabelVal }) {
+	const [isErr, setErr] = useState(false)
+	const getLabelKeyOptions = useCallback(
+		() => {
+			// todo: fetch labels from backend for a resource type
+			return [
+				`${resourceType}-1`,
+				`${resourceType}-2`
+			];
+		}, [resourceType]
+	);
 
-	const updateLabel = useCallback(
-		(label, fun) => {
-			updateNodeData(nodeId, (node) => {
-				return { 
-					...node.data,
-					labels: labels.map(l => {
-						if (l.id === label.id)
-							l = fun(l)
-						return l
-					})
-				};
-			})
-		}, [labels, nodeId, updateNodeData]);
-
-  const handleOpen = (label) => {
-		updateLabel(label, l => {l.open = true; return l;});
-    (async () => {
-			updateLabel(label, l => {l.optionLoading = true; return l;});
-      await new Promise((resolve) => {setTimeout(() => {resolve();}, 1e3);});  // test
-			updateLabel(label, l => {l.optionLoading = false; return l;});
-      const wwhat = resource ? resource.name : "notselected"
-			var options = [
-				{ name: `${wwhat}-1` },
-				{ name: `${wwhat}-2` }
-			]
-			updateLabel(label, l => {l.options = options; return l;});
-    })();
-  };
-
-  const handleClose = (label) => {
-		updateLabel(label, l => {l.open = false; return l;});
-		updateLabel(label, l => {l.options = []; return l;});
-  };
-
-  return (
-    <>
-		{
-			labels.map(
-				label => {
-					return <Stack direction="row">
-						{/* key */}
-						<Autocomplete
-						sx={themeFunction}
-						disabled={disabled || false}
-						open={label.open || false}
-						onOpen={() => handleOpen(label)}
-						onClose={() => handleClose(label)}
-						options={label.options || []}
-						loading={label.optionLoading || false}
-						getOptionLabel={(option) => option.name}
-						value={label.key || null}
-						onChange={(_, newValue) => {updateLabel(label, (l) => {l.key = newValue; return l})}}
-						autoComplete
-						includeInputInList
-						renderInput={(params) => (
-							<TextField
-								{...params}
-								label=""
-								slotProps={{
-									input: {
-										...params.InputProps,
-										endAdornment: (
-											<React.Fragment>
-												{(label.optionLoading || false) ? <CircularProgress color="secondary" size={20} /> : null}
-												{params.InputProps.endAdornment}
-											</React.Fragment>
-										),
-									},
+	return (
+		<>
+			{
+				isErr &&
+				<Alert variant="filled" severity="error">
+					Papiez pedal matke jebal
+				</Alert>
+			}
+			<Stack direction="row" sx={{fontStyle: "italic", fontSize: "10px"}}>
+				<p>Where:</p>
+			</Stack>
+            <List dense={true} sx={{padding: "0px"}}>
+			{
+				labels.map(
+					label => {
+						return <ListItem sx={{padding: "0px"}}>		
+							<ChevronRightIcon />
+							<GenericPicker key={`${label.id}-picker`} value={label.key} valuePlaceholder="Filter" updateData={(newKey) => updateLabelKey(label.id, newKey)} getOptions={getLabelKeyOptions}/>
+							<Box key={`${label.id}-eq`}
+								sx={{
+									padding: '0px 10px 0px 10px',
+									fontWeight: 600, mt: "2px"
+								}}>
+							=
+							</Box>
+							<Stack 
+								key={`${label.id}-val-outer`}
+								sx={{
+								height: 20,
+								padding: '0px',
+								fontWeight: 600,
+								lineHeight: '15px',
+								borderRadius: '2px',
 								}}
-							/>
-						)}
-						/>
-						=
-						{/* value */}
-						<TextField
-							variant="outlined"
-							disabled={disabled || false}
-							sx={themeFunction}
-							value={label.val}
-							onChange={(event) => {updateLabel(label, (l) => {l.val = event.target.value; return l})}}
-						/>
-						<IconButton aria-label="delete" disabled={disabled || false} onClick={() => {
-							updateNodeData(nodeId, (node) => {
-								return { ...node.data, labels: labels.filter(x => x.id !== label.id) } ;
-							});
-						}}>
-							<CloseIcon color="secondary"/>
-						</IconButton>
-					</Stack>
-				}
-			)
-		}
-			<IconButton aria-label="delete" disabled={disabled || false} onClick={(_) => {
-				updateNodeData(nodeId, (node) => {
-					return { ...node.data, labels: labels.concat({id: newLabelId(), key: "", val: ""}) } ;
-				});
-			}}>
-        <AddIcon color="primary"/>
-      </IconButton>
-    </>
-  );
+								direction="row"
+							>
+								{
+									!sourceData &&
+									<TextField key={`${label.id}-val-inner`}
+										variant="outlined"
+										disabled={disabled || false}
+										sx={themeFunction}
+										value={label.val}
+										fullWidth= {false}
+										onChange={(event) => {setErr(false); if (event.target.value==="dupa") setErr(true); updateLabelVal(label.id, event.target.value)}}
+									/>
+								}
+								{
+									sourceData &&
+									<SingleLabelValPicker key={`${label.id}-val-inner`}
+										labelVal={label.val}
+										data={sourceData}
+										onFieldUpdate={(newValue) => {updateLabelVal(label.id, newValue)}}
+										disabled={disabled || false}
+									/>
+								}
+								<IconButton key={`${label.id}-val-del-outer`} sx={{padding: "0px", ml: "5px"}} aria-label="delete" disabled={disabled || false} onClick={() => deleteLabel(label.id)}>
+									<RemoveCircleIcon key={`${label.id}-val-del-inner`} color="secondary" sx={{width: "16px", height: "16px"}}/>
+								</IconButton>
+							</Stack>
+						</ListItem>
+					}
+				)
+			}
+				<ListItem sx={{padding: "0px"}}>
+					<IconButton aria-label="add" sx={{padding: "0px", margin: "0px", width: "fit-content"}} size="small" disabled={disabled || false} onClick={addLabel}>
+						<AddCircleIcon color="primary" sx={{width: "16px", height: "16px", padding: "0px"}}/>
+					</IconButton>
+				</ListItem>
+           	</List>
+		</>
+	);
 }

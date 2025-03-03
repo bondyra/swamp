@@ -59,6 +59,11 @@ code {
   position: relative;
 }
 
+.react-flow__node-query {
+  border-style: dashed;
+  border-width: medium;
+}
+
 .smallPadding {
   padding: 2px 2px;
 }
@@ -88,11 +93,13 @@ code {
 
 .react-flow__node .swamp-resource {
   font-size: 8px;
+  font-style: italic;
   color: rgb(191, 191, 192);
 }
 
 .react-flow__node .swamp-resource-id {
   font-size: 12px;
+  font-weight: 600;
   color: rgb(243, 244, 246);
 }
  

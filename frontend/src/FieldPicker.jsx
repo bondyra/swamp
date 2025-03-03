@@ -1,12 +1,14 @@
-import {Fragment, useState} from 'react';
+import * as React from 'react';
 import PropTypes from 'prop-types';
 import { styled } from '@mui/material/styles';
 import Popper from '@mui/material/Popper';
 import ClickAwayListener from '@mui/material/ClickAwayListener';
+import ListIcon from '@mui/icons-material/List';
 import Autocomplete, { autocompleteClasses } from '@mui/material/Autocomplete';
 import ButtonBase from '@mui/material/ButtonBase';
 import InputBase from '@mui/material/InputBase';
 import Box from '@mui/material/Box';
+import CheckIcon from '@mui/icons-material/Check';
 
 
 const StyledAutocompletePopper = styled('div')(({ theme }) => ({
@@ -44,19 +46,16 @@ const StyledAutocompletePopper = styled('div')(({ theme }) => ({
   },
 }));
 
-
 function PopperComponent(props) {
   const { disablePortal, anchorEl, open, ...other } = props;
   return <StyledAutocompletePopper {...other} />;
 }
-
 
 PopperComponent.propTypes = {
   anchorEl: PropTypes.any,
   disablePortal: PropTypes.bool,
   open: PropTypes.bool.isRequired,
 };
-
 
 const StyledPopper = styled(Popper)(({ theme }) => ({
   border: '1px solid #e1e4e8',
@@ -74,7 +73,6 @@ const StyledPopper = styled(Popper)(({ theme }) => ({
     backgroundColor: '#1c2128',
   }),
 }));
-
 
 const StyledInput = styled(InputBase)(({ theme }) => ({
   padding: 10,
@@ -106,11 +104,34 @@ const StyledInput = styled(InputBase)(({ theme }) => ({
 }));
 
 
+function getAllFields(obj, prefix = '') {
+  let prefixes = [];
+  
+  if (typeof obj === 'object' && obj !== null) {
+      for (let key in obj) {
+        if (Array.isArray(obj[key])) {
+          for(var i = 0; i < obj[key].length; i++) {
+            let newPrefix = prefix === '' ? `${key}[${i}]` : `${prefix}.${key}[${i}]`;
+            prefixes = prefixes.concat(getAllFields(obj[key][i], newPrefix));
+          }
+        }
+        if (typeof obj[key] === 'object'){
+          let newPrefix = prefix === '' ? key : `${prefix}.${key}`;
+          prefixes = prefixes.concat(getAllFields(obj[key], newPrefix));
+        } else {
+          let newPrefix = prefix === '' ? key : `${prefix}.${key}`;
+          prefixes.push(newPrefix);
+        }
+      }
+  }
+  
+  return prefixes;
+}
+
 const Button = styled(ButtonBase)(({ theme }) => ({
   fontSize: 13,
   width: '100%',
   textAlign: 'left',
-  paddingBottom: 8,
   fontWeight: 600,
   color: '#586069',
   ...theme.applyStyles('dark', {
@@ -131,11 +152,13 @@ const Button = styled(ButtonBase)(({ theme }) => ({
   },
 }));
 
-
-export default function SwampPicker({value, updateData, getOptions}) {
-  const [anchorEl, setAnchorEl] = useState(null);
+export default function FieldPicker({data, selectedFields, updateSelectedFields, header, descr}) {
+  const allFields = getAllFields(Array.isArray(data) ? (data.length > 0 ? data[0] : {}) : data)
+  const [anchorEl, setAnchorEl] = React.useState(null);
+  const [options, setOptions] = React.useState([])
 
   const handleClick = (event) => {
+    setOptions(allFields);
     setAnchorEl(event.currentTarget);
   };
 
@@ -148,41 +171,17 @@ export default function SwampPicker({value, updateData, getOptions}) {
 
   const open = Boolean(anchorEl);
   const id = open ? 'github-label' : undefined;
-  const iconPath = (r) => r ? `./icons/${r.replace(".", "/")}.svg` : undefined
-  
+
+  const onInputChange = (newInputValue) => {
+    setOptions(allFields.filter(o => o.startsWith(newInputValue || "")))
+  }
+
   return (
-    <Fragment>
-      <Box sx={{ fontSize: 13 }}>
+    <React.Fragment>
+      <Box sx={{ width: '100%', fontSize: 13, paddingBottom: "8px" }}>
         <Button disableRipple aria-describedby={id} onClick={handleClick}>
-          <Box
-            component="img"
-            sx={{
-              height: 20,
-              flexShrink: 0,
-              borderRadius: '3px',
-              mt: '2px',
-            }}
-            alt={value}
-            src={iconPath(value)}
-          />
-          <Box
-            key={value}
-            sx={{
-              mt: '3px',
-              width: '100%',
-              height: 20,
-              padding: '.15em 4px',
-              fontWeight: 600,
-              lineHeight: '15px',
-              borderRadius: '2px',
-            }}
-            // style={{
-            //   backgroundColor: "#fff",
-            //   color: theme.palette.getContrastText("#fff"),
-            // }}
-          >
-            {value || "What?"}
-          </Box>
+          <ListIcon />
+          <span>{header ?? "Fields"}</span>
         </Button>
       </Box>
       <StyledPopper id={id} open={open} anchorEl={anchorEl} placement="bottom-start">
@@ -198,32 +197,25 @@ export default function SwampPicker({value, updateData, getOptions}) {
                 }),
               })}
             >
-              Choose resource type
+              {descr ?? "Select fields"}
             </Box>
             <Autocomplete
               open
+              multiple
               onClose={(event, reason) => {
-                handleClose();
+                if (reason === 'escape') {
+                  handleClose();
+                }
               }}
-              value={value}
-              onChange={(event, newValue, reason) => updateData(newValue.name)}
+              value={selectedFields}
+              onInputChange={(event, newInputValue) => {onInputChange(newInputValue)}}
+              onChange={(event, newValue, reason) => {updateSelectedFields(newValue)}}
               renderTags={() => null}
-              noOptionsText="No resource types available"
+              noOptionsText="No labels"
               renderOption={(props, option, { selected }) => {
                 const { key, ...optionProps } = props;
                 return (
                   <li key={key} {...optionProps}>
-                    <Box
-                      component="img"
-                      sx={{
-                        flexShrink: 0,
-                        borderRadius: '3px',
-                        mr: 1,
-                        mt: '2px',
-                      }}
-                      alt={option.name}
-                      src={iconPath(option.name)}
-                    />
                     <Box
                       sx={(t) => ({
                         flexGrow: 1,
@@ -235,21 +227,26 @@ export default function SwampPicker({value, updateData, getOptions}) {
                         },
                       })}
                     >
-                      {option.name}
-                      <br />
-                      <span>{option.description}</span>
+                      {option}
                     </Box>
+                    <Box
+                      component={CheckIcon}
+                      sx={{ opacity: 0.6, width: 18, height: 18 }}
+                      style={{
+                        visibility: selected ? 'visible' : 'hidden',
+                      }}
+                    />
                   </li>
                 );
               }}
-              options={getOptions()}
-              getOptionLabel={(option) => option.name ?? option}  // TODO: it's used to render value (string), options are rendered with renderOption, but for some reason they still are evaluated also here, so including option.name for now
+              options={[...options]}
+              getOptionLabel={(o) => o}
               renderInput={(params) => (
                 <StyledInput
                   ref={params.InputProps.ref}
                   inputProps={params.inputProps}
                   autoFocus
-                  placeholder="Filter labels"
+                  placeholder="Select paths"
                 />
               )}
               slots={{
@@ -259,6 +256,6 @@ export default function SwampPicker({value, updateData, getOptions}) {
           </div>
         </ClickAwayListener>
       </StyledPopper>
-    </Fragment>
+    </React.Fragment>
   );
 }
