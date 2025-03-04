@@ -3,269 +3,205 @@ from typing import AsyncGenerator, Dict, List
 import aioboto3
 import boto3
 
-from backend.model import Handler, Module, ResourceDesc, Result
+from backend.model import Attribute, Handler, Provider, GenericQueryException
 
 
-class AWS(Module):
+class AWS(Provider):
     @staticmethod
     def name() -> str:
         return "aws"
 
     @staticmethod
     def description() -> str:
-        return "Module for interacting with AWS resources"
+        return "Provider for interacting with AWS resources via boto3"
 
 
 class AWSHandler(Handler):
     @staticmethod
-    def module() -> str:
+    def provider() -> str:
         return "aws"
 
 
 class LegacyAWSAPIHandler(AWSHandler):
     boto_client_name = None
-    shape_ls = None
-    shape_get = None
+    shape = None
 
     @classmethod
     def description(cls) -> str:
-        return boto3.client(cls.boto_client_name).meta.service_model.shape_for(cls.shape_ls).documentation
+        return boto3.client(cls.boto_client_name).meta.service_model.shape_for(cls.shape).documentation
 
     @classmethod
-    async def ls(cls) -> AsyncGenerator[Result, None]:
-        async with aioboto3.Session().client(cls.boto_client_name) as client:
-            async for r in cls._ls(client):
-                yield r
+    async def get(cls, **required_attrs) -> AsyncGenerator[Dict, None]:
+        if "__profile" not in required_attrs:
+            raise GenericQueryException("You need to provide __profile value to query AWS resource")
+        if "__region" not in required_attrs:
+            raise GenericQueryException("You need to provide __region value to query AWS resource")
+        profile, region = required_attrs["__profile"], required_attrs["__region"]
+        async with aioboto3.Session(profile_name=profile, region_name=region).client(cls.boto_client_name) as client:
+            async for r in cls._get(client):
+                yield {
+                    "__profile": profile,
+                    "__region": region,
+                    **r
+                }
 
     @classmethod
-    async def _ls(self, client) -> AsyncGenerator[Result, None]:
+    async def _get(self, client) -> AsyncGenerator[Dict, None]:
         raise NotImplementedError()
 
     @classmethod
-    async def get(cls, resource_id: str) -> Result:
-        async with aioboto3.Session().client(cls.boto_client_name) as client:
-            return await cls._get(client, resource_id)
+    def attributes(cls) -> List[Attribute]:
+        shp = boto3.client(cls.boto_client_name).meta.service_model.shape_for(cls.shape)
+        return [
+            Attribute(path="__profile", description="AWS profile to use", query_required=True),
+            Attribute(path="__region", description="AWS region", query_required=True),
+            *cls._attributes_rec(shp)
+        ]
 
     @classmethod
-    async def _get(self) -> Result:
-        raise NotImplementedError()
-
-    @classmethod
-    def schema_ls(cls) -> Dict[str, str]:
-        shp = boto3.client(cls.boto_client_name).meta.service_model.shape_for(cls.shape_ls)
-        return dict(cls._schema_rec(shp))
-
-    @classmethod
-    def schema_get(cls) -> Dict[str, str]:
-        shp = boto3.client(cls.boto_client_name).meta.service_model.shape_for(cls.shape_get)
-        return dict(cls._schema_rec(shp))
-
-    @classmethod
-    def _schema_rec(cls, obj, path=""):
+    def _attributes_rec(cls, obj, path=""):
         if "type_name" in dir(obj) and obj.type_name == "structure":
             for name, member in obj.members.items():
                 new_path = f"{path}.{name}" if path else name
-                yield from cls._schema_rec(member, new_path)
-        elif "type_name" in dir(obj) and obj.type_name == "list":
-            for name, member in obj.member.members.items():
-                new_path = f"{path}[*].{name}"
-                yield from cls._schema_rec(member, new_path)
+                yield from cls._attributes_rec(member, new_path)
+        # elif "type_name" in dir(obj) and obj.type_name == "list":  <- ignoring lists for now
+        #     for name, member in obj.member.members.items():
+        #         new_path = f"{path}[*].{name}"
+        #         yield from cls._attributes_rec(member, new_path)
         else:
-            yield (path, obj.documentation)
+            yield Attribute(path=path, description=obj.documentation, query_required=False)
 
 
 class VpcHandler(LegacyAWSAPIHandler):
     boto_client_name = "ec2"
-    shape_ls = "Vpc"
-    shape_get = "Vpc"
+    shape = "Vpc"
 
     @staticmethod
-    def resource_type() -> str:
+    def resource() -> str:
         return "vpc"
 
     @classmethod
-    async def _ls(cls, client) -> AsyncGenerator[Result, None]:
+    async def _get(cls, client) -> AsyncGenerator[Dict, None]:
         response = await client.describe_vpcs()
         for item in response["Vpcs"]:
-            yield Result(item["VpcId"], item)
-
-    @classmethod
-    async def _get(cls, client, resource_id: str) -> Result:
-        response = await client.describe_vpcs(VpcIds=[resource_id])
-        return Result(response["Vpcs"][0]["VpcId"], response["Vpcs"][0])
-    
-    @classmethod
-    def parents(cls, obj: Dict) -> List[ResourceDesc]:
-        return []
-    
-    @classmethod
-    def children(cls, obj: Dict) -> List[ResourceDesc]:
-        return []
+            yield {"__id": item["VpcId"], **item}
 
 
 class SubnetHandler(LegacyAWSAPIHandler):
     boto_client_name = "ec2"
-    shape_ls = "Subnet"
-    shape_get = "Subnet"
+    shape = "Subnet"
 
     @staticmethod
-    def resource_type() -> str:
+    def resource() -> str:
         return "subnet"
 
     @classmethod
-    async def _ls(cls, client) -> AsyncGenerator[Result, None]:
+    async def _get(cls, client) -> AsyncGenerator[Dict, None]:
         response = await client.describe_subnets()
         for item in response["Subnets"]:
-            yield Result(item["SubnetId"], item)
-
-    @classmethod
-    async def _get(cls, client, resource_id: str) -> Result:
-        response = await client.describe_subnets(SubnetIds=[resource_id])
-        return Result(response["Subnets"][0]["SubnetId"], response["Subnets"][0])
+            yield {"__id": item["SubnetId"], **item}
 
 
 class RouteTableHandler(LegacyAWSAPIHandler):
     boto_client_name = "ec2"
-    shape_ls = "RouteTable"
-    shape_get = "RouteTable"
+    shape = "RouteTable"
 
     @staticmethod
-    def resource_type() -> str:
+    def resource() -> str:
         return "rtb"
 
     @classmethod
-    async def _ls(cls, client) -> AsyncGenerator[Result, None]:
+    async def _ls(cls, client) -> AsyncGenerator[Dict, None]:
         response = await client.describe_route_tables()
         for item in response["RouteTables"]:
-            yield Result(item["RouteTableId"], item)
-
-    @classmethod
-    async def _get(cls, client, resource_id: str) -> Result:
-        response = await client.describe_route_tables(RouteTableIds=[resource_id])
-        return Result(response["RouteTables"][0]["RouteTableId"], response["RouteTables"][0])
+            yield {"__id": item["RouteTableId"], **item}
 
 
 class InternetGatewayHandler(LegacyAWSAPIHandler):
     boto_client_name = "ec2"
-    shape_ls = "InternetGateway"
-    shape_get = "InternetGateway"
+    shape = "InternetGateway"
 
     @staticmethod
-    def resource_type() -> str:
+    def resource() -> str:
         return "igw"
 
     @classmethod
-    async def _ls(cls, client) -> AsyncGenerator[Result, None]:
+    async def _get(cls, client) -> AsyncGenerator[Dict, None]:
         response = await client.describe_internet_gateways()
         for item in response["InternetGateways"]:
-            yield Result(item["InternetGatewayId"], item)
-
-    @classmethod
-    async def _get(cls, client, resource_id: str) -> Result:
-        response = await client.describe_internet_gateways(InternetGatewayIds=[resource_id])
-        return Result(response["InternetGateways"][0]["InternetGatewayId"], response["InternetGateways"][0])
+            yield {"__id": item["InternetGatewayId"], **item}
 
 
 class SecurityGroupHandler(LegacyAWSAPIHandler):
     boto_client_name = "ec2"
-    shape_ls = "SecurityGroup"
-    shape_get = "SecurityGroup"
+    shape = "SecurityGroup"
 
     @staticmethod
-    def resource_type() -> str:
+    def resource() -> str:
         return "sg"
 
     @classmethod
-    async def _ls(cls, client) -> AsyncGenerator[Result, None]:
+    async def _get(cls, client) -> AsyncGenerator[Dict, None]:
         response = await client.describe_security_groups()
         for item in response["SecurityGroups"]:
-            yield Result(item["GroupId"], item)
-
-    @classmethod
-    async def _get(cls, client, resource_id: str) -> Result:
-        response = await client.describe_security_groups(GroupIds=[resource_id])
-        return Result(response["SecurityGroups"][0]["GroupId"], response["SecurityGroups"][0])
+            yield {"__id": item["GroupId"], **item}
 
 
 class NATGatewayHandler(LegacyAWSAPIHandler):
     boto_client_name = "ec2"
-    shape_ls = "NatGateway"
-    shape_get = "NatGateway"
+    shape = "NatGateway"
 
     @staticmethod
-    def resource_type() -> str:
+    def resource() -> str:
         return "nat"
 
     @classmethod
-    async def _ls(cls, client) -> AsyncGenerator[Result, None]:
+    async def _get(cls, client) -> AsyncGenerator[Dict, None]:
         response = await client.describe_nat_gateways()
         for item in response["NatGateways"]:
-            yield Result(item["NatGatewayId"], item)
-
-    @classmethod
-    async def _get(cls, client, resource_id: str) -> Result:
-        response = await client.describe_nat_gateways(NatGatewayIds=[resource_id])
-        return Result(response["NatGateways"][0]["NatGatewayId"], response["NatGateways"][0])
+            yield {"__id": item["NatGatewayId"], **item}
 
 
 class ElasticIpHandler(LegacyAWSAPIHandler):
     boto_client_name = "ec2"
-    shape_ls = "Address"
-    shape_get = "Address"
+    shape = "Address"
 
     @staticmethod
-    def resource_type() -> str:
+    def resource() -> str:
         return "eip"
 
     @classmethod
-    async def _ls(cls, client) -> AsyncGenerator[Result, None]:
+    async def _get(cls, client) -> AsyncGenerator[Dict, None]:
         response = await client.describe_addresses()
         for item in response["Addresses"]:
-            yield Result(item["AllocationId"], item)
-
-    @classmethod
-    async def _get(cls, client, resource_id: str) -> Result:
-        response = await client.describe_addresses(AllocationIds=[resource_id])
-        return Result(response["Addresses"][0]["AllocationId"], response["Addresses"][0])
+            yield {"__id": item["AllocationId"], **item}
 
 
 class NetworkInterfaceHandler(LegacyAWSAPIHandler):
     boto_client_name = "ec2"
-    shape_ls = "NetworkInterface"
-    shape_get = "NetworkInterface"
+    shape = "NetworkInterface"
 
     @staticmethod
-    def resource_type() -> str:
+    def resource() -> str:
         return "eni"
 
     @classmethod
-    async def _ls(cls, client) -> AsyncGenerator[Result, None]:
+    async def _get(cls, client) -> AsyncGenerator[Dict, None]:
         response = await client.describe_network_interfaces()
         for item in response["NetworkInterfaces"]:
-            yield Result(item["NetworkInterfaceId"], item)
-
-    @classmethod
-    async def _get(cls, client, resource_id: str) -> Result:
-        response = await client.describe_network_interfaces(NetworkInterfaceIds=[resource_id])
-        return Result(response["NetworkInterfaces"][0]["NetworkInterfaceId"], response["NetworkInterfaces"][0])
+            yield {"__id": item["NetworkInterfaceId"], **item}
 
 
 class NetworkAclHandler(LegacyAWSAPIHandler):
     boto_client_name = "ec2"
-    shape_ls = "NetworkAcl"
-    shape_get = "NetworkAcl"
+    shape = "NetworkAcl"
 
     @staticmethod
-    def resource_type() -> str:
+    def resource() -> str:
         return "nacl"
 
     @classmethod
-    async def _ls(cls, client) -> AsyncGenerator[Result, None]:
+    async def _get(cls, client) -> AsyncGenerator[Dict, None]:
         response = await client.describe_network_acls()
         for item in response["NetworkAcls"]:
-            yield Result(item["NetworkAclId"], item)
-
-    @classmethod
-    async def _get(cls, client, resource_id: str) -> Result:
-        response = await client.describe_network_acls(NetworkAclIds=[resource_id])
-        return Result(response["NetworkAcls"][0]["NetworkAclId"], response["NetworkAcls"][0])
+            yield {"__id": item["NetworkAclId"], **item}

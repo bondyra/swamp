@@ -51,6 +51,7 @@ export default function QueryWizard({nodeId, resourceType, labels, doSomethingWi
   const getIconSrc = useCallback((r) => r ? `./icons/${r.replace(".", "/")}.svg` : undefined, [])
 
   const getResourceTypeOptions = useCallback(
+    // TODO: fetch resource types from backend
     () => {
       return [
         'aws.vpc',
@@ -64,7 +65,7 @@ export default function QueryWizard({nodeId, resourceType, labels, doSomethingWi
 
     // TODO: handle labels
     // TODO: inject pre-request validation (e.g. label vals must not be empty)
-    return await fetch(`http://localhost:8000/${provider}/${resource_type}`)
+    return await fetch(`http://localhost:8000/get?provider=${provider}&resource=${resource_type}`)
       .then(response => response.json())
       .then(response => {
         return response.results.map(result => {

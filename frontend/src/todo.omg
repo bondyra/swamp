@@ -4,17 +4,21 @@
 // TODO: show errors from backend
 // TODO: proper disabling of query wizards after run
 
-// TODO: handle labels
-curl backend/get?module=aws&resource=vpc?label1=xxx&label2=yyy
-
 // TODO: fetch resource types from backend
 curl backend/resource-types
+(done on backend)
 
-// TODO: fetch labels from backend for a resource type
-curl backend/labels?module=aws&resource=vpc
+// TODO: fetch labels from backend for a resource type 
+curl backend/attributes?module=aws&resource=vpc
 returns a list of labels with required flag. required ones must always be thrown to wizard & be undeletable
+(
+    done on backend except: 
+    1. jsonpath filtering of optional paths
+    2. return allowed values to be used in frontend (handy e.g. for region or profiles)
+)
 
 // TODO: AWS profiles and regions
-// TODO: kubernetes
+(done on backend)
 
+// TODO: kubernetes
 // TODO: persistence
