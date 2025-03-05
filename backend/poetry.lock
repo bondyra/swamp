@@ -468,6 +468,22 @@ files = [
 ]
 
 [[package]]
+name = "jsonpath-ng"
+version = "1.7.0"
+description = "A final implementation of JSONPath for Python that aims to be standard compliant, including arithmetic and binary comparison operators and providing clear AST for metaprogramming."
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "jsonpath-ng-1.7.0.tar.gz", hash = "sha256:f6f5f7fd4e5ff79c785f1573b394043b39849fb2bb47bcead935d12b00beab3c"},
+    {file = "jsonpath_ng-1.7.0-py2-none-any.whl", hash = "sha256:898c93fc173f0c336784a3fa63d7434297544b7198124a68f9a3ef9597b0ae6e"},
+    {file = "jsonpath_ng-1.7.0-py3-none-any.whl", hash = "sha256:f3d7f9e848cba1b6da28c55b1c26ff915dc9e0b1ba7e752a53d6da8d5cbd00b6"},
+]
+
+[package.dependencies]
+ply = "*"
+
+[[package]]
 name = "multidict"
 version = "6.1.0"
 description = "multidict implementation"
@@ -567,6 +583,18 @@ files = [
     {file = "multidict-6.1.0-cp39-cp39-win_amd64.whl", hash = "sha256:aa466da5b15ccea564bdab9c89175c762bc12825f4659c11227f515cee76fa4a"},
     {file = "multidict-6.1.0-py3-none-any.whl", hash = "sha256:48e171e52d1c4d33888e529b999e5900356b9ae588c2f09a52dcefb158b27506"},
     {file = "multidict-6.1.0.tar.gz", hash = "sha256:22ae2ebf9b0c69d206c003e2f6a914ea33f0a932d4aa16f236afc049d9958f4a"},
+]
+
+[[package]]
+name = "ply"
+version = "3.11"
+description = "Python Lex & Yacc"
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "ply-3.11-py2.py3-none-any.whl", hash = "sha256:096f9b8350b65ebd2fd1346b12452efe5b9607f7482813ffca50c22722a807ce"},
+    {file = "ply-3.11.tar.gz", hash = "sha256:00c7c1aaa88358b9c765b6d3000c6eec0ba42abca5351b095321aef446081da3"},
 ]
 
 [[package]]
@@ -1094,4 +1122,4 @@ propcache = ">=0.2.0"
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.11"
-content-hash = "1026ba31962c0b3197e62332af672274c861cfe9311ffa1faad275b9e40ce733"
+content-hash = "30cdfc3ebc676719791cb7b93ff779c22db1175dc2eaed0ab76b6879996976c2"

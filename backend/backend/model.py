@@ -1,4 +1,4 @@
-from typing import AsyncGenerator, Dict, List
+from typing import AsyncGenerator, Dict, List, Optional
 
 from pydantic import BaseModel
 
@@ -7,6 +7,7 @@ class Attribute(BaseModel):
     path: str
     description: str
     query_required: bool
+    allowed_values: Optional[List[str]] = None
 
 
 _provider_registry = {}
