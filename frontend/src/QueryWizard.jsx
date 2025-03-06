@@ -44,21 +44,14 @@ const leftTheme = (theme) => ({
 	},
 })
 
+const resourceTypes = await fetch(`http://localhost:8000/resource-types`).then(response => response.json());
+
+
 export default function QueryWizard({nodeId, resourceType, labels, doSomethingWithResults, onResourceTypeUpdate, sourceData, addLabel, deleteLabel, updateLabelKey, updateLabelVal}) {
   const [disabled, setDisabled] = useState(false)
   const [loading, setLoading] = useState(false);
 
   const getIconSrc = useCallback((r) => r ? `./icons/${r.replace(".", "/")}.svg` : undefined, [])
-
-  const getResourceTypeOptions = useCallback(
-    // TODO: fetch resource types from backend
-    () => {
-      return [
-        'aws.vpc',
-        'aws.subnet',
-      ];
-    }, []
-  );
 
   const query = useCallback(async () => {
     const [provider, resource_type] = resourceType.split(".")
@@ -95,7 +88,7 @@ export default function QueryWizard({nodeId, resourceType, labels, doSomethingWi
             <Box sx={{fontSize: "14px", fontWeight:"600", mr: "10px", fontFamily: "monospace"}}>
               <p>GET</p>
             </Box>
-            <GenericPicker disabled={disabled || false} value={resourceType} valuePlaceholder="What?" updateData={onResourceTypeUpdate} getOptions={getResourceTypeOptions} getIconSrc={getIconSrc}/>
+            <GenericPicker disabled={disabled || false} value={resourceType} valuePlaceholder="What?" updateData={onResourceTypeUpdate} options={resourceTypes} getIconSrc={getIconSrc}/>
           </Stack>
           <LabelPicker 
           nodeId={nodeId} resourceType={resourceType} labels={labels} sourceData={sourceData} disabled={disabled || false}

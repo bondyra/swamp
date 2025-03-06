@@ -1,4 +1,4 @@
-import {Fragment, useState} from 'react';
+import {Fragment, useRef, useState} from 'react';
 import PropTypes from 'prop-types';
 import { styled } from '@mui/material/styles';
 import Popper from '@mui/material/Popper';
@@ -132,7 +132,7 @@ const Button = styled(ButtonBase)(({ theme }) => ({
 }));
 
 
-export default function SwampPicker({value, valuePlaceholder, updateData, getOptions, getIconSrc, disabled}) {
+export default function GenericPicker({value, valuePlaceholder, updateData, options, getIconSrc, disabled}) {
   const [anchorEl, setAnchorEl] = useState(null);
 
   const handleClick = (event) => {
@@ -244,7 +244,7 @@ export default function SwampPicker({value, valuePlaceholder, updateData, getOpt
                   </li>
                 );
               }}
-              options={getOptions()}
+              options={options}
               getOptionLabel={(o) => o}
               renderInput={(params) => (
                 <StyledInput

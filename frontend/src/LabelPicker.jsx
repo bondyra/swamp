@@ -47,12 +47,6 @@ export default function LabelPicker({ resourceType, labels, sourceData, disabled
 
 	return (
 		<>
-			{
-				isErr &&
-				<Alert variant="filled" severity="error">
-					Papiez pedal matke jebal
-				</Alert>
-			}
 			<Stack direction="row" sx={{fontStyle: "italic", fontSize: "10px"}}>
 				<p>Where:</p>
 			</Stack>
