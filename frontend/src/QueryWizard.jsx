@@ -47,7 +47,7 @@ const leftTheme = (theme) => ({
 const resourceTypes = await fetch(`http://localhost:8000/resource-types`).then(response => response.json());
 
 
-export default function QueryWizard({nodeId, resourceType, labels, doSomethingWithResults, onResourceTypeUpdate, sourceData, addLabel, deleteLabel, updateLabelKey, updateLabelVal, overwriteLabels}) {
+export default function QueryWizard({nodeId, resourceType, labels, doSomethingWithResults, onResourceTypeUpdate, sourceData, addLabel, deleteLabel, updateLabel, overwriteLabels}) {
   const [disabled, setDisabled] = useState(false)
   const [loading, setLoading] = useState(false);
 
@@ -91,7 +91,7 @@ export default function QueryWizard({nodeId, resourceType, labels, doSomethingWi
           </Stack>
           <LabelPicker 
           nodeId={nodeId} resourceType={resourceType} labels={labels} sourceData={sourceData} disabled={disabled || false}
-          addLabel={addLabel} deleteLabel={deleteLabel} updateLabelKey={updateLabelKey} updateLabelVal={updateLabelVal}  overwriteLabels={overwriteLabels}
+          addLabel={addLabel} deleteLabel={deleteLabel} updateLabel={updateLabel} overwriteLabels={overwriteLabels}
           />
         </Stack>
         <RunButton variant="contained" aria-label="run" disabled={loading}  onClick={onClick} backgroundcolor="primary" sx={{ml: "5px"}}>

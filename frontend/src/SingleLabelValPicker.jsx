@@ -8,9 +8,7 @@ import ButtonBase from '@mui/material/ButtonBase';
 import InputBase from '@mui/material/InputBase';
 import Box from '@mui/material/Box';
 import CheckIcon from '@mui/icons-material/Check';
-import Tooltip from '@mui/material/Tooltip';
 
-import {JSONPath} from 'jsonpath-plus';
 
 const StyledAutocompletePopper = styled('div')(({ theme }) => ({
   [`& .${autocompleteClasses.paper}`]: {
@@ -104,31 +102,6 @@ const StyledInput = styled(InputBase)(({ theme }) => ({
   },
 }));
 
-
-function getAllOptions(obj, prefix = '') {
-  let options = [];
-  
-  if (typeof obj === 'object' && obj !== null) {
-      for (let key in obj) {
-        if (Array.isArray(obj[key])) {
-          for(var i = 0; i < obj[key].length; i++) {
-            let newPrefix = prefix === '' ? `${key}[${i}]` : `${prefix}.${key}[${i}]`;
-            options = options.concat(getAllOptions(obj[key][i], newPrefix));
-          }
-        }
-        else if (typeof obj[key] === 'object'){
-          let newPrefix = prefix === '' ? key : `${prefix}.${key}`;
-          options = options.concat(getAllOptions(obj[key], newPrefix));
-        } else {
-          let newPrefix = prefix === '' ? key : `${prefix}.${key}`;
-          options.push({path: newPrefix, data: JSONPath({path: newPrefix, json: obj})});
-        }
-      }
-  }
-  
-  return options;
-}
-
 const Button = styled(ButtonBase)(({ theme }) => ({
   fontSize: 13,
   width: 'fit-content',
@@ -153,13 +126,10 @@ const Button = styled(ButtonBase)(({ theme }) => ({
   },
 }));
 
-export default function SingleLabelValPicker({labelVal, data, onFieldUpdate, descr, disabled}) {
-  const allOptions = getAllOptions(data)
+export default function SingleLabelValPicker({labelVal, options, onFieldUpdate, descr, disabled}) {
   const [anchorEl, setAnchorEl] = React.useState(null);
-  const [options, setOptions] = React.useState([])
 
   const handleClick = (event) => {
-    setOptions(allOptions);
     setAnchorEl(event.currentTarget);
   };
 
@@ -175,13 +145,11 @@ export default function SingleLabelValPicker({labelVal, data, onFieldUpdate, des
 
   return (
     <React.Fragment>
-    <Tooltip title={labelVal ? JSONPath({path: labelVal, json: data}) : ""}>
       <Box sx={{ width: '100%', fontSize: 13, paddingBottom: "8px" }}>
         <Button disableRipple aria-describedby={id} onClick={handleClick} disabled={disabled || false}>
-          <span>{labelVal ? `this.${labelVal}` : "Choose field"}</span>
+          <span>{labelVal ? labelVal : "Choose field"}</span>
         </Button>
       </Box>
-      </Tooltip>
       <StyledPopper id={id} open={open} anchorEl={anchorEl} placement="bottom-start">
         <ClickAwayListener onClickAway={handleClose}>
           <div>
@@ -201,7 +169,7 @@ export default function SingleLabelValPicker({labelVal, data, onFieldUpdate, des
               open
               onClose={(event, reason) => handleClose()}
               value={labelVal}
-              onChange={(event, newValue, reason) => {onFieldUpdate(newValue.path)}}
+              onChange={(event, newValue, reason) => {onFieldUpdate(newValue)}}
               renderTags={() => null}
               noOptionsText="No labels"
               renderOption={(props, option, { selected }) => {
@@ -219,9 +187,7 @@ export default function SingleLabelValPicker({labelVal, data, onFieldUpdate, des
                         },
                       })}
                     >
-                      {option.path}
-                      <br />
-                      <span>{option.data ?? "(null)"}</span>
+                      {option}
                     </Box>
                     <Box
                       component={CheckIcon}
@@ -233,14 +199,14 @@ export default function SingleLabelValPicker({labelVal, data, onFieldUpdate, des
                   </li>
                 );
               }}
-              options={[...options]}
-              getOptionLabel={(o) => o.path ?? o}
+              options={options}
+              getOptionLabel={(o) => o}
               renderInput={(params) => (
                 <StyledInput
                   ref={params.InputProps.ref}
                   inputProps={params.inputProps}
                   autoFocus
-                  placeholder="Select path"
+                  placeholder="Select value"
                 />
               )}
               slots={{

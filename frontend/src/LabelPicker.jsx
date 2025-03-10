@@ -9,6 +9,8 @@ import Stack from '@mui/material/Stack';
 import TextField, { textFieldClasses} from '@mui/material/TextField';
 import React, { useEffect, useState } from 'react';
 
+import {JSONPath} from 'jsonpath-plus';
+
 import GenericPicker from './GenericPicker'
 import SingleLabelValPicker from './SingleLabelValPicker'
 
@@ -32,20 +34,44 @@ const themeFunction = (theme) => ({
 		},
 })
 
-export default function LabelPicker({ resourceType, labels, sourceData, disabled, addLabel, deleteLabel, updateLabelKey, updateLabelVal, overwriteLabels }) {
-	const [attributes, setAttributes] = useState(false)
+
+function getAllOptions(obj, prefix = '') {
+	let options = [];
+	
+	if (typeof obj === 'object' && obj !== null) {
+		for (let key in obj) {
+		  if (Array.isArray(obj[key])) {
+			for(var i = 0; i < obj[key].length; i++) {
+			  let newPrefix = prefix === '' ? `${key}[${i}]` : `${prefix}.${key}[${i}]`;
+			  options = options.concat(getAllOptions(obj[key][i], newPrefix));
+			}
+		  }
+		  else if (typeof obj[key] === 'object'){
+			let newPrefix = prefix === '' ? key : `${prefix}.${key}`;
+			options = options.concat(getAllOptions(obj[key], newPrefix));
+		  } else {
+			let newPrefix = prefix === '' ? key : `${prefix}.${key}`;
+			options.push({path: newPrefix, data: JSONPath({path: newPrefix, json: obj})});
+		  }
+		}
+	}
+	
+	return options;
+  }
+
+export default function LabelPicker({ resourceType, labels, sourceData, disabled, addLabel, deleteLabel, updateLabel, overwriteLabels }) {
+	const [attributes, setAttributes] = useState(new Map())
 	useEffect(() => {
 		const loadAttributes = async () => {
 			if (resourceType === null || resourceType === undefined)
 				return []
 			const [provider, resource] = resourceType.split(".")
 			const attributes = await fetch(`http://localhost:8000/attributes?provider=${provider}&resource=${resource}`).then(response => response.json());
-			setAttributes(attributes.map(a=> a.path))
-			overwriteLabels(attributes.filter(a => a.query_required).map(a => {return {key: a.path, val: "", undeletable: true}}))
+			setAttributes(new Map(attributes.map(a=> [a.path, a])))
+			overwriteLabels(attributes.filter(a => a.query_required).map(a => {return {key: a.path, val: "", undeletable: true, allowedValues: a.allowed_values}}))
 		};
         loadAttributes();
 	}, [resourceType, overwriteLabels]);
-
 	return (
 		<>
 			<Stack direction="row" sx={{fontStyle: "italic", fontSize: "10px"}}>
@@ -57,7 +83,10 @@ export default function LabelPicker({ resourceType, labels, sourceData, disabled
 					label => {
 						return <ListItem key={`${label.id}-list-item`} sx={{padding: "0px"}}>		
 							<ChevronRightIcon />
-							<GenericPicker key={`${label.id}-picker`} value={label.key} valuePlaceholder="Filter" updateData={(newKey) => updateLabelKey(label.id, newKey)} options={attributes}/>
+							<GenericPicker 
+							key={`${label.id}-picker`} value={label.key} valuePlaceholder="Filter" 
+							updateData={(newKey) => updateLabel(label.id, {key: newKey, allowedValues: (attributes.get(newKey) ?? Object()).allowed_values})} 
+							options={[...attributes.keys()]}/>
 							<Box key={`${label.id}-eq`}
 								sx={{
 									padding: '0px 10px 0px 10px',
@@ -77,22 +106,22 @@ export default function LabelPicker({ resourceType, labels, sourceData, disabled
 								direction="row"
 							>
 								{
-									!sourceData &&
+									(!sourceData && !label.allowedValues) &&
 									<TextField key={`${label.id}-val-inner`}
 										variant="outlined"
 										disabled={disabled || false}
 										sx={themeFunction}
 										value={label.val}
 										fullWidth= {false}
-										onChange={(event) => {updateLabelVal(label.id, event.target.value)}}
+										onChange={(event) => {updateLabel(label.id, {val: event.target.value})}}
 									/>
 								}
 								{
-									sourceData &&
+									(sourceData || label.allowedValues) &&
 									<SingleLabelValPicker key={`${label.id}-val-inner`}
 										labelVal={label.val}
-										data={sourceData}
-										onFieldUpdate={(newValue) => {updateLabelVal(label.id, newValue)}}
+										options={sourceData ? getAllOptions(sourceData) : label.allowedValues}
+										onFieldUpdate={(newValue) => {updateLabel(label.id, {val: newValue})}}
 										disabled={disabled || false}
 									/>
 								}

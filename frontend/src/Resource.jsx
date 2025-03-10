@@ -128,8 +128,8 @@ export default memo(({ id, data, isConnectable }) => {
     }, [id, reactFlow]
   );
 
-  const _updateInlineLabel = useCallback(
-  ({labelId, newKey, newVal}) => {
+  const updateInlineLabel = useCallback(
+  (labelId, data) => {
     reactFlow.updateNodeData(id, (node) => {
       var labels = node.data.inline.labels ?? []
       return { 
@@ -138,8 +138,7 @@ export default memo(({ id, data, isConnectable }) => {
           ...node.data.inline,
           labels: labels.map(l => {
             if (l.id === labelId){
-              l.key = newKey ?? l.key
-              l.val = newVal ?? l.val
+              return {...l, ...data}
             }
             return l;
           })
@@ -147,9 +146,6 @@ export default memo(({ id, data, isConnectable }) => {
       };
     })
   }, [id, reactFlow]);
-
-  const updateInlineLabelKey = (labelId, newKey) => _updateInlineLabel({labelId: labelId, newKey: newKey})
-  const updateInlineLabelVal = (labelId, newVal) => _updateInlineLabel({labelId: labelId, newVal: newVal})
 
   const addInlineLabel = useCallback(
     () => {
@@ -227,7 +223,7 @@ export default memo(({ id, data, isConnectable }) => {
                 <QueryWizard 
                 nodeId={id} resourceType={data.inline.resourceType} labels={data.inline.labels || []} doSomethingWithResults={inlineResources} onResourceTypeUpdate={updateInlineResourceType}
                 sourceData={data.obj}
-                addLabel={addInlineLabel} deleteLabel={deleteInlineLabel} updateLabelKey={updateInlineLabelKey} updateLabelVal={updateInlineLabelVal} overwriteLabels={overwriteInlineLabels}
+                addLabel={addInlineLabel} deleteLabel={deleteInlineLabel} updateLabel={updateInlineLabel} overwriteLabels={overwriteInlineLabels}
                 />
                 <FieldPicker data={data.inline.results} selectedFields={data.inline.selectedFields || []} updateSelectedFields={updateInlineSelectedFields} header="Results"/>
                 <DataDisplay multiple nodeId={id} data={data.inline.results || []} selectedFields={data.inline.selectedFields || []}/>
