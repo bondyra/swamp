@@ -106,7 +106,7 @@ const StyledInput = styled(InputBase)(({ theme }) => ({
 
 function getAllFields(obj, prefix = '') {
   let prefixes = [];
-  
+
   if (typeof obj === 'object' && obj !== null) {
       for (let key in obj) {
         if (Array.isArray(obj[key])) {

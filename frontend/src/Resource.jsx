@@ -175,6 +175,17 @@ export default memo(({ id, data, isConnectable }) => {
     }, [id, reactFlow]
   )
 
+  const overwriteInlineLabels = useCallback(
+    (newLabels) => {
+      reactFlow.updateNodeData(id, (node) => {
+        return {
+          ...node.data,
+          inline: {...node.data.inline, labels: newLabels.map(l => {return {id: newInlineLabelId(), ...l}}) }
+        };
+      });
+    }, [id, reactFlow]
+  )
+
   return (
     <>
       <div className="wrapper">
@@ -186,19 +197,19 @@ export default memo(({ id, data, isConnectable }) => {
               </div>
               <div className="header-label">
                 <div className="header-label-row"><label className="swamp-resource">{data.provider}.{data.resource_type}</label></div>
-                <div className="header-label-row"><label className="swamp-resource-id">{data.resource_id}</label></div>
+                <div className="header-label-row"><label className="swamp-resource-id">{data.data.__id}</label></div>
               </div>
             </div>
             <hr/>
             <div className="resource-row">
-              <FieldPicker data={data.obj} selectedFields={data.selectedFields || []} updateSelectedFields={updateSelectedFields}/>
+              <FieldPicker data={data.data} selectedFields={data.selectedFields || []} updateSelectedFields={updateSelectedFields}/>
               {/* to do - button to apply jsonpaths to other siblings */}
               <Button disableRipple aria-describedby={id} sx={{width: "auto"}}> 
                 <SettingsEthernetIcon/>
               </Button>
             </div>
             <div className="resource-row">
-              <DataDisplay nodeId={id} data={data.obj} selectedFields={data.selectedFields || []}/>
+              <DataDisplay nodeId={id} data={data.data} selectedFields={data.selectedFields || []}/>
             </div>
             <div className="resource-row">
             <Button disableRipple aria-describedby={id} onClick={onEmbed}>
@@ -216,7 +227,7 @@ export default memo(({ id, data, isConnectable }) => {
                 <QueryWizard 
                 nodeId={id} resourceType={data.inline.resourceType} labels={data.inline.labels || []} doSomethingWithResults={inlineResources} onResourceTypeUpdate={updateInlineResourceType}
                 sourceData={data.obj}
-                addLabel={addInlineLabel} deleteLabel={deleteInlineLabel} updateLabelKey={updateInlineLabelKey} updateLabelVal={updateInlineLabelVal}
+                addLabel={addInlineLabel} deleteLabel={deleteInlineLabel} updateLabelKey={updateInlineLabelKey} updateLabelVal={updateInlineLabelVal} overwriteLabels={overwriteInlineLabels}
                 />
                 <FieldPicker data={data.inline.results} selectedFields={data.inline.selectedFields || []} updateSelectedFields={updateInlineSelectedFields} header="Results"/>
                 <DataDisplay multiple nodeId={id} data={data.inline.results || []} selectedFields={data.inline.selectedFields || []}/>

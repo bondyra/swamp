@@ -47,7 +47,7 @@ const leftTheme = (theme) => ({
 const resourceTypes = await fetch(`http://localhost:8000/resource-types`).then(response => response.json());
 
 
-export default function QueryWizard({nodeId, resourceType, labels, doSomethingWithResults, onResourceTypeUpdate, sourceData, addLabel, deleteLabel, updateLabelKey, updateLabelVal}) {
+export default function QueryWizard({nodeId, resourceType, labels, doSomethingWithResults, onResourceTypeUpdate, sourceData, addLabel, deleteLabel, updateLabelKey, updateLabelVal, overwriteLabels}) {
   const [disabled, setDisabled] = useState(false)
   const [loading, setLoading] = useState(false);
 
@@ -55,22 +55,21 @@ export default function QueryWizard({nodeId, resourceType, labels, doSomethingWi
 
   const query = useCallback(async () => {
     const [provider, resource_type] = resourceType.split(".")
-
-    // TODO: handle labels
+    const qs = (labels ?? []).map(l=> `${l.key}=${l.val}`).join("&")
     // TODO: inject pre-request validation (e.g. label vals must not be empty)
-    return await fetch(`http://localhost:8000/get?provider=${provider}&resource=${resource_type}`)
+    // TOOD: display errors
+    return await fetch(`http://localhost:8000/get?provider=${provider}&resource=${resource_type}&${qs}`)
       .then(response => response.json())
       .then(response => {
         return response.results.map(result => {
           return {
             provider: provider,
             resource_type: resource_type,
-            resource_id: result.id,
-            obj: result.obj
+            data: result
           };
         })
       })
-  }, [resourceType]);
+  }, [resourceType, labels]);
 
   const onClick = useCallback(async () => {
     setDisabled(true);
@@ -92,7 +91,7 @@ export default function QueryWizard({nodeId, resourceType, labels, doSomethingWi
           </Stack>
           <LabelPicker 
           nodeId={nodeId} resourceType={resourceType} labels={labels} sourceData={sourceData} disabled={disabled || false}
-          addLabel={addLabel} deleteLabel={deleteLabel} updateLabelKey={updateLabelKey} updateLabelVal={updateLabelVal}
+          addLabel={addLabel} deleteLabel={deleteLabel} updateLabelKey={updateLabelKey} updateLabelVal={updateLabelVal}  overwriteLabels={overwriteLabels}
           />
         </Stack>
         <RunButton variant="contained" aria-label="run" disabled={loading}  onClick={onClick} backgroundcolor="primary" sx={{ml: "5px"}}>

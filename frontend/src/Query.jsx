@@ -14,7 +14,7 @@ export default memo(({ id, data, isConnectable }) => {
     var newNodes = [];
     var newEdges = [];
     results.forEach(result => {
-      const newNodeId = `${result.provider}.${result.resource_type}.${result.resource_id}`;
+      const newNodeId = `${result.provider}.${result.resource_type}.${result.data.__id}`;
       newNodes.push({
         id: newNodeId,
         position: { x: 0, y: 0 },
@@ -77,6 +77,13 @@ export default memo(({ id, data, isConnectable }) => {
       });
     }, [id, reactFlow]
   )
+  const overwriteLabels = useCallback(
+    (newLabels) => {
+      reactFlow.updateNodeData(id, (node) => {
+        return { ...node.data, labels: newLabels.map(l => {return {id: newLabelId(), ...l}})} ;
+      });
+    }, [id, reactFlow]
+  )
 
   return (
     <>
@@ -85,7 +92,7 @@ export default memo(({ id, data, isConnectable }) => {
           <div className="body">
             <QueryWizard 
             nodeId={id} resourceType={data.resourceType} labels={data.labels} doSomethingWithResults={addNewNodesAndEdges} onResourceTypeUpdate={updateResourceType}
-            addLabel={addLabel} deleteLabel={deleteLabel} updateLabelKey={updateLabelKey} updateLabelVal={updateLabelVal}
+            addLabel={addLabel} deleteLabel={deleteLabel} updateLabelKey={updateLabelKey} updateLabelVal={updateLabelVal} overwriteLabels={overwriteLabels}
             />
             <Handle type="target" position={Position.Top} id="a" style={{opacity: 0}} />
             <Handle type="source" position={Position.Bottom} id="b" style={{opacity: 0}} />

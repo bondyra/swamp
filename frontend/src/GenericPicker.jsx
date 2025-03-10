@@ -1,4 +1,4 @@
-import {Fragment, useRef, useState} from 'react';
+import {Fragment, useState} from 'react';
 import PropTypes from 'prop-types';
 import { styled } from '@mui/material/styles';
 import Popper from '@mui/material/Popper';
@@ -148,7 +148,7 @@ export default function GenericPicker({value, valuePlaceholder, updateData, opti
 
   const open = Boolean(anchorEl);
   const id = open ? 'github-label' : undefined;
-  
+
   return (
     <Fragment>
       <Box sx={{ fontSize: 13, width:"fit-content"}}>

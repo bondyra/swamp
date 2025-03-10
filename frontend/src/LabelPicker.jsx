@@ -1,5 +1,4 @@
 import Box from '@mui/material/Box';
-import Alert from '@mui/material/Alert';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import RemoveCircleIcon from '@mui/icons-material/RemoveCircle';
 import IconButton, {iconButtonClasses} from '@mui/material/IconButton';
@@ -8,7 +7,7 @@ import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import Stack from '@mui/material/Stack';
 import TextField, { textFieldClasses} from '@mui/material/TextField';
-import React, { useCallback, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import GenericPicker from './GenericPicker'
 import SingleLabelValPicker from './SingleLabelValPicker'
@@ -33,17 +32,19 @@ const themeFunction = (theme) => ({
 		},
 })
 
-export default function LabelPicker({ resourceType, labels, sourceData, disabled, addLabel, deleteLabel, updateLabelKey, updateLabelVal }) {
-	const [isErr, setErr] = useState(false)
-	const getLabelKeyOptions = useCallback(
-		() => {
-			// todo: fetch labels from backend for a resource type
-			return [
-				`${resourceType}-1`,
-				`${resourceType}-2`
-			];
-		}, [resourceType]
-	);
+export default function LabelPicker({ resourceType, labels, sourceData, disabled, addLabel, deleteLabel, updateLabelKey, updateLabelVal, overwriteLabels }) {
+	const [attributes, setAttributes] = useState(false)
+	useEffect(() => {
+		const loadAttributes = async () => {
+			if (resourceType === null || resourceType === undefined)
+				return []
+			const [provider, resource] = resourceType.split(".")
+			const attributes = await fetch(`http://localhost:8000/attributes?provider=${provider}&resource=${resource}`).then(response => response.json());
+			setAttributes(attributes.map(a=> a.path))
+			overwriteLabels(attributes.filter(a => a.query_required).map(a => {return {key: a.path, val: "", undeletable: true}}))
+		};
+        loadAttributes();
+	}, [resourceType, overwriteLabels]);
 
 	return (
 		<>
@@ -54,9 +55,9 @@ export default function LabelPicker({ resourceType, labels, sourceData, disabled
 			{
 				labels.map(
 					label => {
-						return <ListItem sx={{padding: "0px"}}>		
+						return <ListItem key={`${label.id}-list-item`} sx={{padding: "0px"}}>		
 							<ChevronRightIcon />
-							<GenericPicker key={`${label.id}-picker`} value={label.key} valuePlaceholder="Filter" updateData={(newKey) => updateLabelKey(label.id, newKey)} getOptions={getLabelKeyOptions}/>
+							<GenericPicker key={`${label.id}-picker`} value={label.key} valuePlaceholder="Filter" updateData={(newKey) => updateLabelKey(label.id, newKey)} options={attributes}/>
 							<Box key={`${label.id}-eq`}
 								sx={{
 									padding: '0px 10px 0px 10px',
@@ -83,7 +84,7 @@ export default function LabelPicker({ resourceType, labels, sourceData, disabled
 										sx={themeFunction}
 										value={label.val}
 										fullWidth= {false}
-										onChange={(event) => {setErr(false); if (event.target.value==="dupa") setErr(true); updateLabelVal(label.id, event.target.value)}}
+										onChange={(event) => {updateLabelVal(label.id, event.target.value)}}
 									/>
 								}
 								{
@@ -95,9 +96,12 @@ export default function LabelPicker({ resourceType, labels, sourceData, disabled
 										disabled={disabled || false}
 									/>
 								}
-								<IconButton key={`${label.id}-val-del-outer`} sx={{padding: "0px", ml: "5px"}} aria-label="delete" disabled={disabled || false} onClick={() => deleteLabel(label.id)}>
-									<RemoveCircleIcon key={`${label.id}-val-del-inner`} color="secondary" sx={{width: "16px", height: "16px"}}/>
-								</IconButton>
+								{
+									!label.undeletable &&
+									<IconButton key={`${label.id}-val-del-outer`} sx={{padding: "0px", ml: "5px"}} aria-label="delete" disabled={disabled || false} onClick={() => deleteLabel(label.id)}>
+										<RemoveCircleIcon key={`${label.id}-val-del-inner`} color="secondary" sx={{width: "16px", height: "16px"}}/>
+									</IconButton>
+								}
 							</Stack>
 						</ListItem>
 					}
