@@ -9,8 +9,6 @@ import Stack from '@mui/material/Stack';
 import TextField, { textFieldClasses} from '@mui/material/TextField';
 import React, { useEffect, useState } from 'react';
 
-import {JSONPath} from 'jsonpath-plus';
-
 import GenericPicker from './GenericPicker'
 import SingleLabelValPicker from './SingleLabelValPicker'
 
@@ -34,32 +32,7 @@ const themeFunction = (theme) => ({
 		},
 })
 
-
-function getAllOptions(obj, prefix = '') {
-	let options = [];
-	
-	if (typeof obj === 'object' && obj !== null) {
-		for (let key in obj) {
-		  if (Array.isArray(obj[key])) {
-			for(var i = 0; i < obj[key].length; i++) {
-			  let newPrefix = prefix === '' ? `${key}[${i}]` : `${prefix}.${key}[${i}]`;
-			  options = options.concat(getAllOptions(obj[key][i], newPrefix));
-			}
-		  }
-		  else if (typeof obj[key] === 'object'){
-			let newPrefix = prefix === '' ? key : `${prefix}.${key}`;
-			options = options.concat(getAllOptions(obj[key], newPrefix));
-		  } else {
-			let newPrefix = prefix === '' ? key : `${prefix}.${key}`;
-			options.push({path: newPrefix, data: JSONPath({path: newPrefix, json: obj})});
-		  }
-		}
-	}
-	
-	return options;
-  }
-
-export default function LabelPicker({ resourceType, labels, sourceData, disabled, addLabel, deleteLabel, updateLabel, overwriteLabels }) {
+export default function LabelPicker({ resourceType, labels, disabled, addLabel, deleteLabel, updateLabel, overwriteLabels }) {
 	const [attributes, setAttributes] = useState(new Map())
 	useEffect(() => {
 		const loadAttributes = async () => {
@@ -68,7 +41,7 @@ export default function LabelPicker({ resourceType, labels, sourceData, disabled
 			const [provider, resource] = resourceType.split(".")
 			const attributes = await fetch(`http://localhost:8000/attributes?provider=${provider}&resource=${resource}`).then(response => response.json());
 			setAttributes(new Map(attributes.map(a=> [a.path, a])))
-			overwriteLabels(attributes.filter(a => a.query_required).map(a => {return {key: a.path, val: "", undeletable: true, allowedValues: a.allowed_values}}))
+			overwriteLabels(attributes.filter(a => a.query_required).map(a => {return {key: a.path, val: "", required: true, allowedValues: a.allowed_values}}))
 		};
         loadAttributes();
 	}, [resourceType, overwriteLabels]);
@@ -106,7 +79,7 @@ export default function LabelPicker({ resourceType, labels, sourceData, disabled
 								direction="row"
 							>
 								{
-									(!sourceData && !label.allowedValues) &&
+									!label.allowedValues &&
 									<TextField key={`${label.id}-val-inner`}
 										variant="outlined"
 										disabled={disabled || false}
@@ -117,20 +90,17 @@ export default function LabelPicker({ resourceType, labels, sourceData, disabled
 									/>
 								}
 								{
-									(sourceData || label.allowedValues) &&
+									label.allowedValues &&
 									<SingleLabelValPicker key={`${label.id}-val-inner`}
 										labelVal={label.val}
-										options={sourceData ? getAllOptions(sourceData) : label.allowedValues}
+										options={label.allowedValues}
 										onFieldUpdate={(newValue) => {updateLabel(label.id, {val: newValue})}}
 										disabled={disabled || false}
 									/>
 								}
-								{
-									!label.undeletable &&
-									<IconButton key={`${label.id}-val-del-outer`} sx={{padding: "0px", ml: "5px"}} aria-label="delete" disabled={disabled || false} onClick={() => deleteLabel(label.id)}>
-										<RemoveCircleIcon key={`${label.id}-val-del-inner`} color="secondary" sx={{width: "16px", height: "16px"}}/>
-									</IconButton>
-								}
+								<IconButton key={`${label.id}-val-del-outer`} sx={{padding: "0px", ml: "5px"}} aria-label="delete" disabled={label.required || disabled || false} onClick={() => deleteLabel(label.id)}>
+									<RemoveCircleIcon key={`${label.id}-val-del-inner`} color="secondary" sx={{width: "16px", height: "16px"}}/>
+								</IconButton>
 							</Stack>
 						</ListItem>
 					}

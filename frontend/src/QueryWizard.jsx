@@ -47,7 +47,10 @@ const leftTheme = (theme) => ({
 const resourceTypes = await fetch(`http://localhost:8000/resource-types`).then(response => response.json());
 
 
-export default function QueryWizard({nodeId, resourceType, labels, doSomethingWithResults, onResourceTypeUpdate, sourceData, addLabel, deleteLabel, updateLabel, overwriteLabels}) {
+export default function QueryWizard({
+  nodeId, resourceType, labels, doSomethingWithResults, onResourceTypeUpdate, addLabel, deleteLabel, updateLabel, overwriteLabels,
+  join, childPath, childPaths, onChildPathUpdate, parentPath, parentPaths, onParentPathUpdate
+}) {
   const [disabled, setDisabled] = useState(false)
   const [loading, setLoading] = useState(false);
 
@@ -85,12 +88,25 @@ export default function QueryWizard({nodeId, resourceType, labels, doSomethingWi
         <Stack sx={leftTheme}>
           <Stack direction="row">
             <Box sx={{fontSize: "14px", fontWeight:"600", mr: "10px", fontFamily: "monospace"}}>
-              <p>GET</p>
+              <p>{join ? "JOIN" : "SELECT"}</p>
             </Box>
             <GenericPicker disabled={disabled || false} value={resourceType} valuePlaceholder="What?" updateData={onResourceTypeUpdate} options={resourceTypes} getIconSrc={getIconSrc}/>
           </Stack>
+          {
+            join &&
+            <Stack direction="row">
+              <Box sx={{fontSize: "14px", fontWeight:"600", mr: "10px", fontFamily: "monospace"}}>
+                <p>ON</p>
+              </Box>
+              <GenericPicker disabled={disabled || false} value={childPath} valuePlaceholder="Child field" updateData={onChildPathUpdate} options={childPaths}/>
+              <Box sx={{fontSize: "14px", fontWeight:"600", ml: "10px", mr: "10px", fontFamily: "monospace"}}>
+                <p>=</p>
+              </Box>
+              <GenericPicker disabled={disabled || false} value={parentPath} valuePlaceholder="Parent field" updateData={onParentPathUpdate} options={parentPaths}/>
+            </Stack>
+          }
           <LabelPicker 
-          nodeId={nodeId} resourceType={resourceType} labels={labels} sourceData={sourceData} disabled={disabled || false}
+          nodeId={nodeId} resourceType={resourceType} labels={labels} disabled={disabled || false}
           addLabel={addLabel} deleteLabel={deleteLabel} updateLabel={updateLabel} overwriteLabels={overwriteLabels}
           />
         </Stack>

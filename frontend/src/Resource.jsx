@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useState } from 'react';
+import React, { memo, useCallback, useEffect, useState } from 'react';
 import { styled } from '@mui/material/styles';
 import { Handle, Position, useReactFlow } from '@xyflow/react';
 import ButtonBase from '@mui/material/ButtonBase';
@@ -31,6 +31,31 @@ const newInlineLabelId = () => inlineLabelId++;
 // })
 
 
+function getAllPaths(obj, prefix = '') {
+	let paths = [];
+	
+	if (typeof obj === 'object' && obj !== null) {
+		for (let key in obj) {
+		  if (Array.isArray(obj[key])) {
+        for(var i = 0; i < obj[key].length; i++) {
+          let newPrefix = prefix === '' ? `${key}[${i}]` : `${prefix}.${key}[${i}]`;
+          paths = paths.concat(getAllPaths(obj[key][i], newPrefix));
+        }
+		  }
+		  else if (typeof obj[key] === 'object'){
+        let newPrefix = prefix === '' ? key : `${prefix}.${key}`;
+        paths = paths.concat(getAllPaths(obj[key], newPrefix));
+		  } else {
+        let newPrefix = prefix === '' ? key : `${prefix}.${key}`;
+        paths.push(newPrefix);
+		  }
+		}
+	}
+	
+	return paths;
+}
+
+
 const Button = styled(ButtonBase)(({ theme }) => ({
   fontSize: 13,
   width: '100%',
@@ -58,6 +83,7 @@ const Button = styled(ButtonBase)(({ theme }) => ({
 
 export default memo(({ id, data, isConnectable }) => {
   const reactFlow = useReactFlow();
+  const [inlineChildPaths, setInlineChildPaths] = useState([])
   const [embedding, setEmbedding] = useState(false);
   const onEmbed = (_) => setEmbedding(!embedding)
 
@@ -106,6 +132,17 @@ export default memo(({ id, data, isConnectable }) => {
       })
     }, [id, reactFlow]);
 
+  useEffect(() => {
+    const loadAttributes = async () => {
+      if (data.inline.resourceType === null || data.inline.resourceType === undefined)
+        return []
+      const [provider, resource] = data.inline.resourceType.split(".")
+      const attributes = await fetch(`http://localhost:8000/attributes?provider=${provider}&resource=${resource}`).then(response => response.json());
+      setInlineChildPaths(attributes.map(a=> a.path))
+    };
+    loadAttributes();
+  }, [data.inline.resourceType, setInlineChildPaths]);
+
   const updateSelectedFields = useCallback(
     (newValue) => {
       reactFlow.updateNodeData(id, (node) => {
@@ -123,6 +160,28 @@ export default memo(({ id, data, isConnectable }) => {
         return { 
           ...node.data,
           inline: {...node.data.inline, selectedFields: newValue}
+        };
+      })
+    }, [id, reactFlow]
+  );
+
+  const updateInlineChildPath = useCallback(
+    (newValue) => {
+      reactFlow.updateNodeData(id, (node) => {
+        return { 
+          ...node.data,
+          inline: {...node.data.inline, childPath: newValue}
+        };
+      })
+    }, [id, reactFlow]
+  );
+
+  const updateInlineParentPath = useCallback(
+    (newValue) => {
+      reactFlow.updateNodeData(id, (node) => {
+        return { 
+          ...node.data,
+          inline: {...node.data.inline, parentPath: newValue}
         };
       })
     }, [id, reactFlow]
@@ -222,8 +281,8 @@ export default memo(({ id, data, isConnectable }) => {
               <Box sx={{borderLeft: "1px solid gray", marginLeft: "12px", paddingLeft:"12px"}}>
                 <QueryWizard 
                 nodeId={id} resourceType={data.inline.resourceType} labels={data.inline.labels || []} doSomethingWithResults={inlineResources} onResourceTypeUpdate={updateInlineResourceType}
-                sourceData={data.obj}
                 addLabel={addInlineLabel} deleteLabel={deleteInlineLabel} updateLabel={updateInlineLabel} overwriteLabels={overwriteInlineLabels}
+                join childPath={data.inline.childPath} childPaths={inlineChildPaths} onChildPathUpdate={updateInlineChildPath} parentPath={data.inline.parentPath} parentPaths={getAllPaths(data.data)} onParentPathUpdate={updateInlineParentPath}
                 />
                 <FieldPicker data={data.inline.results} selectedFields={data.inline.selectedFields || []} updateSelectedFields={updateInlineSelectedFields} header="Results"/>
                 <DataDisplay multiple nodeId={id} data={data.inline.results || []} selectedFields={data.inline.selectedFields || []}/>
