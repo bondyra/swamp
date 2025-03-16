@@ -16,6 +16,8 @@ app.add_middleware(
     allow_methods=["GET"],
     allow_headers=["*"],
 )
+
+
 _cache = {}
 
 
@@ -41,6 +43,9 @@ async def get(r: Request):
         return {"results": results}
     except GenericQueryException as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 def validate(request: Request):
     if "provider" not in request.query_params:

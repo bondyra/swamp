@@ -7,53 +7,18 @@ import DatasetIcon from '@mui/icons-material/Dataset';
 import DatasetLinkedIcon from '@mui/icons-material/DatasetLinked';
 import SettingsEthernetIcon from '@mui/icons-material/SettingsEthernet';
 
+import {JSONPath} from 'jsonpath-plus';
+
 import DataDisplay from './DataDisplay';
 import QueryWizard from './QueryWizard';
 import FieldPicker from './FieldPicker';
 import { Box } from '@mui/material';
+import { useBackend } from './BackendProvider';
+import { getAllJSONPaths, getIconSrc } from './Utils';
 
 
 let linkId = 1;
 const newLinkId = () => `link-${linkId++}`;
-
-let inlineLabelId = 1;
-const newInlineLabelId = () => inlineLabelId++;
-
-// const themeFunction = (theme) => ({
-//   background: "#000000",
-//   color: "#ffffff",
-//   width: "100%",
-//   '& input': {
-//     color: "#aaaaaa",
-//     padding: "4px 4px",
-//     fontFamily: "Monospace"
-//   }
-// })
-
-
-function getAllPaths(obj, prefix = '') {
-	let paths = [];
-	
-	if (typeof obj === 'object' && obj !== null) {
-		for (let key in obj) {
-		  if (Array.isArray(obj[key])) {
-        for(var i = 0; i < obj[key].length; i++) {
-          let newPrefix = prefix === '' ? `${key}[${i}]` : `${prefix}.${key}[${i}]`;
-          paths = paths.concat(getAllPaths(obj[key][i], newPrefix));
-        }
-		  }
-		  else if (typeof obj[key] === 'object'){
-        let newPrefix = prefix === '' ? key : `${prefix}.${key}`;
-        paths = paths.concat(getAllPaths(obj[key], newPrefix));
-		  } else {
-        let newPrefix = prefix === '' ? key : `${prefix}.${key}`;
-        paths.push(newPrefix);
-		  }
-		}
-	}
-	
-	return paths;
-}
 
 
 const Button = styled(ButtonBase)(({ theme }) => ({
@@ -83,9 +48,10 @@ const Button = styled(ButtonBase)(({ theme }) => ({
 
 export default memo(({ id, data, isConnectable }) => {
   const reactFlow = useReactFlow();
-  const [inlineChildPaths, setInlineChildPaths] = useState([])
-  const [embedding, setEmbedding] = useState(false);
-  const onEmbed = (_) => setEmbedding(!embedding)
+  const [inlineChildPaths, setInlineChildPaths] = useState([]);
+  const [inlineParentPaths, setInlineParentPaths] = useState([]);
+  const [inlineCollapsed, setInlineCollapsed] = useState(true);
+  const backend = useBackend();
 
   const addQuery = useCallback((event) => {
     const sourceNodeId = id
@@ -114,7 +80,7 @@ export default memo(({ id, data, isConnectable }) => {
   const inlineResources = useCallback(
     (results) => {
       reactFlow.updateNodeData(id, (node) => {
-        return { 
+        return {
           ...node.data,
           inline: {...node.data.inline, results: results}
         };
@@ -136,12 +102,13 @@ export default memo(({ id, data, isConnectable }) => {
     const loadAttributes = async () => {
       if (data.inline.resourceType === null || data.inline.resourceType === undefined)
         return []
-      const [provider, resource] = data.inline.resourceType.split(".")
-      const attributes = await fetch(`http://localhost:8000/attributes?provider=${provider}&resource=${resource}`).then(response => response.json());
+			const attributes = await backend.attributes(data.inline.resourceType)
       setInlineChildPaths(attributes.map(a=> a.path))
     };
     loadAttributes();
-  }, [data.inline.resourceType, setInlineChildPaths]);
+  }, [data.inline.resourceType, setInlineChildPaths, backend]);
+
+  useEffect(() => {setInlineParentPaths(getAllJSONPaths(data.data))}, [data.data])
 
   const updateSelectedFields = useCallback(
     (newValue) => {
@@ -187,59 +154,15 @@ export default memo(({ id, data, isConnectable }) => {
     }, [id, reactFlow]
   );
 
-  const updateInlineLabel = useCallback(
-  (labelId, data) => {
-    reactFlow.updateNodeData(id, (node) => {
-      var labels = node.data.inline.labels ?? []
-      return { 
-        ...node.data,
-        inline: {
-          ...node.data.inline,
-          labels: labels.map(l => {
-            if (l.id === labelId){
-              return {...l, ...data}
-            }
-            return l;
-          })
-        }
-      };
-    })
-  }, [id, reactFlow]);
-
-  const addInlineLabel = useCallback(
-    () => {
+  const setInlineLabels = useCallback(
+    (labels) => {
       reactFlow.updateNodeData(id, (node) => {
-        var labels = node.data.inline.labels ?? []
         return { 
           ...node.data,
-          inline: {...node.data.inline, labels: labels.concat({id: newInlineLabelId(), key: "", val: ""}) }
+          inline: {...node.data.inline, labels: labels}
         };
-      });
-    }, [id, reactFlow]
-  )
-
-  const deleteInlineLabel = useCallback(
-    (labelId) => {
-      reactFlow.updateNodeData(id, (node) => {
-        var labels = node.data.inline.labels ?? []
-        return {
-          ...node.data,
-          inline: {...node.data.inline, labels: labels.filter(x => x.id !== labelId) }
-        };
-      });
-    }, [id, reactFlow]
-  )
-
-  const overwriteInlineLabels = useCallback(
-    (newLabels) => {
-      reactFlow.updateNodeData(id, (node) => {
-        return {
-          ...node.data,
-          inline: {...node.data.inline, labels: newLabels.map(l => {return {id: newInlineLabelId(), ...l}}) }
-        };
-      });
-    }, [id, reactFlow]
-  )
+      })
+    }, [id, reactFlow]);
 
   return (
     <>
@@ -248,11 +171,11 @@ export default memo(({ id, data, isConnectable }) => {
           <div className="body">
             <div className="resource-row">
               <div className="header-icon">
-                <img src={`./icons/aws/${data.resource_type}.svg`} alt={data.resource_type} />
+                <img src={getIconSrc(data.resourceType)}/>
               </div>
               <div className="header-label">
-                <div className="header-label-row"><label className="swamp-resource">{data.provider}.{data.resource_type}</label></div>
-                <div className="header-label-row"><label className="swamp-resource-id">{data.data.__id}</label></div>
+                <div className="header-label-row"><label className="swamp-resource">{data.resourceType}</label></div>
+                <div className="header-label-row"><label className="swamp-resource-id">{data.metadata.id}</label></div>
               </div>
             </div>
             <hr/>
@@ -267,22 +190,25 @@ export default memo(({ id, data, isConnectable }) => {
               <DataDisplay nodeId={id} data={data.data} selectedFields={data.selectedFields || []}/>
             </div>
             <div className="resource-row">
-            <Button disableRipple aria-describedby={id} onClick={onEmbed}>
+            <Button disableRipple aria-describedby={id} onClick={(_) => setInlineCollapsed(!inlineCollapsed)}>
               <DatasetIcon />
               <span>Inline</span>
             </Button>
-            {/* to do - button to apply embeddings to other siblings */}
+            {/* to do - button to apply inline to other siblings */}
             <Button disableRipple aria-describedby={id} sx={{width:"auto"}}> 
               <SettingsEthernetIcon />
             </Button>
             </div>
             <div className="resource-row">
-              <Collapse in={embedding} timeout="auto" unmountOnExit>
+              <Collapse in={!inlineCollapsed} timeout="auto" unmountOnExit>
               <Box sx={{borderLeft: "1px solid gray", marginLeft: "12px", paddingLeft:"12px"}}>
                 <QueryWizard 
                 nodeId={id} resourceType={data.inline.resourceType} labels={data.inline.labels || []} doSomethingWithResults={inlineResources} onResourceTypeUpdate={updateInlineResourceType}
-                addLabel={addInlineLabel} deleteLabel={deleteInlineLabel} updateLabel={updateInlineLabel} overwriteLabels={overwriteInlineLabels}
-                join childPath={data.inline.childPath} childPaths={inlineChildPaths} onChildPathUpdate={updateInlineChildPath} parentPath={data.inline.parentPath} parentPaths={getAllPaths(data.data)} onParentPathUpdate={updateInlineParentPath}
+                setLabels={setInlineLabels}
+                join={true}
+                childPath={data.inline.childPath} childPaths={inlineChildPaths} onChildPathUpdate={updateInlineChildPath} 
+                parentPath={data.inline.parentPath} parentPaths={inlineParentPaths} onParentPathUpdate={updateInlineParentPath}
+                getParentVal={(p) => JSONPath({path: p, json: data.data})}
                 />
                 <FieldPicker data={data.inline.results} selectedFields={data.inline.selectedFields || []} updateSelectedFields={updateInlineSelectedFields} header="Results"/>
                 <DataDisplay multiple nodeId={id} data={data.inline.results || []} selectedFields={data.inline.selectedFields || []}/>

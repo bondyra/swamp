@@ -9,6 +9,7 @@ import { styled } from '@mui/material/styles';
 
 import {JSONPath} from 'jsonpath-plus';
 
+
 const NiceContainer = styled(TableContainer)(({ theme }) => ({
   color: theme.palette.success.main,
   '.MuiTableCell-root': {
@@ -37,8 +38,8 @@ export default memo(({ data, selectedFields }) => {
           {
             multiple &&
             data.map(d => 
-                  <TableRow key={d.id}>
-                    {fields.map(f => <TableCell key={`${d.id}-${f}`} align="left">{JSONPath({path: f, json: d})}</TableCell>)}
+                  <TableRow key={d.data.__id}>
+                    {fields.map(f => <TableCell key={`${d.data.__id}-${f}`} align="left">{JSONPath({path: f, json: d})}</TableCell>)}
                 </TableRow>
             )
           }
@@ -46,8 +47,8 @@ export default memo(({ data, selectedFields }) => {
             !multiple &&
             fields.map(f => 
                   <TableRow key={f}>
-                    <TableCell align="left">{f}</TableCell>
-                    <TableCell align="left">{JSONPath({path: f, json: data})}</TableCell>
+                    <TableCell key={`${f}-key`} align="left">{f}</TableCell>
+                    <TableCell key={`${f}-val`} align="left">{JSONPath({path: f, json: data})}</TableCell>
                 </TableRow>
             )
           }

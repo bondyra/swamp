@@ -163,7 +163,7 @@ export default function GenericPicker({value, valuePlaceholder, updateData, opti
                 mt: '0px',
                 mr: "5px"
               }}
-              alt={value}
+              alt=""
               src={getIconSrc(value)}
             />
           }
@@ -219,12 +219,13 @@ export default function GenericPicker({value, valuePlaceholder, updateData, opti
                       <Box
                         component="img"
                         sx={{
+                          height: 20,
                           flexShrink: 0,
                           borderRadius: '3px',
                           mr: 1,
                           mt: '2px',
                         }}
-                        alt={option}
+                        alt=""
                         src={getIconSrc(option)}
                       />
                     }

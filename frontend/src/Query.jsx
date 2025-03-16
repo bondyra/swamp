@@ -1,14 +1,18 @@
 import React, { memo } from 'react';
-import { useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Handle, Position, useReactFlow } from '@xyflow/react';
 
-import QueryWizard from './QueryWizard';
+import {JSONPath} from 'jsonpath-plus';
 
-let labelId = 1;
-const newLabelId = () => labelId++;
+import QueryWizard from './QueryWizard';
+import { getAllJSONPaths } from './Utils';
+import { useBackend } from './BackendProvider';
 
 export default memo(({ id, data, isConnectable }) => {
   const reactFlow = useReactFlow();
+    const [childPaths, setChildPaths] = useState([]);
+    const [parentPaths, setParentPaths] = useState([]);
+    const backend = useBackend();
 
   const addNewNodesAndEdges = (results) => {
     var newNodes = [];
@@ -41,45 +45,46 @@ export default memo(({ id, data, isConnectable }) => {
       })
     }, [id, reactFlow]);
 
-  const updateLabel = useCallback(
-  (labelId, data) => {
-    reactFlow.updateNodeData(id, (node) => {
-      var labels = node.data.labels ?? []
-      return { 
-        ...node.data,
-        labels: labels.map(l => {
-        if (l.id === labelId){
-          return {...l, ...data}
-        }
-        return l;
+    const updateChildPath = useCallback(
+      (newValue) => {
+        reactFlow.updateNodeData(id, (node) => {
+          return { 
+            ...node.data,
+            childPath: newValue
+          };
         })
-      };
-    })
-  }, [id, reactFlow]);
+      }, [id, reactFlow]
+    );
   
-  const addLabel = useCallback(
-    () => {
+    const updateParentPath = useCallback(
+      (newValue) => {
+        reactFlow.updateNodeData(id, (node) => {
+          return { 
+            ...node.data,
+            parentPath: newValue
+          };
+        })
+      }, [id, reactFlow]
+    );
+
+  const setLabels = useCallback(
+    (labels) => {
       reactFlow.updateNodeData(id, (node) => {
-        var labels = node.data.labels ?? []
-        return { ...node.data, labels: labels.concat({id: newLabelId(), key: "", val: ""}) } ;
-      });
-    }, [id, reactFlow]
-  )
-  const deleteLabel = useCallback(
-    (labelId) => {
-      reactFlow.updateNodeData(id, (node) => {
-        var labels = node.data.labels ?? []
-        return { ...node.data, labels: labels.filter(x => x.id !== labelId) } ;
-      });
-    }, [id, reactFlow]
-  )
-  const overwriteLabels = useCallback(
-    (newLabels) => {
-      reactFlow.updateNodeData(id, (node) => {
-        return { ...node.data, labels: newLabels.map(l => {return {id: newLabelId(), ...l}})} ;
-      });
-    }, [id, reactFlow]
-  )
+        return {...node.data, labels: labels};
+      })
+    }, [id, reactFlow]);
+
+  useEffect(() => {
+    const loadAttributes = async () => {
+      if (data.resourceType === null || data.resourceType === undefined)
+        return []
+      const attributes = await backend.attributes(data.resourceType)
+      setChildPaths(attributes.map(a=> a.path))
+    };
+    loadAttributes();
+  }, [data.resourceType, setChildPaths, backend]);
+
+  useEffect(() => {setParentPaths(data.nodeData ? getAllJSONPaths(data.nodeData.data) : [])}, [data.nodeData])
 
   return (
     <>
@@ -88,7 +93,11 @@ export default memo(({ id, data, isConnectable }) => {
           <div className="body">
             <QueryWizard 
             nodeId={id} resourceType={data.resourceType} labels={data.labels} doSomethingWithResults={addNewNodesAndEdges} onResourceTypeUpdate={updateResourceType}
-            addLabel={addLabel} deleteLabel={deleteLabel} updateLabel={updateLabel} overwriteLabels={overwriteLabels}
+            setLabels={setLabels}
+            join={data.nodeData !== undefined}
+            childPath={data.childPath} childPaths={childPaths} onChildPathUpdate={updateChildPath}
+            parentPath={data.parentPath} parentPaths={parentPaths} onParentPathUpdate={updateParentPath}
+            getParentVal={(p) => JSONPath({path: p, json: data.nodeData.data})}
             />
             <Handle type="target" position={Position.Top} id="a" style={{opacity: 0}} />
             <Handle type="source" position={Position.Bottom} id="b" style={{opacity: 0}} />

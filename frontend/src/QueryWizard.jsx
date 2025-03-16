@@ -2,14 +2,20 @@ import Box from '@mui/material/Box';
 import Button from '@mui/material/Button'
 import CircularProgress from '@mui/material/CircularProgress';
 import DownloadForOfflineIcon from '@mui/icons-material/DownloadForOffline';
+import ErrorIcon from '@mui/icons-material/Error';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import WarningIcon from '@mui/icons-material/Warning';
 import Stack from '@mui/material/Stack';
 import { styled } from '@mui/material/styles';
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useCallback, useState } from 'react';
 
 import LabelPicker from './LabelPicker';
 import GenericPicker from './GenericPicker';
-  
+import { useBackend } from './BackendProvider';
+import { getIconSrc } from './Utils';
+import { Tooltip } from '@mui/material';
+
 const RunButton = styled(Button)({
   width: "auto",
   height: "auto",
@@ -44,43 +50,88 @@ const leftTheme = (theme) => ({
 	},
 })
 
-const resourceTypes = await fetch(`http://localhost:8000/resource-types`).then(response => response.json());
+const validateJoinLabel = (childPath, parentPath) => {
+  if (!childPath) return "Left side of join cannot be empty!";
+  if (!parentPath) return "Right side of join cannot be empty!";
+  return null;
+}
 
+const validateLabels = (labels) => {
+  const invalidAllowedValueLabels = labels.filter(l => l.allowedValues && !l.allowedValues.includes(l.val))
+  if(invalidAllowedValueLabels && invalidAllowedValueLabels.length > 0){
+    return `Following labels have not allowed values: ${invalidAllowedValueLabels.map(l => l.key).join(",")}`
+  }
+  return null
+}
 
 export default function QueryWizard({
-  nodeId, resourceType, labels, doSomethingWithResults, onResourceTypeUpdate, addLabel, deleteLabel, updateLabel, overwriteLabels,
-  join, childPath, childPaths, onChildPathUpdate, parentPath, parentPaths, onParentPathUpdate
+  nodeId, resourceType, labels, doSomethingWithResults, onResourceTypeUpdate, setLabels,
+  join,
+  childPath, onChildPathUpdate, childPaths, parentPath, onParentPathUpdate, parentPaths, getParentVal
 }) {
-  const [disabled, setDisabled] = useState(false)
+  const [disabled, setDisabled] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [resourceTypes, setResourceTypes] = useState([])
+  const [status, setStatus] = useState("initial")
+  const [message, setMessage] = useState(null)
 
-  const getIconSrc = useCallback((r) => r ? `./icons/${r.replace(".", "/")}.svg` : undefined, [])
+  const backend = useBackend();
 
-  const query = useCallback(async () => {
-    const [provider, resource_type] = resourceType.split(".")
-    const qs = (labels ?? []).map(l=> `${l.key}=${l.val}`).join("&")
-    // TODO: inject pre-request validation (e.g. label vals must not be empty)
-    // TOOD: display errors
-    return await fetch(`http://localhost:8000/get?provider=${provider}&resource=${resource_type}&${qs}`)
-      .then(response => response.json())
-      .then(response => {
-        return response.results.map(result => {
-          return {
-            provider: provider,
-            resource_type: resource_type,
-            data: result
-          };
-        })
-      })
-  }, [resourceType, labels]);
+  const setError = useCallback((msg) => {
+    setStatus("failed");
+    setMessage(msg);
+    setLoading(false);
+    setDisabled(false);
+  }, [setStatus, setMessage, setLoading, setDisabled])
 
   const onClick = useCallback(async () => {
     setDisabled(true);
     setLoading(true);
-    var results = await query()
-    doSomethingWithResults(results)
+    if (!resourceType) {
+      setError("You must select a resource type!")
+      return
+    }
+    var queryLabels = labels
+    var err = null
+    if (join) {
+      err = validateJoinLabel(childPath, parentPath)
+      if(err) {
+        setError(err);
+        return
+      }
+      const parentVal = getParentVal(parentPath)
+      queryLabels = [...queryLabels, {key: childPath, val: parentVal}]
+    }
+    err = validateLabels(queryLabels)
+    if(err) {
+      setError(err);
+      return
+    }
+    try {
+      var results = await backend.query(resourceType, queryLabels)
+      doSomethingWithResults(results)
+    } catch (e) {
+      setError(e.message)
+      return
+    }
     setLoading(false);
-  }, [doSomethingWithResults, query])
+    if (results && results.length > 0){
+      setStatus("success");
+      setMessage(`Returned ${results.length} results`);
+    } else {
+      setStatus("warning");
+      setMessage(`No results!`);
+      setDisabled(false);
+    }
+  }, [join, doSomethingWithResults, resourceType, labels, childPath, parentPath, backend, getParentVal, setError])
+
+  useEffect(() => {
+    async function update() {
+      const newResourceTypes = await backend.resourceTypes()
+      setResourceTypes(newResourceTypes)
+    }
+    update();
+  }, [backend, setResourceTypes])
 
   return (
     <>
@@ -105,16 +156,24 @@ export default function QueryWizard({
               <GenericPicker disabled={disabled || false} value={parentPath} valuePlaceholder="Parent field" updateData={onParentPathUpdate} options={parentPaths}/>
             </Stack>
           }
-          <LabelPicker 
-          nodeId={nodeId} resourceType={resourceType} labels={labels} disabled={disabled || false}
-          addLabel={addLabel} deleteLabel={deleteLabel} updateLabel={updateLabel} overwriteLabels={overwriteLabels}
-          />
+          <LabelPicker nodeId={nodeId} resourceType={resourceType} labels={labels} disabled={disabled || false} setLabels={setLabels}/>
         </Stack>
-        <RunButton variant="contained" aria-label="run" disabled={loading}  onClick={onClick} backgroundcolor="primary" sx={{ml: "5px"}}>
-          {loading && <CircularProgress color="white" size="20px"/>}
-          {!loading && <DownloadForOfflineIcon/>}
-        </RunButton>
+        <Stack>
+          <Tooltip title={message || "Query status will be here"}>
+            <Box sx={{ml: "5px", mb: "10px", height: "20%"}} justifyContent="center" display="flex" >
+              {status === "failed" && <ErrorIcon sx={{color: "red"}} fontSize="small"/>}
+              {status === "warning" && <WarningIcon sx={{color: "yellow"}} fontSize="small"/>}
+              {status === "success" && <CheckCircleIcon sx={{color: "green"}} fontSize="small"/>}
+            </Box>
+          </Tooltip>
+          <Tooltip title="Run or refresh">
+            <RunButton variant="contained" aria-label="run"  onClick={onClick} backgroundcolor="primary" sx={{ml: "5px", height:"80%"}}>
+              {loading && <CircularProgress color="white" size="20px"/>}
+              {!loading && <DownloadForOfflineIcon/>}
+            </RunButton>
+          </Tooltip>
+        </Stack>
       </Stack>
-    </>
+    </> 
   );
 };

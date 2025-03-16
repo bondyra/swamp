@@ -13,6 +13,8 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/base.css';
 
+
+import BackendProvider from './BackendProvider';
 import Resource from './Resource';
 import Query from './Query';
 import { DagreLayoutProvider } from './DagreLayoutProvider';
@@ -31,7 +33,7 @@ const initialNodes = [
     id: 'root-query',
     position: { x: 0, y: 0 },
     type: 'query',
-    data: {resourceType: null, resourceOpen: true, labels: [], nodeData: null},
+    data: {labels: []},
   }
 ]
 
@@ -113,7 +115,9 @@ const App = () => {
   return (
     <ReactFlowProvider>
       <DagreLayoutProvider skipInitialLayout>
-        <SwampApp/>
+        <BackendProvider>
+          <SwampApp/>
+        </BackendProvider>
       </DagreLayoutProvider>
     </ReactFlowProvider>
   );
