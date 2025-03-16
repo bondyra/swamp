@@ -39,6 +39,6 @@ export function getIconSrc(resourceType) {
                     return "https://www.svgrepo.com/show/353443/aws.svg"
             }
         default:
-            return "./icons/asset.svg"
+            return "./asset.svg"
     }
 }

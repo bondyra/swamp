@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import jsonpath_ng
 import uvicorn
 
-from backend.model import all_resource_types, GenericQueryException, handler
+from backend.model import GenericQueryException, handler, iter_all_resource_types
 from backend.modules.aws import AWS
 
 
@@ -23,7 +23,7 @@ _cache = {}
 
 @app.get("/resource-types")
 async def resource_types():
-    return all_resource_types()
+    return list(iter_all_resource_types())
 
 
 @app.get("/attributes")

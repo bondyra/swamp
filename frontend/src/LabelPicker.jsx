@@ -10,7 +10,7 @@ import TextField, { textFieldClasses} from '@mui/material/TextField';
 import React, { useEffect, useState } from 'react';
 
 import { useBackend } from './BackendProvider';
-import GenericPicker from './GenericPicker'
+import SingleFieldPicker from './SingleFieldPicker'
 import SingleLabelValPicker from './SingleLabelValPicker'
 
 let labelId = 1;
@@ -64,21 +64,21 @@ export default function LabelPicker({ resourceType, labels, setLabels, disabled 
 			<Stack direction="row" sx={{fontStyle: "italic", fontSize: "10px"}}>
 				<p>Where:</p>
 			</Stack>
-            <List dense={true} sx={{padding: "0px"}}>
+            <List dense={true} sx={{padding: "0px", margin: "0px"}}>
 			{
 				labels.map(
 					label => {
-						return <ListItem key={`${label.id}-list-item`} sx={{padding: "0px"}}>		
-							<ChevronRightIcon />
-							<GenericPicker 
+						return <ListItem key={`${label.id}-list-item`} sx={{padding: "0px", margin: "0px", height:"16px"}}>		
+							<ChevronRightIcon sx={{width: "16px", height: "16px", padding: "0px"}}/>
+							<SingleFieldPicker 
 							key={`${label.id}-picker`} value={label.key} valuePlaceholder="Filter" 
 							disabled = {label.required || disabled || false}
 							updateData={(newKey) => setLabels(labelsWithUpdatedLabel(labels, {...label, key: newKey, allowedValues: (attributes.get(newKey) ?? Object()).allowed_values}))} 
-							options={[...attributes.keys()]}/>
+							options={[...attributes.values().map(v => {return {value: v.path, description: v.description}})]}/>
 							<Box key={`${label.id}-eq`}
 								sx={{
-									padding: '0px 10px 0px 10px',
-									fontWeight: 600, mt: "2px"
+									padding: '0px 7px 0px 7px',
+									fontWeight: 600, pb: "4px"
 								}}>
 							=
 							</Box>
@@ -106,7 +106,7 @@ export default function LabelPicker({ resourceType, labels, setLabels, disabled 
 								}
 								{
 									(!label.allowedValues && disabled) &&
-									<Box sx={{ fontSize: 13, width:"fit-content", color: "#586069"}}>{label.val}</Box>
+									<Box sx={{ fontSize: 10, width:"fit-content", color: "#586069"}}>{label.val}</Box>
 								}
 								{
 									label.allowedValues &&
@@ -115,12 +115,13 @@ export default function LabelPicker({ resourceType, labels, setLabels, disabled 
 										options={label.allowedValues}
 										onFieldUpdate={(newValue) =>  setLabels(labelsWithUpdatedLabel(labels, {...label, val: newValue}))}
 										disabled={disabled || false}
+										descr={`Select one of allowed values for ${label.key}`}
 									/>
 								}
 								{ (!label.required && !disabled) &&
 								<IconButton key={`${label.id}-val-del-outer`} sx={{padding: "0px", ml: "5px"}} aria-label="delete"
 								onClick={() => setLabels(labels.filter(x => x.id !== label.id))}>
-									<RemoveCircleIcon key={`${label.id}-val-del-inner`} color="secondary" sx={{width: "16px", height: "16px"}}/>
+									<RemoveCircleIcon key={`${label.id}-val-del-inner`} color="secondary" sx={{width: "16px", height: "16px", padding: "0px"}}/>
 								</IconButton>
 								}
 							</Stack>

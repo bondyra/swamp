@@ -7,14 +7,14 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import WarningIcon from '@mui/icons-material/Warning';
 import Stack from '@mui/material/Stack';
 import { styled } from '@mui/material/styles';
+import { Tooltip } from '@mui/material';
 import React, { useEffect } from 'react';
 import { useCallback, useState } from 'react';
 
 import LabelPicker from './LabelPicker';
-import GenericPicker from './GenericPicker';
+import SingleFieldPicker from './SingleFieldPicker';
 import { useBackend } from './BackendProvider';
 import { getIconSrc } from './Utils';
-import { Tooltip } from '@mui/material';
 
 const RunButton = styled(Button)({
   width: "auto",
@@ -67,7 +67,7 @@ const validateLabels = (labels) => {
 export default function QueryWizard({
   nodeId, resourceType, labels, doSomethingWithResults, onResourceTypeUpdate, setLabels,
   join,
-  childPath, onChildPathUpdate, childPaths, parentPath, onParentPathUpdate, parentPaths, getParentVal
+  childPath, onChildPathUpdate, childPaths, parentPath, onParentPathUpdate, parentPaths, getParentVal, parentResourceType
 }) {
   const [disabled, setDisabled] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -141,19 +141,24 @@ export default function QueryWizard({
             <Box sx={{fontSize: "14px", fontWeight:"600", mr: "10px", fontFamily: "monospace"}}>
               <p>{join ? "JOIN" : "SELECT"}</p>
             </Box>
-            <GenericPicker disabled={disabled || false} value={resourceType} valuePlaceholder="What?" updateData={onResourceTypeUpdate} options={resourceTypes} getIconSrc={getIconSrc}/>
+            <SingleFieldPicker disabled={disabled || false} value={resourceType} updateData={onResourceTypeUpdate} options={resourceTypes} getIconSrc={getIconSrc}
+            valuePlaceholder="What?" popperPrompt={join ? "Select resource to join" : "Select resource to query"}/>
           </Stack>
           {
             join &&
             <Stack direction="row">
-              <Box sx={{fontSize: "14px", fontWeight:"600", mr: "10px", fontFamily: "monospace"}}>
+              <Box sx={{fontSize: "12px", fontWeight:"600", mr: "5px", fontFamily: "monospace"}}>
                 <p>ON</p>
               </Box>
-              <GenericPicker disabled={disabled || false} value={childPath} valuePlaceholder="Child field" updateData={onChildPathUpdate} options={childPaths}/>
-              <Box sx={{fontSize: "14px", fontWeight:"600", ml: "10px", mr: "10px", fontFamily: "monospace"}}>
+              <SingleFieldPicker disabled={disabled || false} value={childPath} valuePlaceholder="Child field" updateData={onChildPathUpdate} options={childPaths}
+              popperPrompt={resourceType ? `Choose attribute of ${resourceType} to join on` : "Please select resource type to join first"}
+              />
+              <Box sx={{fontSize: "10px", fontWeight:"600", fontFamily: "monospace", padding: '0px 7px 0px 7px'}}>
                 <p>=</p>
               </Box>
-              <GenericPicker disabled={disabled || false} value={parentPath} valuePlaceholder="Parent field" updateData={onParentPathUpdate} options={parentPaths}/>
+              <SingleFieldPicker disabled={disabled || false} value={parentPath} valuePlaceholder="Parent field" updateData={onParentPathUpdate} options={parentPaths}
+              popperPrompt={`Choose attribute of parent (${parentResourceType}) to join on`}
+              />
             </Stack>
           }
           <LabelPicker nodeId={nodeId} resourceType={resourceType} labels={labels} disabled={disabled || false} setLabels={setLabels}/>

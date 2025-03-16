@@ -87,7 +87,7 @@ const StyledInput = styled(InputBase)(({ theme }) => ({
     borderRadius: 4,
     padding: 8,
     transition: theme.transitions.create(['border-color', 'box-shadow']),
-    fontSize: 14,
+    fontSize: 10,
     backgroundColor: '#fff',
     border: '1px solid #30363d',
     ...theme.applyStyles('dark', {
@@ -107,7 +107,7 @@ const StyledInput = styled(InputBase)(({ theme }) => ({
 
 
 const Button = styled(ButtonBase)(({ theme }) => ({
-  fontSize: 13,
+  fontSize: 10,
   width: '100%',
   textAlign: 'left',
   paddingBottom: 8,
@@ -132,7 +132,7 @@ const Button = styled(ButtonBase)(({ theme }) => ({
 }));
 
 
-export default function GenericPicker({value, valuePlaceholder, updateData, options, getIconSrc, disabled}) {
+export default function SingleFieldPicker({value, valuePlaceholder, updateData, options, getIconSrc, disabled, popperPrompt}) {
   const [anchorEl, setAnchorEl] = useState(null);
 
   const handleClick = (event) => {
@@ -151,7 +151,7 @@ export default function GenericPicker({value, valuePlaceholder, updateData, opti
 
   return (
     <Fragment>
-      <Box sx={{ fontSize: 13, width:"fit-content"}}>
+      <Box sx={{ fontSize: 10, width:"fit-content"}}>
         <Button disabled={disabled || false} disableRipple aria-describedby={id} onClick={handleClick} sx={{padding: "0", margin:"0"}}>
           { getIconSrc &&
             <Box
@@ -199,7 +199,7 @@ export default function GenericPicker({value, valuePlaceholder, updateData, opti
                 }),
               })}
             >
-              Choose resource type
+              {popperPrompt || "Choose option"}
             </Box>
             <Autocomplete
               open
@@ -207,9 +207,9 @@ export default function GenericPicker({value, valuePlaceholder, updateData, opti
                 handleClose();
               }}
               value={value}
-              onChange={(event, newValue, reason) => updateData(newValue)}
+              onChange={(event, newOption, reason) => updateData(newOption.value)}
               renderTags={() => null}
-              noOptionsText="No resource types available"
+              noOptionsText="No options available"
               renderOption={(props, option, { selected }) => {
                 const { key, ...optionProps } = props;
                 return (
@@ -226,7 +226,7 @@ export default function GenericPicker({value, valuePlaceholder, updateData, opti
                           mt: '2px',
                         }}
                         alt=""
-                        src={getIconSrc(option)}
+                        src={getIconSrc(option.value)}
                       />
                     }
                     <Box
@@ -240,13 +240,15 @@ export default function GenericPicker({value, valuePlaceholder, updateData, opti
                         },
                       })}
                     >
-                      {option}
+                      <b>{option.value}</b>
+                      <br/>
+                      <i>{option.description}</i>
                     </Box>
                   </li>
                 );
               }}
               options={options}
-              getOptionLabel={(o) => o}
+              getOptionLabel={(o) => o.value || o}
               renderInput={(params) => (
                 <StyledInput
                   ref={params.InputProps.ref}

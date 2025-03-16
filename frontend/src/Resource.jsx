@@ -3,15 +3,17 @@ import { styled } from '@mui/material/styles';
 import { Handle, Position, useReactFlow } from '@xyflow/react';
 import ButtonBase from '@mui/material/ButtonBase';
 import Collapse from '@mui/material/Collapse';
-import DatasetIcon from '@mui/icons-material/Dataset';
+import Stack from '@mui/material/Stack';
+import PlaylistPlayIcon from '@mui/icons-material/PlaylistPlay';
 import DatasetLinkedIcon from '@mui/icons-material/DatasetLinked';
 import SettingsEthernetIcon from '@mui/icons-material/SettingsEthernet';
+import { Tooltip } from '@mui/material';
 
 import {JSONPath} from 'jsonpath-plus';
 
 import DataDisplay from './DataDisplay';
 import QueryWizard from './QueryWizard';
-import FieldPicker from './FieldPicker';
+import MultipleFieldPicker from './MultipleFieldPicker';
 import { Box } from '@mui/material';
 import { useBackend } from './BackendProvider';
 import { getAllJSONPaths, getIconSrc } from './Utils';
@@ -48,6 +50,7 @@ const Button = styled(ButtonBase)(({ theme }) => ({
 
 export default memo(({ id, data, isConnectable }) => {
   const reactFlow = useReactFlow();
+  const [isLinked, setIsLinked] = useState(false);
   const [inlineChildPaths, setInlineChildPaths] = useState([]);
   const [inlineParentPaths, setInlineParentPaths] = useState([]);
   const [inlineCollapsed, setInlineCollapsed] = useState(true);
@@ -67,7 +70,7 @@ export default memo(({ id, data, isConnectable }) => {
         y: clientY,
       }),
       type: 'query',
-      data: {resourceType: null, labels: [], nodeData: sourceNode.data},
+      data: {resourceType: null, labels: [], parentResourceType: sourceNode.data.resourceType,  parent: {data: sourceNode.data.data, metadata: sourceNode.data.metadata}},
       origin: [0.5, 0.0],
     };
 
@@ -75,6 +78,7 @@ export default memo(({ id, data, isConnectable }) => {
     reactFlow.setEdges((eds) =>
       eds.concat({ id: `${sourceNodeId}-${targetNodeId}`, source: sourceNodeId, target: targetNodeId, style: {strokeWidth: 5} }),
     );
+    setIsLinked(true);
   }, [id, reactFlow]);
 
   const inlineResources = useCallback(
@@ -103,12 +107,22 @@ export default memo(({ id, data, isConnectable }) => {
       if (data.inline.resourceType === null || data.inline.resourceType === undefined)
         return []
 			const attributes = await backend.attributes(data.inline.resourceType)
-      setInlineChildPaths(attributes.map(a=> a.path))
+      setInlineChildPaths(attributes.map(a=> {return {value: a.path, description: a.description}}))
     };
     loadAttributes();
   }, [data.inline.resourceType, setInlineChildPaths, backend]);
 
-  useEffect(() => {setInlineParentPaths(getAllJSONPaths(data.data))}, [data.data])
+  useEffect(() => {
+    const d = {data: data.data, metadata: data.metadata}
+    setInlineParentPaths(
+      getAllJSONPaths(d).map(p => {
+        return {
+          value: p,
+          description: JSONPath({path: p, json: d})
+        }
+      })
+    )
+  }, [data, setInlineParentPaths])
 
   const updateSelectedFields = useCallback(
     (newValue) => {
@@ -169,61 +183,73 @@ export default memo(({ id, data, isConnectable }) => {
       <div className="wrapper">
         <div className="inner">
           <div className="body">
-            <div className="resource-row">
-              <div className="header-icon">
-                <img src={getIconSrc(data.resourceType)}/>
-              </div>
-              <div className="header-label">
+          <Handle type="target" position={Position.Top} id="a" style={{opacity: 0}} />
+            <Stack direction="row">
+              <Box
+                component="img"
+                sx={{
+                  height: 24,
+                  flexShrink: 0,
+                  borderRadius: '3px',
+                  padding: "1px",
+                  mr: "5px"
+                }}
+                src={getIconSrc(data.resourceType)} alt=""
+              />
+              <Stack direction="column">
                 <div className="header-label-row"><label className="swamp-resource">{data.resourceType}</label></div>
                 <div className="header-label-row"><label className="swamp-resource-id">{data.metadata.id}</label></div>
-              </div>
-            </div>
+              </Stack>
+            </Stack>
             <hr/>
-            <div className="resource-row">
-              <FieldPicker data={data.data} selectedFields={data.selectedFields || []} updateSelectedFields={updateSelectedFields}/>
-              {/* to do - button to apply jsonpaths to other siblings */}
-              <Button disableRipple aria-describedby={id} sx={{width: "auto"}}> 
-                <SettingsEthernetIcon/>
-              </Button>
-            </div>
-            <div className="resource-row">
-              <DataDisplay nodeId={id} data={data.data} selectedFields={data.selectedFields || []}/>
-            </div>
-            <div className="resource-row">
-            <Button disableRipple aria-describedby={id} onClick={(_) => setInlineCollapsed(!inlineCollapsed)}>
-              <DatasetIcon />
-              <span>Inline</span>
-            </Button>
-            {/* to do - button to apply inline to other siblings */}
-            <Button disableRipple aria-describedby={id} sx={{width:"auto"}}> 
-              <SettingsEthernetIcon />
-            </Button>
-            </div>
-            <div className="resource-row">
+            <Stack direction="row">
+              <MultipleFieldPicker data={{data: data.data, metadata: data.metadata}} selectedFields={data.selectedFields || []} updateSelectedFields={updateSelectedFields}
+              header={"Select fields"} descr={`Select fields of ${data.resourceType} to display`}/>
+              <Tooltip title="Propagate selections to all siblings (NOT WORKING YET)">
+                <Button disableRipple aria-describedby={id} sx={{width: "auto", pb: "0px"}}> 
+                  <SettingsEthernetIcon/>
+                </Button>
+              </Tooltip>
+            </Stack>
+            <Box> 
+              <DataDisplay nodeId={id} data={{data: data.data, metadata: data.metadata}} selectedFields={data.selectedFields || []}/>
+            </Box>
+            <hr/>
+            <Box>
+            <Tooltip title="Join some other resources and display it here for convenience">
+              <Button disableRipple aria-describedby={id} onClick={(_) => setInlineCollapsed(!inlineCollapsed)} sx={{fontSize: "10px", pb: "0px"}}>
+                  <PlaylistPlayIcon />
+                  <span>Extra resources</span>
+                </Button>
+                </Tooltip>
+              </Box>
+            <Box>
               <Collapse in={!inlineCollapsed} timeout="auto" unmountOnExit>
-              <Box sx={{borderLeft: "1px solid gray", marginLeft: "12px", paddingLeft:"12px"}}>
+              <Box sx={{borderLeft: "1px solid gray", ml: "12px", pl:"12px", mt:"0px", pt: "0px"}}>
                 <QueryWizard 
                 nodeId={id} resourceType={data.inline.resourceType} labels={data.inline.labels || []} doSomethingWithResults={inlineResources} onResourceTypeUpdate={updateInlineResourceType}
                 setLabels={setInlineLabels}
                 join={true}
                 childPath={data.inline.childPath} childPaths={inlineChildPaths} onChildPathUpdate={updateInlineChildPath} 
                 parentPath={data.inline.parentPath} parentPaths={inlineParentPaths} onParentPathUpdate={updateInlineParentPath}
-                getParentVal={(p) => JSONPath({path: p, json: data.data})}
+                getParentVal={(p) => JSONPath({path: p, json: {data: data.data, metadata: data.metadata}})} parentResourceType={data.resourceType}
                 />
-                <FieldPicker data={data.inline.results} selectedFields={data.inline.selectedFields || []} updateSelectedFields={updateInlineSelectedFields} header="Results"/>
+                <MultipleFieldPicker data={data.inline.results} selectedFields={data.inline.selectedFields || []} updateSelectedFields={updateInlineSelectedFields} header="Results"/>
                 <DataDisplay multiple nodeId={id} data={data.inline.results || []} selectedFields={data.inline.selectedFields || []}/>
               </Box>
               </Collapse>
-            </div>
-            <div className="resource-row">
-            {/* to do - replace edge on drop from App with this button */}
-            <Button disableRipple aria-describedby={id} onClick={addQuery}>
-              <DatasetLinkedIcon/>
-              <span>Link</span>
-            </Button>
-            </div>
-            <Handle type="source" position={Position.Bottom} id="b"/>
-            <Handle type="target" position={Position.Top} id="a" style={{opacity: 0}} />
+            </Box>
+            {
+              !isLinked && 
+              <Box>
+                <Tooltip title="Join some other resources as new nodes">
+                  <Button disableRipple aria-describedby={id} onClick={addQuery} sx={{pb: "0px"}}>
+                    <DatasetLinkedIcon/>
+                  </Button>
+                </Tooltip>
+              </Box>
+            }
+            <Handle type="source" style={{opacity: isLinked ? 1 : 0, borderRadius: "10%", height:"8px", width:"8px", bottom: "4px"}} position={Position.Bottom} id="b"/>
           </div>
         </div>
       </div>

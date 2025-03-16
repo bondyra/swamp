@@ -18,7 +18,7 @@ export default memo(({ id, data, isConnectable }) => {
     var newNodes = [];
     var newEdges = [];
     results.forEach(result => {
-      const newNodeId = `${result.provider}.${result.resource_type}.${result.data.__id}`;
+      const newNodeId = `${result.resourceType}.${result.metadata.id}`;
       newNodes.push({
         id: newNodeId,
         position: { x: 0, y: 0 },
@@ -79,12 +79,21 @@ export default memo(({ id, data, isConnectable }) => {
       if (data.resourceType === null || data.resourceType === undefined)
         return []
       const attributes = await backend.attributes(data.resourceType)
-      setChildPaths(attributes.map(a=> a.path))
+      setChildPaths(attributes.map(a=> {return {value: a.path, description: a.description}}))
     };
     loadAttributes();
   }, [data.resourceType, setChildPaths, backend]);
 
-  useEffect(() => {setParentPaths(data.nodeData ? getAllJSONPaths(data.nodeData.data) : [])}, [data.nodeData])
+  useEffect(() => {
+    setParentPaths(
+      data.parent ? getAllJSONPaths(data.parent).map(p => {
+        return {
+          value: p,
+          description: JSONPath({path: p, json: data.parent})
+        }
+      }) : []
+    )
+  }, [data.parent])
 
   return (
     <>
@@ -94,10 +103,10 @@ export default memo(({ id, data, isConnectable }) => {
             <QueryWizard 
             nodeId={id} resourceType={data.resourceType} labels={data.labels} doSomethingWithResults={addNewNodesAndEdges} onResourceTypeUpdate={updateResourceType}
             setLabels={setLabels}
-            join={data.nodeData !== undefined}
+            join={data.parent !== undefined}
             childPath={data.childPath} childPaths={childPaths} onChildPathUpdate={updateChildPath}
-            parentPath={data.parentPath} parentPaths={parentPaths} onParentPathUpdate={updateParentPath}
-            getParentVal={(p) => JSONPath({path: p, json: data.nodeData.data})}
+            parentPath={data.parentPath} parentPaths={parentPaths} onParentPathUpdate={updateParentPath} parentResourceType={data.parentResourceType}
+            getParentVal={(p) => JSONPath({path: p, json: data.parent})}
             />
             <Handle type="target" position={Position.Top} id="a" style={{opacity: 0}} />
             <Handle type="source" position={Position.Bottom} id="b" style={{opacity: 0}} />

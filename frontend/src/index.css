@@ -105,6 +105,7 @@ code {
  
 .react-flow__handle {
   opacity: 1;
+  background-image: url("./link.svg");
 }
  
 .react-flow__node:focus {

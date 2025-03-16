@@ -60,7 +60,7 @@ class LegacyAWSAPIHandler(AWSHandler):
         return [
             Attribute(path="metadata.profile", description="AWS profile to use", query_required=True, allowed_values=_get_profiles()),
             Attribute(path="metadata.region", description="AWS region", query_required=True, allowed_values=_ALL_AWS_REGIONS),
-            *cls._attributes_rec(shp)
+            *cls._attributes_rec(shp, path="data")
         ]
 
     @classmethod

@@ -7,13 +7,18 @@ export default class Backend {
 
   async resourceTypes() {
     return fetch(`${this.base_url}/resource-types`)
-    .then(response => response.json());
+    .then(response => response.json())
+    .then(response => response.map(result => {
+      return {
+        value: `${result.provider}.${result.resource}`,
+        description: result.description
+      }
+    }))
   }
 
   async attributes(resourceType) {
     const [provider, resource] = resourceType.split(".")
-    return fetch(`${this.base_url}/attributes?provider=${provider}&resource=${resource}`)
-    .then(response => response.json());
+    return fetch(`${this.base_url}/attributes?provider=${provider}&resource=${resource}`).then(response => response.json());
   }
 
   async query(resourceType, labels) {
@@ -42,6 +47,8 @@ export default class Backend {
       case 4:
       case 5:
         throw new Error(`HTTP status ${response.status} on request to backend.`)
+      default:
+        break;
     }
   }
 }

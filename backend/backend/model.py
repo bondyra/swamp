@@ -1,4 +1,4 @@
-from typing import AsyncGenerator, Dict, List, Optional
+from typing import AsyncGenerator, Dict, Iterable, List, Optional
 
 from pydantic import BaseModel
 
@@ -10,12 +10,24 @@ class Attribute(BaseModel):
     allowed_values: Optional[List[str]] = None
 
 
+class ResourceType(BaseModel):
+    provider: str
+    resource: str
+    description: str
+
+
 _provider_registry = {}
 _handler_registry = {}
 
 
-def all_resource_types() -> List[str]:
-    return [f"{p}.{r}" for p in _provider_registry for r in _handler_registry[p].keys()]
+def iter_all_resource_types() -> Iterable[ResourceType]:
+    for p in _provider_registry:
+        for r in _handler_registry[p]:
+            yield ResourceType(
+                provider=p, 
+                resource=r,
+                description =_handler_registry[p][r].description().replace("<p>", "").replace("</p>", "")
+            )
 
 
 class GenericQueryException(Exception):

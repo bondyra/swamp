@@ -103,7 +103,7 @@ const StyledInput = styled(InputBase)(({ theme }) => ({
 }));
 
 const Button = styled(ButtonBase)(({ theme }) => ({
-  fontSize: 13,
+  fontSize: 10,
   width: 'fit-content',
   textAlign: 'left',
   fontWeight: 600,

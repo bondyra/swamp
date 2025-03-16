@@ -129,7 +129,7 @@ function getAllFields(obj, prefix = '') {
 }
 
 const Button = styled(ButtonBase)(({ theme }) => ({
-  fontSize: 13,
+  fontSize: 10,
   width: '100%',
   textAlign: 'left',
   fontWeight: 600,
@@ -152,7 +152,7 @@ const Button = styled(ButtonBase)(({ theme }) => ({
   },
 }));
 
-export default function FieldPicker({data, selectedFields, updateSelectedFields, header, descr}) {
+export default function MultipleFieldPicker({data, selectedFields, updateSelectedFields, header, descr}) {
   const allFields = getAllFields(Array.isArray(data) ? (data.length > 0 ? data[0] : {}) : data)
   const [anchorEl, setAnchorEl] = React.useState(null);
   const [options, setOptions] = React.useState([])
@@ -178,7 +178,7 @@ export default function FieldPicker({data, selectedFields, updateSelectedFields,
 
   return (
     <React.Fragment>
-      <Box sx={{ width: '100%', fontSize: 13, paddingBottom: "8px" }}>
+      <Box sx={{ width: '100%', fontSize: 13, paddingBottom: "0px" }}>
         <Button disableRipple aria-describedby={id} onClick={handleClick}>
           <ListIcon />
           <span>{header ?? "Fields"}</span>

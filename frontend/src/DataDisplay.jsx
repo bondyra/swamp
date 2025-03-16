@@ -14,18 +14,20 @@ const NiceContainer = styled(TableContainer)(({ theme }) => ({
   color: theme.palette.success.main,
   '.MuiTableCell-root': {
     fontFamily: "monospace",
+    fontSize: "10px",
     color: "white",
-    padding: "6px 4px",
-    border: "1px solid white"
+    margin: "0px",
+    padding: "3px",
+    border: "1px solid gray"
   },
 }));
 
 export default memo(({ data, selectedFields }) => {
   const multiple = Array.isArray(data)
-  const fields = multiple ? ["data.__id"].concat(selectedFields) : selectedFields;
+  const fields = multiple ? ["metadata.id"].concat(selectedFields) : selectedFields;
   return (
     <NiceContainer>
-      <Table size="small" aria-label="a dense table">
+      <Table size="small" aria-label="a dense table" sx={{mb: "5px"}}>
         { 
           multiple && 
           <TableHead>
@@ -38,8 +40,8 @@ export default memo(({ data, selectedFields }) => {
           {
             multiple &&
             data.map(d => 
-                  <TableRow key={d.data.__id}>
-                    {fields.map(f => <TableCell key={`${d.data.__id}-${f}`} align="left">{JSONPath({path: f, json: d})}</TableCell>)}
+                  <TableRow key={d.metadata.id}>
+                    {fields.map(f => <TableCell key={`${d.metadata.id}-${f}`} align="left">{JSONPath({path: f, json: d})}</TableCell>)}
                 </TableRow>
             )
           }
@@ -47,7 +49,7 @@ export default memo(({ data, selectedFields }) => {
             !multiple &&
             fields.map(f => 
                   <TableRow key={f}>
-                    <TableCell key={`${f}-key`} align="left">{f}</TableCell>
+                    <TableCell key={`${f}-key`} align="left" sx={{fontSize: "10px"}}><b>{f}</b></TableCell>
                     <TableCell key={`${f}-val`} align="left">{JSONPath({path: f, json: data})}</TableCell>
                 </TableRow>
             )
