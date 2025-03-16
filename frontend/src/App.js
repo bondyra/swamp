@@ -147,8 +147,8 @@ const SwampApp = () => {
         fitView
         >
           <Panel position="top-left">
-            <Stack sx={{borderRadius: "10px", background: "#141414", padding: "5px"}}>
-              <Stack direction="row">
+            <Stack sx={{borderRadius: "10px", background: "#141414", padding: "0px"}}>
+              <Stack direction="row" sx={{border: "2px solid gray", padding: "5px"}}>
                 <Box
                   component="img"
                   sx={{
@@ -166,22 +166,24 @@ const SwampApp = () => {
                   <Box sx={{fontSize: "14px", fontWeight: 100, mt: "6px", ml: "5px"}}>{version}</Box>
                 </Stack>
               </Stack>
-              <Button href="https://github.com/bondyra/swamp">
-                <Box component="img" sx={{height: 16, flexShrink: 0, mr: "5px"}} src={"./github.svg"} />
-                <span>GitHub</span>
-              </Button>
-              <Button onClick={saveGraph}>
-                <UploadIcon/>
-                <span>Save graph</span>
-              </Button>
-              <Button>
-                <Tooltip title="Click text on the right, not the icon">
-                  <DownloadIcon/>
-                </Tooltip>
-                <label htmlFor="loadGraph">Load graph</label>
-                <input id="loadGraph" accept=".json" type="file" style={{display:"none"}} onChange={loadGraph}/>
-              </Button>
-              {alertMessage && <Alert severity="error">{alertMessage}</Alert>}
+              <Stack sx={{border: "2px solid gray", borderTop: "0px"}}>
+                <Button href="https://github.com/bondyra/swamp">
+                  <Box component="img" sx={{height: 16, flexShrink: 0, mr: "5px"}} src={"./github.svg"} />
+                  <span>GitHub</span>
+                </Button>
+                <Button onClick={saveGraph}>
+                  <UploadIcon/>
+                  <span>Save graph</span>
+                </Button>
+                <Button>
+                  <Tooltip title="Click text on the right, not the icon">
+                    <DownloadIcon/>
+                  </Tooltip>
+                  <label htmlFor="loadGraph">Load graph</label>
+                  <input id="loadGraph" accept=".json" type="file" style={{display:"none"}} onChange={loadGraph}/>
+                </Button>
+                {alertMessage && <Alert severity="error">{alertMessage}</Alert>}
+              </Stack>
             </Stack>
           </Panel>
           <MiniMap />
