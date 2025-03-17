@@ -71,20 +71,21 @@ export const DagreLayoutProvider = (props) => {
 
     // getLayoutedElements calls dagre to compute the layout. height and width correspond to 
     // dagreGraph.graph().height and width, which allows us to fit the viewport to the layout
-    const { nodes, edges, height, width } = getLayoutedElements(getNodes(), getEdges());
+    try{
+      const { nodes, edges, height, width } = getLayoutedElements(getNodes(), getEdges());
 
-    setEdges(edges.map(e => ({ ...e, hidden: false })));
-    setNodes(
-      nodes.map(n => ({
-        ...n,
-        data: {
-          ...n.data,
-          isHidden: false
-        }
-      }))
-    );
-    console.log(`fitBounds width: ${width} height: ${height} x: 0 y: 0`)
-    fitBounds({ width: width ?? 0, height: height ?? 0, x: 0, y: 0 }, { duration: 100 });
+      setEdges(edges.map(e => ({ ...e, hidden: false })));
+      setNodes(
+        nodes.map(n => ({
+          ...n,
+          data: {
+            ...n.data,
+            isHidden: false
+          }
+        }))
+      );
+      fitBounds({ width: width ?? 0, height: height ?? 0, x: 0, y: 0 }, { duration: 100 });
+    } catch {}
   }, [recomputeTriggered, nodesInitialized, shouldSkipNextRecompute, getNodes, getEdges, setNodes, setEdges, fitBounds]);
 
   return (

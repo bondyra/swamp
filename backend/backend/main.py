@@ -6,6 +6,7 @@ import uvicorn
 
 from backend.model import GenericQueryException, handler, iter_all_resource_types
 from backend.modules.aws import AWS
+from backend.modules.k8s import Kubernetes
 
 
 app = FastAPI()

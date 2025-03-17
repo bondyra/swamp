@@ -35,9 +35,9 @@ class LegacyAWSAPIHandler(AWSHandler):
     @classmethod
     async def get(cls, **required_attrs) -> AsyncGenerator[Dict, None]:
         if "metadata.profile" not in required_attrs:
-            raise GenericQueryException("You need to provide __profile value to query AWS resource")
+            raise GenericQueryException("You need to provide metadata.profile value to query AWS resource")
         if "metadata.region" not in required_attrs:
-            raise GenericQueryException("You need to provide __region value to query AWS resource")
+            raise GenericQueryException("You need to provide metadata.region value to query AWS resource")
         profile, region = required_attrs["metadata.profile"], required_attrs["metadata.region"]
         async with aioboto3.Session(profile_name=profile, region_name=region).client(cls.boto_client_name) as client:
             async for i in cls._get(client):
@@ -60,7 +60,7 @@ class LegacyAWSAPIHandler(AWSHandler):
         return [
             Attribute(path="metadata.profile", description="AWS profile to use", query_required=True, allowed_values=_get_profiles()),
             Attribute(path="metadata.region", description="AWS region", query_required=True, allowed_values=_ALL_AWS_REGIONS),
-            *cls._attributes_rec(shp, path="data")
+            cls._attributes_rec(shp, path="data")
         ]
 
     @classmethod
@@ -75,7 +75,7 @@ class LegacyAWSAPIHandler(AWSHandler):
         #         new_path = f"{path}[*].{name}"
         #         yield from cls._attributes_rec(member, new_path)
         else:
-            yield Attribute(path=path, description=obj.documentation, query_required=False)
+            yield Attribute(path=path, description=obj.documentation.replace("<p>", "").replace("</p>", ""), query_required=False)
 
 
 class VpcHandler(LegacyAWSAPIHandler):

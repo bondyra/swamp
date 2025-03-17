@@ -1,12 +1,9 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useReactFlow } from '@xyflow/react';
-import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button'
 import Stack from '@mui/material/Stack';
-import { Tooltip } from '@mui/material';
-import DownloadIcon from '@mui/icons-material/Download';
-import UploadIcon from '@mui/icons-material/Upload';
+import { Alert, Tooltip } from '@mui/material';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import {
   ReactFlow,
@@ -68,36 +65,40 @@ const SwampApp = () => {
   // eslint-disable-next-line
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-  const [alertMessage, setAlertMessage] = useState("")
   const [rfInstance, setRfInstance] = useState(null);
+  // eslint-disable-next-line
+  const [graphName, setGraphName] = useState("default")
+  const [alrt, setAlrt] = useState("")
+
+  useEffect(() => {
+    (async () => {
+      await new Promise(res => setTimeout(res, 1000));
+      setAlrt("")
+    })();
+  }, [alrt, setAlrt])
 
   const saveGraph = useCallback(() => {
     if (rfInstance) {
       const flow = rfInstance.toObject();
-      const jsn = JSON.stringify(flow)
-      downloadJson(jsn)
+      localStorage.setItem(graphName, JSON.stringify(flow));
+      setAlrt("Graph saved to local storage!")
     }
-  }, [rfInstance])
+  }, [rfInstance, graphName])
 
-  const loadGraph = useCallback(async (evt) => {
-    if (!evt.target.files || evt.target.files.length === 0){
-      setAlertMessage("Cannot load, no file selected")
-      return
-    }
-    const graphFile = evt.target.files[0]
-    const reader = new FileReader()
-    reader.onload = () => {
-      const flow = JSON.parse(reader.result);
+  // load graph on mount if exists in local storage
+  useEffect(() => {
+    async function restoreFlow() {
+      const flow = JSON.parse(localStorage.getItem(graphName));
       if (flow) {
         const { x = 0, y = 0, zoom = 1 } = flow.viewport;
         setNodes(flow.nodes || []);
         setEdges(flow.edges || []);
         reactFlow.setViewport({ x, y, zoom });
+        setAlrt("Graph restored from local storage!");
       }
-      setAlertMessage("")
-    }
-    reader.readAsText(graphFile)
-  }, [setNodes, setEdges, reactFlow])
+    };
+    restoreFlow();
+  }, [setNodes, setEdges, reactFlow, graphName])
 
   const onConnect = useCallback(
     (params) =>
@@ -130,6 +131,15 @@ const SwampApp = () => {
     }
   }, [reactFlow, nodes, addDummyNode, delDummyNode, setAddDummyNode, setDelDummyNode])
 
+  useEffect(() => {
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "s" && (navigator.platform.match("Mac") ? event.metaKey : event.ctrlKey)) {
+        event.preventDefault();
+        saveGraph();
+      }
+    }, false);
+  }, [saveGraph])
+
   return (
     <div className="wrapper" ref={reactFlowWrapper} style={{ width: '100vw', height: '100vh' }}>
       <ThemeProvider theme={theme}>
@@ -146,9 +156,9 @@ const SwampApp = () => {
         colorMode={"dark"}
         fitView
         >
-          <Panel position="top-left">
-            <Stack sx={{borderRadius: "10px", background: "#141414", padding: "0px"}}>
-              <Stack direction="row" sx={{border: "2px solid gray", padding: "5px"}}>
+          <Panel position="top" style={{ width: "100%" }}>
+            <Stack sx={{borderRadius: "10px", background: "#141414", padding: "0px"}} direction="row">
+              <Stack direction="row" sx={{padding: "5px", border: "1px solid gray"}}>
                 <Box
                   component="img"
                   sx={{
@@ -165,26 +175,21 @@ const SwampApp = () => {
                   <Box sx={{fontSize: "20px", fontWeight: 800}}>Swamp</Box>
                   <Box sx={{fontSize: "14px", fontWeight: 100, mt: "6px", ml: "5px"}}>{version}</Box>
                 </Stack>
-              </Stack>
-              <Stack sx={{border: "2px solid gray", borderTop: "0px"}}>
                 <Button href="https://github.com/bondyra/swamp">
-                  <Box component="img" sx={{height: 16, flexShrink: 0, mr: "5px"}} src={"./github.svg"} />
-                  <span>GitHub</span>
+                  <Box component="img" sx={{height: 24, flexShrink: 0, mr: "5px"}} src={"./github.svg"} />
                 </Button>
-                <Button onClick={saveGraph}>
-                  <UploadIcon/>
-                  <span>Save graph</span>
-                </Button>
-                <Button>
-                  <Tooltip title="Click text on the right, not the icon">
-                    <DownloadIcon/>
-                  </Tooltip>
-                  <label htmlFor="loadGraph">Load graph</label>
-                  <input id="loadGraph" accept=".json" type="file" style={{display:"none"}} onChange={loadGraph}/>
-                </Button>
-                {alertMessage && <Alert severity="error">{alertMessage}</Alert>}
               </Stack>
+              <Tooltip title="THIS DOESNT DO ANYTHING ATM">
+                <Stack direction="row" sx={{border: "1px solid gray", borderRight: "0px"}}>
+                  <Box key="tab 1" sx={{borderRight: "1px solid gray", paddingTop: "10px", paddingLeft: "5px", paddingRight: "5px"}}>tab 1</Box>
+                  <Box key="tab 2" sx={{borderRight: "1px solid gray", paddingTop: "10px", paddingLeft: "5px", paddingRight: "5px"}}>tab 2</Box>
+                  <Box key="tab 3" sx={{borderRight: "1px solid gray", paddingTop: "10px", paddingLeft: "5px", paddingRight: "5px"}}>tab 3</Box>
+                </Stack>
+              </Tooltip>
             </Stack>
+          </Panel>
+          <Panel position="top-center">
+            {alrt && <Alert variant="outlined" severity="success" sx={{color: "lightgreen"}}>{alrt}</Alert>}
           </Panel>
           <MiniMap />
           <Controls />
