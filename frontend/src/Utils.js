@@ -1,6 +1,3 @@
-
-
-
 export function getAllJSONPaths(obj, prefix = '') {
 	let results = [];
 	
@@ -35,6 +32,22 @@ export function getIconSrc(resourceType) {
             switch(resource){
                 case "vpc":
                     return "https://icon.icepanel.io/AWS/svg/Networking-Content-Delivery/Virtual-Private-Cloud.svg"
+                case "subnet":
+                    return "https://icon.icepanel.io/AWS/svg/Networking-Content-Delivery/Virtual-Private-Cloud.svg"
+                case "rtb":
+                    return "https://icon.icepanel.io/AWS/svg/Networking-Content-Delivery/Virtual-Private-Cloud.svg"
+                case "igw":
+                    return "https://icon.icepanel.io/AWS/svg/Networking-Content-Delivery/Transit-Gateway.svg"
+                case "sg":
+                    return "https://icon.icepanel.io/AWS/svg/Security-Identity-Compliance/Network-Firewall.svg"
+                case "nat":
+                    return "https://icon.icepanel.io/AWS/svg/Networking-Content-Delivery/Transit-Gateway.svg"
+                case "eip":
+                    return "https://icon.icepanel.io/AWS/svg/Networking-Content-Delivery/Virtual-Private-Cloud.svg"
+                case "eni":
+                    return "https://icon.icepanel.io/AWS/svg/Networking-Content-Delivery/Virtual-Private-Cloud.svg"
+                case "nacl":
+                    return "https://icon.icepanel.io/AWS/svg/Security-Identity-Compliance/Network-Firewall.svg"
                 default:
                     return "https://www.svgrepo.com/show/353443/aws.svg"
             }
@@ -56,6 +69,10 @@ export function getIconSrc(resourceType) {
                     return "https://raw.githubusercontent.com/kubernetes/community/19094aa6e60eb4a481650c4cbdb94badd9919b5b/icons/svg/resources/unlabeled/rs.svg"
                 case "deployment":
                     return "https://raw.githubusercontent.com/kubernetes/community/19094aa6e60eb4a481650c4cbdb94badd9919b5b/icons/svg/resources/unlabeled/deploy.svg"
+                case "node":
+                    return "https://raw.githubusercontent.com/kubernetes/community/refs/heads/master/icons/svg/infrastructure_components/unlabeled/node.svg"
+                case "pv":
+                    return "https://raw.githubusercontent.com/kubernetes/community/refs/heads/master/icons/svg/resources/unlabeled/pv.svg"
                 default:
                     return "https://raw.githubusercontent.com/kubernetes/community/19094aa6e60eb4a481650c4cbdb94badd9919b5b/icons/svg/control_plane_components/labeled/api.svg"
             }

@@ -16,6 +16,7 @@ aioboto3 = "^12.3.0"
 pydantic = "2.10.4"
 jsonpath-ng = "1.7.0"
 kubernetes-asyncio = "32.0.0"
+requests = "2.32.3"
 
 [build-system]
 requires = ["poetry-core"]

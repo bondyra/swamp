@@ -31,7 +31,8 @@ async def resource_types():
 async def attributes(r: Request):
     validate(r)
     try:
-        return handler(r.query_params["provider"], r.query_params["resource"]).attributes()
+        result = await handler(r.query_params["provider"], r.query_params["resource"]).attributes()
+        return result
     except GenericQueryException as e:
         raise HTTPException(status_code=400, detail=str(e))
 

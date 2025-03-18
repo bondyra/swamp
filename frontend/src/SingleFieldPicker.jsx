@@ -112,7 +112,7 @@ const Button = styled(ButtonBase)(({ theme }) => ({
   textAlign: 'left',
   paddingBottom: 8,
   fontWeight: 600,
-  color: '#586069',
+  color: '#ffffff',
   ...theme.applyStyles('dark', {
     color: '#8b949e',
   }),
@@ -207,7 +207,7 @@ export default function SingleFieldPicker({value, valuePlaceholder, updateData, 
                 handleClose();
               }}
               value={value}
-              onChange={(event, newOption, reason) => updateData(newOption.value)}
+              onChange={(event, newOption, reason) => {if (newOption) updateData(newOption.value)}}
               renderTags={() => null}
               noOptionsText="No options available"
               renderOption={(props, option, { selected }) => {

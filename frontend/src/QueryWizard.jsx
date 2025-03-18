@@ -166,7 +166,7 @@ export default function QueryWizard({
         <Stack>
           <Tooltip title={message || "Query status will be here"}>
             <Box sx={{ml: "5px", mb: "10px", height: "20%"}} justifyContent="center" display="flex" >
-              {status === "failed" && <ErrorIcon sx={{color: "red"}} fontSize="small"/>}
+              {status === "failed" && <ErrorIcon sx={{color: "darkred"}} fontSize="small"/>}
               {status === "warning" && <WarningIcon sx={{color: "yellow"}} fontSize="small"/>}
               {status === "success" && <CheckCircleIcon sx={{color: "green"}} fontSize="small"/>}
             </Box>

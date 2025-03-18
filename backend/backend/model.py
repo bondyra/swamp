@@ -81,7 +81,7 @@ class Handler(metaclass=_HandlerMeta):
         pass
 
     @classmethod
-    def attributes(cls) -> List[Attribute]:
+    async def attributes(cls) -> List[Attribute]:
         pass
 
 

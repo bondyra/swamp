@@ -55,7 +55,7 @@ class LegacyAWSAPIHandler(AWSHandler):
         raise NotImplementedError()
 
     @classmethod
-    def attributes(cls) -> List[Attribute]:
+    async def attributes(cls) -> List[Attribute]:
         shp = boto3.client(cls.boto_client_name).meta.service_model.shape_for(cls.shape)
         return [
             Attribute(path="metadata.profile", description="AWS profile to use", query_required=True, allowed_values=_get_profiles()),

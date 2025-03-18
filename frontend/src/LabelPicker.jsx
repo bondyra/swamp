@@ -2,7 +2,8 @@ import Box from '@mui/material/Box';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import RemoveCircleIcon from '@mui/icons-material/RemoveCircle';
 import IconButton, {iconButtonClasses} from '@mui/material/IconButton';
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
+import EmergencyIcon from '@mui/icons-material/Emergency';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import Stack from '@mui/material/Stack';
@@ -12,6 +13,7 @@ import React, { useEffect, useState } from 'react';
 import { useBackend } from './BackendProvider';
 import SingleFieldPicker from './SingleFieldPicker'
 import SingleLabelValPicker from './SingleLabelValPicker'
+import { Tooltip } from '@mui/material';
 
 let labelId = 1;
 const newLabelId = () => labelId++;
@@ -48,13 +50,26 @@ export default function LabelPicker({ resourceType, labels, setLabels, disabled 
 		})
 	}
 
-	useEffect(() => {
+	const labelsWithExtraLabelsIfKeysAreMissing = (labels, extraLabels) => {
+		if (!labels)
+			return extraLabels
+		const existingKeys = labels.map(l => l.key)
+		return [
+			...labels,
+			...extraLabels.filter(e => !existingKeys.includes(e.key))
+		]
+	}
+
+	useEffect(() => {  // if resourceType changes, re-load attributes & 
 		const loadAttributes = async () => {
 			if (resourceType === null || resourceType === undefined)
 				return []
 			const attributes = await backend.attributes(resourceType)
+			const requiredAttributes = attributes.filter(a => a.query_required)
 			setAttributes(new Map(attributes.map(a=> [a.path, a])))
-			setLabels(attributes.filter(a => a.query_required).map(a => {return {id: newLabelId(), key: a.path, val: "", required: true, allowedValues: a.allowed_values}}))
+			setLabels(labelsWithExtraLabelsIfKeysAreMissing(
+				labels, requiredAttributes.map(a => {return {id: newLabelId(), key: a.path, val: "", required: true, allowedValues: a.allowed_values}})
+			))
 		};
         loadAttributes();
 	}, [resourceType, setLabels, backend]);
@@ -66,15 +81,22 @@ export default function LabelPicker({ resourceType, labels, setLabels, disabled 
 			</Stack>
             <List dense={true} sx={{padding: "0px", margin: "0px"}}>
 			{
-				labels.map(
+				labels
+				.sort((a, b) => b.required - a.required)  // meaning: put required labels first - descending order based on "required" flag (true=1, false=0)
+				.map(
 					label => {
 						return <ListItem key={`${label.id}-list-item`} sx={{padding: "0px", margin: "0px", height:"16px"}}>		
-							<ChevronRightIcon sx={{width: "16px", height: "16px", padding: "0px"}}/>
+							{
+								!label.required && <KeyboardArrowRightIcon sx={{width: "8px", height: "8px", padding: "0px"}}/>
+							}
+							{
+								label.required && <Tooltip title="Required by provider"><EmergencyIcon sx={{width: "8px", height: "8px", padding: "0px", color: "darkred"}}/></Tooltip>
+							}
 							<SingleFieldPicker 
 							key={`${label.id}-picker`} value={label.key} valuePlaceholder="Filter" 
 							disabled = {label.required || disabled || false}
-							updateData={(newKey) => setLabels(labelsWithUpdatedLabel(labels, {...label, key: newKey, allowedValues: (attributes.get(newKey) ?? Object()).allowed_values}))} 
-							options={[...attributes.values().map(v => {return {value: v.path, description: v.description}})]}/>
+							updateData={(newKey) => setLabels(labelsWithUpdatedLabel(labels, {...label, key: newKey, allowedValues: (attributes.get(newKey) ?? Object()).allowed_values, required: (attributes.get(newKey) ?? Object()).query_required ?? false}))} 
+							options={[...attributes.values().filter(v=> !v.query_required).map(v => {return {value: v.path, description: v.description}})]}/>
 							<Box key={`${label.id}-eq`}
 								sx={{
 									padding: '0px 7px 0px 7px',

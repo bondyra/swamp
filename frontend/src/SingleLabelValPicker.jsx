@@ -107,7 +107,7 @@ const Button = styled(ButtonBase)(({ theme }) => ({
   width: 'fit-content',
   textAlign: 'left',
   fontWeight: 600,
-  color: '#586069',
+  color: '#ffffff',
   ...theme.applyStyles('dark', {
     color: '#8b949e',
   }),

@@ -146,6 +146,7 @@ const SwampApp = () => {
         <ReactFlow 
         nodes={nodes}
         edges={edges}
+        deleteKeyCode={null}
         onNodesChange={onNodesChangeExt}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
@@ -172,8 +173,8 @@ const SwampApp = () => {
                   src={"./asset.svg"} alt=""
                 />
                 <Stack direction="row">
-                  <Box sx={{fontSize: "20px", fontWeight: 800}}>Swamp</Box>
-                  <Box sx={{fontSize: "14px", fontWeight: 100, mt: "6px", ml: "5px"}}>{version}</Box>
+                  <Box sx={{fontSize: "20px", fontWeight: 800, fontFamily: "monospace"}}>Swamp</Box>
+                  <Box sx={{fontSize: "16px", fontWeight: 100, fontFamily: "monospace", mt: "4px", ml: "5px"}}>{version}</Box>
                 </Stack>
                 <Button href="https://github.com/bondyra/swamp">
                   <Box component="img" sx={{height: 24, flexShrink: 0, mr: "5px"}} src={"./github.svg"} />
@@ -181,9 +182,9 @@ const SwampApp = () => {
               </Stack>
               <Tooltip title="THIS DOESNT DO ANYTHING ATM">
                 <Stack direction="row" sx={{border: "1px solid gray", borderRight: "0px"}}>
-                  <Box key="tab 1" sx={{borderRight: "1px solid gray", paddingTop: "10px", paddingLeft: "5px", paddingRight: "5px"}}>tab 1</Box>
-                  <Box key="tab 2" sx={{borderRight: "1px solid gray", paddingTop: "10px", paddingLeft: "5px", paddingRight: "5px"}}>tab 2</Box>
-                  <Box key="tab 3" sx={{borderRight: "1px solid gray", paddingTop: "10px", paddingLeft: "5px", paddingRight: "5px"}}>tab 3</Box>
+                  <Box key="tab 1" sx={{borderRight: "2px solid gray", fontFamily: "monospace", paddingTop: "10px", paddingLeft: "5px", paddingRight: "5px"}}>MOCK TAB 1</Box>
+                  <Box key="tab 2" sx={{borderRight: "1px solid gray", fontFamily: "monospace", paddingTop: "10px", paddingLeft: "5px", paddingRight: "5px"}}>MOCK TAB 2</Box>
+                  <Box key="tab 3" sx={{borderRight: "1px solid gray", fontFamily: "monospace", paddingTop: "10px", paddingLeft: "5px", paddingRight: "5px"}}>MOCK TAB 3</Box>
                 </Stack>
               </Tooltip>
             </Stack>
