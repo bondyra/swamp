@@ -34,20 +34,17 @@ class LegacyAWSAPIHandler(AWSHandler):
 
     @classmethod
     async def get(cls, **required_attrs) -> AsyncGenerator[Dict, None]:
-        if "metadata.profile" not in required_attrs:
-            raise GenericQueryException("You need to provide metadata.profile value to query AWS resource")
-        if "metadata.region" not in required_attrs:
-            raise GenericQueryException("You need to provide metadata.region value to query AWS resource")
-        profile, region = required_attrs["metadata.profile"], required_attrs["metadata.region"]
+        if "_profile" not in required_attrs:
+            raise GenericQueryException("You need to provide _profile value to query AWS resource")
+        if "_region" not in required_attrs:
+            raise GenericQueryException("You need to provide _region value to query AWS resource")
+        profile, region = required_attrs["_profile"], required_attrs["_region"]
         async with aioboto3.Session(profile_name=profile, region_name=region).client(cls.boto_client_name) as client:
-            async for i in cls._get(client):
+            async for item in cls._get(client):
                 yield {
-                    "metadata": {
-                        "profile": profile,
-                        "region": region,
-                        **i["metadata"]
-                    },
-                    "data": i["data"]
+                    "_profile": profile,
+                    "_region": region,
+                    **item
                 }
 
     @classmethod
@@ -58,9 +55,9 @@ class LegacyAWSAPIHandler(AWSHandler):
     async def attributes(cls) -> List[Attribute]:
         shp = boto3.client(cls.boto_client_name).meta.service_model.shape_for(cls.shape)
         return [
-            Attribute(path="metadata.profile", description="AWS profile to use", query_required=True, allowed_values=_get_profiles()),
-            Attribute(path="metadata.region", description="AWS region", query_required=True, allowed_values=_ALL_AWS_REGIONS),
-            cls._attributes_rec(shp, path="data")
+            Attribute(path="_profile", description="AWS profile to use", query_required=True, allowed_values=_get_profiles()),
+            Attribute(path="_region", description="AWS region", query_required=True, allowed_values=_ALL_AWS_REGIONS),
+            *cls._attributes_rec(shp, path="")
         ]
 
     @classmethod
@@ -91,8 +88,8 @@ class VpcHandler(LegacyAWSAPIHandler):
         response = await client.describe_vpcs()
         for item in response["Vpcs"]:
             yield {
-                "metadata": {"id": item["VpcId"]},
-                "data": item
+                **{"_id": item["VpcId"]},
+                **item
             }
 
 
@@ -109,8 +106,8 @@ class SubnetHandler(LegacyAWSAPIHandler):
         response = await client.describe_subnets()
         for item in response["Subnets"]:
             yield {
-                "metadata": {"id": item["SubnetId"]},
-                "data": item
+                **{"_id": item["SubnetId"]},
+                **item
             }
 
 
@@ -127,8 +124,8 @@ class RouteTableHandler(LegacyAWSAPIHandler):
         response = await client.describe_route_tables()
         for item in response["RouteTables"]:
             yield {
-                "metadata": {"id": item["RouteTableId"]},
-                "data": item
+                **{"_id": item["RouteTableId"]},
+                **item
             }
 
 
@@ -145,8 +142,8 @@ class InternetGatewayHandler(LegacyAWSAPIHandler):
         response = await client.describe_internet_gateways()
         for item in response["InternetGateways"]:
             yield {
-                "metadata": {"id": item["InternetGatewayId"]},
-                "data": item
+                **{"_id": item["InternetGatewayId"]},
+                **item
             }
 
 
@@ -163,8 +160,8 @@ class SecurityGroupHandler(LegacyAWSAPIHandler):
         response = await client.describe_security_groups()
         for item in response["SecurityGroups"]:
             yield {
-                "metadata": {"id": item["GroupId"]},
-                "data": item
+                **{"_id": item["GroupId"]},
+                **item
             }
 
 
@@ -181,8 +178,8 @@ class NATGatewayHandler(LegacyAWSAPIHandler):
         response = await client.describe_nat_gateways()
         for item in response["NatGateways"]:
             yield {
-                "metadata": {"id": item["NatGatewayId"]},
-                "data": item
+                **{"_id": item["NatGatewayId"]},
+                **item
             }
 
 
@@ -199,8 +196,8 @@ class ElasticIpHandler(LegacyAWSAPIHandler):
         response = await client.describe_addresses()
         for item in response["Addresses"]:
             yield {
-                "metadata": {"id": item["AllocationId"]},
-                "data": item
+                **{"_id": item["AllocationId"]},
+                **item
             }
 
 
@@ -217,8 +214,8 @@ class NetworkInterfaceHandler(LegacyAWSAPIHandler):
         response = await client.describe_network_interfaces()
         for item in response["NetworkInterfaces"]:
             yield {
-                "metadata": {"id": item["NetworkInterfaceId"]},
-                "data": item
+                **{"_id": item["NetworkInterfaceId"]},
+                **item
             }
 
 
@@ -235,8 +232,8 @@ class NetworkAclHandler(LegacyAWSAPIHandler):
         response = await client.describe_network_acls()
         for item in response["NetworkAcls"]:
             yield {
-                "metadata": {"id": item["NetworkAclId"]},
-                "data": item
+                **{"_id": item["NetworkAclId"]},
+                **item
             }
 
 

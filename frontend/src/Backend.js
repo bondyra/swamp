@@ -18,14 +18,13 @@ export default class Backend {
 
   async attributes(resourceType) {
     const [provider, resource] = resourceType.split(".")
-    return fetch(`${this.base_url}/attributes?provider=${provider}&resource=${resource}`).then(response => response.json());
+    return fetch(`${this.base_url}/attributes?_provider=${provider}&_resource=${resource}`).then(response => response.json());
   }
 
   async query(resourceType, labels) {
     const [provider, resource] = resourceType.split(".")
     const qs = (labels ?? []).map(l=> `${l.key}=${l.val}`).join("&")
-    console.log(`${this.base_url}/get?provider=${provider}&resource=${resource}&${qs}`)
-    return fetch(`${this.base_url}/get?provider=${provider}&resource=${resource}&${qs}`)
+    return fetch(`${this.base_url}/get?_provider=${provider}&_resource=${resource}&${qs}`)
     .then(response => {
       this.throwForStatus(response);
       return response.json();
@@ -34,8 +33,7 @@ export default class Backend {
       return response.results.map(result => {
           return {
             resourceType: resourceType,
-            metadata: result.metadata,
-            data: result.data
+            result: result
           };
       })
     })

@@ -31,7 +31,7 @@ async def resource_types():
 async def attributes(r: Request):
     validate(r)
     try:
-        result = await handler(r.query_params["provider"], r.query_params["resource"]).attributes()
+        result = await handler(r.query_params["_provider"], r.query_params["_resource"]).attributes()
         return result
     except GenericQueryException as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -50,15 +50,15 @@ async def get(r: Request):
 
 
 def validate(request: Request):
-    if "provider" not in request.query_params:
-        raise HTTPException(status_code=400, detail='You must specify "provider"')
-    if "resource" not in request.query_params:
-        raise HTTPException(status_code=400, detail='You must specify "resource"')
+    if "_provider" not in request.query_params:
+        raise HTTPException(status_code=400, detail='You must specify "_provider"')
+    if "_resource" not in request.query_params:
+        raise HTTPException(status_code=400, detail='You must specify "_resource"')
 
 
-async def do_get(provider, resource, **attrs):
+async def do_get(_provider, _resource, **attrs):
     # some of the filters might not get used in handler, running this for the second time on actual results
-    results = await _cached(provider, resource, **attrs)
+    results = await _cached(_provider, _resource, **attrs)
     path_vals = [(jsonpath_ng.parse(key), val) for key, val in attrs.items()]
     return [r for r in results if _matches(r, path_vals)]
 

@@ -70,7 +70,7 @@ export default memo(({ id, data, isConnectable }) => {
         y: clientY,
       }),
       type: 'query',
-      data: {resourceType: null, labels: [], parentResourceType: sourceNode.data.resourceType,  parent: {data: sourceNode.data.data, metadata: sourceNode.data.metadata}},
+      data: {resourceType: null, labels: [], parentResourceType: sourceNode.data.resourceType,  parent: sourceNode.data.result},
       origin: [0.5, 0.0],
     };
 
@@ -86,7 +86,7 @@ export default memo(({ id, data, isConnectable }) => {
       reactFlow.updateNodeData(id, (node) => {
         return {
           ...node.data,
-          inline: {...node.data.inline, results: results}
+          inline: {...node.data.inline, results: results.map(r => r.result)}
         };
       })
     }, [id, reactFlow]
@@ -113,12 +113,11 @@ export default memo(({ id, data, isConnectable }) => {
   }, [data.inline.resourceType, setInlineChildPaths, backend]);
 
   useEffect(() => {
-    const d = {data: data.data, metadata: data.metadata}
     setInlineParentPaths(
-      getAllJSONPaths(d).map(p => {
+      getAllJSONPaths(data.result).map(p => {
         return {
           value: p,
-          description: JSONPath({path: p, json: d})
+          description: JSONPath({path: p, json: data.result})
         }
       })
     )
@@ -198,12 +197,12 @@ export default memo(({ id, data, isConnectable }) => {
               />
               <Stack direction="column">
                 <div className="header-label-row"><label className="swamp-resource">{data.resourceType}</label></div>
-                <div className="header-label-row"><label className="swamp-resource-id">{data.metadata.id}</label></div>
+                <div className="header-label-row"><label className="swamp-resource-id">{data.result._id}</label></div>
               </Stack>
             </Stack>
             <hr/>
             <Stack direction="row">
-              <MultipleFieldPicker data={{data: data.data, metadata: data.metadata}} selectedFields={data.selectedFields || []} updateSelectedFields={updateSelectedFields}
+              <MultipleFieldPicker data={data.result} selectedFields={data.selectedFields || []} updateSelectedFields={updateSelectedFields}
               header={"Select fields"} descr={`Select fields of ${data.resourceType} to display`}/>
               <Tooltip title="Propagate selections to all siblings (NOT WORKING YET)">
                 <Button disableRipple aria-describedby={id} sx={{width: "auto", pb: "0px"}}> 
@@ -212,7 +211,7 @@ export default memo(({ id, data, isConnectable }) => {
               </Tooltip>
             </Stack>
             <Box> 
-              <DataDisplay nodeId={id} data={{data: data.data, metadata: data.metadata}} selectedFields={data.selectedFields || []}/>
+              <DataDisplay nodeId={id} data={data.result} selectedFields={data.selectedFields || []}/>
             </Box>
             <hr/>
             <Box>
@@ -232,7 +231,7 @@ export default memo(({ id, data, isConnectable }) => {
                 join={true}
                 childPath={data.inline.childPath} childPaths={inlineChildPaths} onChildPathUpdate={updateInlineChildPath} 
                 parentPath={data.inline.parentPath} parentPaths={inlineParentPaths} onParentPathUpdate={updateInlineParentPath}
-                getParentVal={(p) => JSONPath({path: p, json: {data: data.data, metadata: data.metadata}})} parentResourceType={data.resourceType}
+                getParentVal={(p) => JSONPath({path: p, json: data.result})} parentResourceType={data.resourceType}
                 />
                 <MultipleFieldPicker data={data.inline.results} selectedFields={data.inline.selectedFields || []} updateSelectedFields={updateInlineSelectedFields} header="Results"/>
                 <DataDisplay multiple nodeId={id} data={data.inline.results || []} selectedFields={data.inline.selectedFields || []}/>

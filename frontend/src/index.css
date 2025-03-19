@@ -60,8 +60,9 @@ code {
 }
 
 .react-flow__node-query {
-  border-style: dashed;
-  border-width: medium;
+  border-style: dotted;
+  border-width: 4px;
+  border-radius: 25%;
 }
 
 .smallPadding {

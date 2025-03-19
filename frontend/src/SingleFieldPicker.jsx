@@ -242,7 +242,7 @@ export default function SingleFieldPicker({value, valuePlaceholder, updateData, 
                     >
                       <b>{option.value}</b>
                       <br/>
-                      <i>{option.description}</i>
+                      <Box sx={{fontSize: "10px"}}><i>{option.description}</i></Box>
                     </Box>
                   </li>
                 );

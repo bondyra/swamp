@@ -28,7 +28,7 @@ async def _load_attributes_from_openapi_schema(openapi_path: str) -> List[Attrib
     if not _OPENAPI_SCHEMA:
         _OPENAPI_SCHEMA = await _load_openapi_schema()
     definition = _OPENAPI_SCHEMA["definitions"][openapi_path]
-    return _attributes_rec(_OPENAPI_SCHEMA, definition, path="data")
+    return _attributes_rec(_OPENAPI_SCHEMA, definition, path="")
 
 
 async def _load_openapi_schema():
@@ -49,11 +49,11 @@ def _attributes_rec(schema, definition, path=""):
                 continue
             if "$ref" in val:
                 new_definition = schema["definitions"][val["$ref"].replace("#/definitions/", "")]
-                yield from _attributes_rec(schema, new_definition, path=f"{path}.{key}")
+                yield from _attributes_rec(schema, new_definition, path=f"{path}.{key}" if path else key)
             elif val["type"] == "array":  # TODO: don't really know what to do with lists for now
                 continue
             else:
-                yield Attribute(path=f"{path}.{key}", description=val["description"], query_required=False)
+                yield Attribute(path=f"{path}.{key}" if path else key, description=val["description"], query_required=False)
     else:
         yield Attribute(path=path, description=definition["description"], query_required=False)
 
@@ -67,23 +67,21 @@ class K8sHandler(Handler):
 class NamespacedK8sHandler(K8sHandler):
     @classmethod
     async def get(cls, **required_attrs) -> AsyncGenerator[Dict, None]:
-        if "metadata.context" not in required_attrs:
-            raise GenericQueryException("You need to provide metadata.context value to query K8S resource")
-        if "metadata.namespace" not in required_attrs:
-            raise GenericQueryException("You need to provide metadata.namespace value to query K8S resource")
-        context, namespace = required_attrs["metadata.context"], required_attrs["metadata.namespace"]
+        if "_context" not in required_attrs:
+            raise GenericQueryException("You need to provide _context value to query K8S resource")
+        if "_namespace" not in required_attrs:
+            raise GenericQueryException("You need to provide _namespace value to query K8S resource")
+        context, namespace = required_attrs["_context"], required_attrs["_namespace"]
         async with await config.new_client_from_config(context=context) as api:
             client = await DynamicClient(api)
             v1 = await client.resources.get(api_version="v1", kind=cls.kind())
             response = await v1.get(namespace=namespace)
             for item in response.items:
                 yield {
-                    "metadata": {
-                        "id": item.metadata.name,
-                        "context": context,
-                        "namespace": namespace
-                    },
-                    "data": item.to_dict()
+                    "_id": item.metadata.name,
+                    "_context": context,
+                    "_namespace": namespace,
+                    **item.to_dict()
                 }
 
     @staticmethod
@@ -97,8 +95,8 @@ class NamespacedK8sHandler(K8sHandler):
         resource_attributes = await _load_attributes_from_openapi_schema(cls.openapi_path())
         
         return [
-            Attribute(path="metadata.context", description="Kubernetes context to use", query_required=True, allowed_values=await _get_contexts()),
-            Attribute(path="metadata.namespace", description="Kubernetes namespace this resource sits in", query_required=True, allowed_values=["default", "kube-system", "kube-public", "kube-node-lease"]),
+            Attribute(path="_context", description="Kubernetes context to use", query_required=True, allowed_values=await _get_contexts()),
+            Attribute(path="_namespace", description="Kubernetes namespace this resource sits in", query_required=True, allowed_values=["default", "kube-system", "kube-public", "kube-node-lease"]),
             *resource_attributes
         ]
 
@@ -132,7 +130,7 @@ class ReplicaSetHandler(NamespacedK8sHandler):
 
     @staticmethod
     def openapi_path() -> str:
-        return "io.k8s.api.core.v1.ReplicaSet"
+        return "io.k8s.api.apps.v1.ReplicaSet"
 
     @staticmethod
     def resource() -> str:
@@ -150,7 +148,7 @@ class DeploymentHandler(NamespacedK8sHandler):
 
     @staticmethod
     def openapi_path() -> str:
-        return "io.k8s.api.core.v1.Deployment"
+        return "io.k8s.api.apps.v1.Deployment"
 
     @staticmethod
     def resource() -> str:
@@ -286,20 +284,18 @@ class EndpointsHandler(NamespacedK8sHandler):
 class GlobalK8sHandler(K8sHandler):
     @classmethod
     async def get(cls, **required_attrs) -> AsyncGenerator[Dict, None]:
-        if "metadata.context" not in required_attrs:
-            raise GenericQueryException("You need to provide metadata.context value to query this K8S resource")
-        context = required_attrs["metadata.context"]
+        if "_context" not in required_attrs:
+            raise GenericQueryException("You need to provide _context value to query this K8S resource")
+        context = required_attrs["_context"]
         async with await config.new_client_from_config() as api:
             client = await DynamicClient(api)
             v1 = await client.resources.get(api_version="v1", kind=cls.kind())
             response = await v1.get()
             for item in response.items:
                 yield {
-                    "metadata": {
-                        "id": item.metadata.name,
-                        "context": context
-                    },
-                    "data": item.to_dict()
+                    "_id": item.metadata.name,
+                    "_context": context,
+                    **item.to_dict()
                 }
 
 

@@ -24,7 +24,8 @@ const NiceContainer = styled(TableContainer)(({ theme }) => ({
 
 export default memo(({ data, selectedFields }) => {
   const multiple = Array.isArray(data)
-  const fields = multiple ? ["metadata.id"].concat(selectedFields) : selectedFields;
+  const fields = multiple ? ["_id"].concat(selectedFields) : selectedFields;
+  console.log(data);
   return (
     <NiceContainer>
       <Table size="small" aria-label="a dense table" sx={{mb: "5px"}}>
@@ -40,8 +41,8 @@ export default memo(({ data, selectedFields }) => {
           {
             multiple &&
             data.map(d => 
-                  <TableRow key={d.metadata.id}>
-                    {fields.map(f => <TableCell key={`${d.metadata.id}-${f}`} align="left">{JSONPath({path: f, json: d})}</TableCell>)}
+                  <TableRow key={d._id}>
+                    {fields.map(f => <TableCell key={`${d._id}-${f}`} align="left">{JSONPath({path: f, json: d})}</TableCell>)}
                 </TableRow>
             )
           }

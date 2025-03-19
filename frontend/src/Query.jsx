@@ -14,19 +14,20 @@ export default memo(({ id, data, isConnectable }) => {
     const [parentPaths, setParentPaths] = useState([]);
     const backend = useBackend();
 
-  const addNewNodesAndEdges = (results) => {
+  const addNewNodesAndEdges = (items) => {
     var newNodes = [];
     var newEdges = [];
-    results.forEach(result => {
-      const newNodeId = `${result.resourceType}.${result.metadata.id}`;
+    items.forEach(item => {
+      const newNodeId = `${item.resourceType}.${item.result._id}`;
       newNodes.push({
         id: newNodeId,
         position: { x: 0, y: 0 },
         type: 'resource',
         data: {
           id: newNodeId,
+          resourceType: item.resourceType,
           inline: {},
-          ...result
+          result: item.result
         },
       });
       newEdges.push({id: `${id}-${newNodeId}`, source: id, target: newNodeId, style: {strokeWidth: 5} });
