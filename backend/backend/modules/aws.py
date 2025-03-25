@@ -5,7 +5,7 @@ from typing import AsyncGenerator, Dict, List
 import aioboto3
 import boto3
 
-from backend.model import Attribute, Handler, Provider, GenericQueryException
+from backend.model import Attribute, Handler, Provider, GenericQueryException, LinkInfo
 
 
 class AWS(Provider):
@@ -110,6 +110,12 @@ class SubnetHandler(LegacyAWSAPIHandler):
                 **item
             }
 
+    @classmethod
+    async def links(cls) -> List[LinkInfo]:
+        return [
+            LinkInfo(path="VpcId", parent_provider= "aws", parent_resource="vpc", parent_path="VpcId")
+        ]
+
 
 class RouteTableHandler(LegacyAWSAPIHandler):
     boto_client_name = "ec2"
@@ -127,6 +133,12 @@ class RouteTableHandler(LegacyAWSAPIHandler):
                 **{"_id": item["RouteTableId"]},
                 **item
             }
+
+    @classmethod
+    async def links(cls) -> List[LinkInfo]:
+        return [
+            LinkInfo(path="VpcId", parent_provider= "aws", parent_resource="vpc", parent_path="VpcId")
+        ]
 
 
 class InternetGatewayHandler(LegacyAWSAPIHandler):
@@ -146,6 +158,12 @@ class InternetGatewayHandler(LegacyAWSAPIHandler):
                 **item
             }
 
+    @classmethod
+    async def links(cls) -> List[LinkInfo]:
+        return [
+            LinkInfo(path="VpcId", parent_provider= "aws", parent_resource="vpc", parent_path="VpcId")
+        ]
+
 
 class SecurityGroupHandler(LegacyAWSAPIHandler):
     boto_client_name = "ec2"
@@ -163,6 +181,12 @@ class SecurityGroupHandler(LegacyAWSAPIHandler):
                 **{"_id": item["GroupId"]},
                 **item
             }
+
+    @classmethod
+    async def links(cls) -> List[LinkInfo]:
+        return [
+            LinkInfo(path="VpcId", parent_provider= "aws", parent_resource="vpc", parent_path="VpcId")
+        ]
 
 
 class NATGatewayHandler(LegacyAWSAPIHandler):
@@ -182,6 +206,12 @@ class NATGatewayHandler(LegacyAWSAPIHandler):
                 **item
             }
 
+    @classmethod
+    async def links(cls) -> List[LinkInfo]:
+        return [
+            LinkInfo(path="VpcId", parent_provider= "aws", parent_resource="vpc", parent_path="VpcId")
+        ]
+
 
 class ElasticIpHandler(LegacyAWSAPIHandler):
     boto_client_name = "ec2"
@@ -199,6 +229,12 @@ class ElasticIpHandler(LegacyAWSAPIHandler):
                 **{"_id": item["AllocationId"]},
                 **item
             }
+
+    @classmethod
+    async def links(cls) -> List[LinkInfo]:
+        return [
+            LinkInfo(path="VpcId", parent_provider= "aws", parent_resource="vpc", parent_path="VpcId")
+        ]
 
 
 class NetworkInterfaceHandler(LegacyAWSAPIHandler):
@@ -218,6 +254,12 @@ class NetworkInterfaceHandler(LegacyAWSAPIHandler):
                 **item
             }
 
+    @classmethod
+    async def links(cls) -> List[LinkInfo]:
+        return [
+            LinkInfo(path="VpcId", parent_provider= "aws", parent_resource="vpc", parent_path="VpcId")
+        ]
+
 
 class NetworkAclHandler(LegacyAWSAPIHandler):
     boto_client_name = "ec2"
@@ -235,6 +277,12 @@ class NetworkAclHandler(LegacyAWSAPIHandler):
                 **{"_id": item["NetworkAclId"]},
                 **item
             }
+
+    @classmethod
+    async def links(cls) -> List[LinkInfo]:
+        return [
+            LinkInfo(path="VpcId", parent_provider= "aws", parent_resource="vpc", parent_path="VpcId")
+        ]
 
 
 _PROFILES = []

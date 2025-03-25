@@ -27,11 +27,39 @@ async def resource_types():
     return list(iter_all_resource_types())
 
 
+@app.get("/link-suggestion")
+async def link_suggestion(child_provider: str, child_resource: str, parent_provider: str, parent_resource: str):
+    try:
+        links = await handler(child_provider, child_resource).links()
+        matching_links = [
+            l for l in links
+            if l.parent_provider == parent_provider and l.parent_resource == parent_resource
+        ]
+        if not matching_links:
+            return {"key": "", "val": ""}
+        m = matching_links[0]
+        return {"key": m.path, "val": m.parent_path}
+    except Exception as e:
+        return {"key": "", "val": ""}
+
+
 @app.get("/attributes")
 async def attributes(r: Request):
     validate(r)
     try:
         result = await handler(r.query_params["_provider"], r.query_params["_resource"]).attributes()
+        return result
+    except GenericQueryException as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/attribute-values")
+async def attribute_values(r: Request):
+    validate(r)
+    if "attribute" not in r.query_params:
+        raise HTTPException(status_code=400, detail='You must specify "attribute"')
+    try:
+        result = await handler(r.query_params["_provider"], r.query_params["_resource"]).attribute_values(**r.query_params)
         return result
     except GenericQueryException as e:
         raise HTTPException(status_code=400, detail=str(e))

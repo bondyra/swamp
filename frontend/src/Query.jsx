@@ -1,5 +1,4 @@
-import React, { memo } from 'react';
-import { useCallback, useEffect, useState } from 'react';
+import React, { memo, useEffect, useCallback, useState } from 'react';
 import { Handle, Position, useReactFlow } from '@xyflow/react';
 
 import {JSONPath} from 'jsonpath-plus';
@@ -8,10 +7,12 @@ import QueryWizard from './QueryWizard';
 import { getAllJSONPaths } from './Utils';
 import { useBackend } from './BackendProvider';
 
+//todo collapse
 export default memo(({ id, data, isConnectable }) => {
   const reactFlow = useReactFlow();
     const [childPaths, setChildPaths] = useState([]);
     const [parentPaths, setParentPaths] = useState([]);
+    const [previousLabelVars, setPreviousLabelsVars] = useState(null);
     const backend = useBackend();
 
   const addNewNodesAndEdges = (items) => {
@@ -35,38 +36,16 @@ export default memo(({ id, data, isConnectable }) => {
     reactFlow.addNodes(newNodes);
     reactFlow.addEdges(newEdges);
   };
-
+  console.log(data)
   const updateResourceType = useCallback(
     (newValue) => {
       reactFlow.updateNodeData(id, (node) => {
-        return { 
-          ...node.data,
-          resourceType: newValue
-        };
-      })
+          return {
+            ...node.data,
+            resourceType: newValue
+          };
+      });
     }, [id, reactFlow]);
-
-    const updateChildPath = useCallback(
-      (newValue) => {
-        reactFlow.updateNodeData(id, (node) => {
-          return { 
-            ...node.data,
-            childPath: newValue
-          };
-        })
-      }, [id, reactFlow]
-    );
-  
-    const updateParentPath = useCallback(
-      (newValue) => {
-        reactFlow.updateNodeData(id, (node) => {
-          return { 
-            ...node.data,
-            parentPath: newValue
-          };
-        })
-      }, [id, reactFlow]
-    );
 
   const setLabels = useCallback(
     (labels) => {
@@ -74,6 +53,28 @@ export default memo(({ id, data, isConnectable }) => {
         return {...node.data, labels: labels};
       })
     }, [id, reactFlow]);
+  
+  const updateChildPath = useCallback(
+    (newValue) => {
+      reactFlow.updateNodeData(id, (node) => {
+        return { 
+          ...node.data,
+          childPath: newValue
+        };
+      })
+    }, [id, reactFlow]
+  );
+
+  const updateParentPath = useCallback(
+    (newValue) => {
+      reactFlow.updateNodeData(id, (node) => {
+        return { 
+          ...node.data,
+          parentPath: newValue
+        };
+      })
+    }, [id, reactFlow]
+  );
 
   useEffect(() => {
     const loadAttributes = async () => {
@@ -84,7 +85,7 @@ export default memo(({ id, data, isConnectable }) => {
     };
     loadAttributes();
   }, [data.resourceType, setChildPaths, backend]);
-
+  
   useEffect(() => {
     setParentPaths(
       data.parent ? getAllJSONPaths(data.parent).map(p => {
@@ -95,6 +96,18 @@ export default memo(({ id, data, isConnectable }) => {
       }) : []
     )
   }, [data.parent])
+  
+  useEffect(() => {
+    var result = new Map();
+    reactFlow.getNodes().forEach(n => {
+      (n.data.labels ?? []).forEach(l => {
+        if(! result[l.key])
+          result[l.key] = new Set()
+        result[l.key].add(l.val)
+      })
+    })
+    setPreviousLabelsVars(result)
+  }, [setPreviousLabelsVars, reactFlow])
 
   return (
     <>
@@ -102,7 +115,9 @@ export default memo(({ id, data, isConnectable }) => {
         <div className="inner">
           <div className="body">
             <QueryWizard 
-            nodeId={id} resourceType={data.resourceType} labels={data.labels} doSomethingWithResults={addNewNodesAndEdges} onResourceTypeUpdate={updateResourceType}
+            nodeId={id} resourceType={data.resourceType} labels={data.labels} 
+            doSomethingWithResults={addNewNodesAndEdges} onResourceTypeUpdate={updateResourceType}
+            previousLabelVars={previousLabelVars}
             setLabels={setLabels}
             join={data.parent !== undefined}
             childPath={data.childPath} childPaths={childPaths} onChildPathUpdate={updateChildPath}

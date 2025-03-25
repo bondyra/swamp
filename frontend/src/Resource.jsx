@@ -54,15 +54,14 @@ export default memo(({ id, data, isConnectable }) => {
   const [inlineChildPaths, setInlineChildPaths] = useState([]);
   const [inlineParentPaths, setInlineParentPaths] = useState([]);
   const [inlineCollapsed, setInlineCollapsed] = useState(true);
+  const [previousLabelVars, setPreviousLabelsVars] = useState(null)
   const backend = useBackend();
 
   const addQuery = useCallback((event) => {
-    const sourceNodeId = id
-    const sourceNode = reactFlow.getNodes().filter(n=> n.id === sourceNodeId)[0]
     const targetNodeId = `${id}-${newLinkId()}`
     // we need to remove the wrapper bounds, in order to get the correct position
     const { clientX, clientY } = 'changedTouches' in event ? event.changedTouches[0] : event;
-    
+    // todo: move it to querywizard and add link label if it's a join query
     const newNode = {
       id: targetNodeId,
       position: reactFlow.screenToFlowPosition({
@@ -70,16 +69,27 @@ export default memo(({ id, data, isConnectable }) => {
         y: clientY,
       }),
       type: 'query',
-      data: {resourceType: null, labels: [], parentResourceType: sourceNode.data.resourceType,  parent: sourceNode.data.result},
+      data: {
+        resourceType: null,
+        parentResourceType: data.resourceType, 
+        parent: data.result,
+        labels: [
+          {
+            id: "link", key: "", val: "", required: true, 
+            allowedValues: data.result ? getAllJSONPaths(data.result).map(p => { return {value: p, description: JSONPath({path: p, json: data.result})}}) : [],
+            dependsOn: null
+          }
+        ]
+      },
       origin: [0.5, 0.0],
     };
 
     reactFlow.setNodes((nds) => nds.concat(newNode));
     reactFlow.setEdges((eds) =>
-      eds.concat({ id: `${sourceNodeId}-${targetNodeId}`, source: sourceNodeId, target: targetNodeId, style: {strokeWidth: 5} }),
+      eds.concat({ id: `${id}-${targetNodeId}`, source: id, target: targetNodeId, style: {strokeWidth: 5} }),
     );
-    setIsLinked(true);
-  }, [id, reactFlow]);
+    setIsLinked(true);  // make it useEffect 
+  }, [id, reactFlow, data.result, data.resourceType]);
 
   const inlineResources = useCallback(
     (results) => {
@@ -177,6 +187,18 @@ export default memo(({ id, data, isConnectable }) => {
       })
     }, [id, reactFlow]);
 
+  useEffect(() => {
+    var result = new Map();
+    reactFlow.getNodes().forEach(n => {
+      (n.data.labels ?? []).forEach(l => {
+        if(! result[l.key])
+          result[l.key] = new Set()
+        result[l.key].add(l.val)
+      })
+    })
+    setPreviousLabelsVars(result)
+  }, [setPreviousLabelsVars, reactFlow])
+
   return (
     <>
       <div className="wrapper">
@@ -227,7 +249,7 @@ export default memo(({ id, data, isConnectable }) => {
               <Box sx={{borderLeft: "1px solid gray", ml: "12px", pl:"12px", mt:"0px", pt: "0px"}}>
                 <QueryWizard 
                 nodeId={id} resourceType={data.inline.resourceType} labels={data.inline.labels || []} doSomethingWithResults={inlineResources} onResourceTypeUpdate={updateInlineResourceType}
-                setLabels={setInlineLabels}
+                setLabels={setInlineLabels} previousLabelVars={previousLabelVars}
                 join={true}
                 childPath={data.inline.childPath} childPaths={inlineChildPaths} onChildPathUpdate={updateInlineChildPath} 
                 parentPath={data.inline.parentPath} parentPaths={inlineParentPaths} onParentPathUpdate={updateInlineParentPath}

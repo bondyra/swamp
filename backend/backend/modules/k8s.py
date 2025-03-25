@@ -4,7 +4,7 @@ from kubernetes_asyncio import config
 from kubernetes_asyncio.dynamic import DynamicClient
 import requests
 
-from backend.model import Attribute, Handler, Provider, GenericQueryException
+from backend.model import Attribute, Handler, Provider, GenericQueryException, LinkInfo
 
 
 description = "Module for interacting with Kubernetes resources"
@@ -62,6 +62,15 @@ class K8sHandler(Handler):
     @staticmethod
     def provider() -> str:
         return "k8s"
+    
+    @classmethod
+    async def attribute_values(cls, attribute: str, **kwargs) -> List[str]:
+        # stupidly hardwired for now (and probably for a long time)
+        if attribute == "_namespace":
+            if "_context" not in kwargs:
+                raise GenericQueryException(f"To get attribute values of namespace, we need context")
+            return await _get_namespaces(kwargs["_context"])
+        raise GenericQueryException(f"Not supported for attribute {attribute}")
 
 
 class NamespacedK8sHandler(K8sHandler):
@@ -96,7 +105,7 @@ class NamespacedK8sHandler(K8sHandler):
         
         return [
             Attribute(path="_context", description="Kubernetes context to use", query_required=True, allowed_values=await _get_contexts()),
-            Attribute(path="_namespace", description="Kubernetes namespace this resource sits in", query_required=True, allowed_values=["default", "kube-system", "kube-public", "kube-node-lease"]),
+            Attribute(path="_namespace", description="Kubernetes namespace this resource sits in", query_required=True, depends_on="_context"),
             *resource_attributes
         ]
 
@@ -117,6 +126,11 @@ class ConfigMapHandler(NamespacedK8sHandler):
     @staticmethod
     def resource() -> str:
         return "cm"
+
+    @classmethod
+    async def links(cls) -> List[LinkInfo]:
+        return [
+        ]
     
 
 class ReplicaSetHandler(NamespacedK8sHandler):
@@ -135,6 +149,15 @@ class ReplicaSetHandler(NamespacedK8sHandler):
     @staticmethod
     def resource() -> str:
         return "rs"
+
+    @classmethod
+    async def links(cls) -> List[LinkInfo]:
+        return [
+            # link to deployment todo
+            # link to sa todo
+            # link to secret todo
+            # link to cm todo
+        ]
     
 
 class DeploymentHandler(NamespacedK8sHandler):
@@ -153,6 +176,14 @@ class DeploymentHandler(NamespacedK8sHandler):
     @staticmethod
     def resource() -> str:
         return "deployment"
+    
+    @classmethod
+    async def links(cls) -> List[LinkInfo]:
+        return [
+            # link to sa todo
+            # link to secret todo
+            # link to cm todo
+        ]
 
 
 class PodHandler(NamespacedK8sHandler):
@@ -171,6 +202,18 @@ class PodHandler(NamespacedK8sHandler):
     @staticmethod
     def resource() -> str:
         return "pod"
+    
+    @classmethod
+    async def links(cls) -> List[LinkInfo]:
+        return [
+            # link to replicaset todo
+            # link to deployment todo
+            # link to sa todo
+            # link to secret todo
+            # link to cm todo
+            # link to service todo
+            # link to ep todo
+        ]
 
 
 class PersistentVolumeClaimHandler(NamespacedK8sHandler):
@@ -189,6 +232,12 @@ class PersistentVolumeClaimHandler(NamespacedK8sHandler):
     @staticmethod
     def resource() -> str:
         return "pvc"
+    
+    @classmethod
+    async def links(cls) -> List[LinkInfo]:
+        return [
+            # link to PV todo
+        ]
 
 
 class SecretHandler(NamespacedK8sHandler):
@@ -207,6 +256,11 @@ class SecretHandler(NamespacedK8sHandler):
     @staticmethod
     def resource() -> str:
         return "secret"
+    
+    @classmethod
+    async def links(cls) -> List[LinkInfo]:
+        return [
+        ]
 
 
 class ServiceAccountHandler(NamespacedK8sHandler):
@@ -225,6 +279,11 @@ class ServiceAccountHandler(NamespacedK8sHandler):
     @staticmethod
     def resource() -> str:
         return "sa"
+    
+    @classmethod
+    async def links(cls) -> List[LinkInfo]:
+        return [
+        ]
 
 
 class ServiceHandler(NamespacedK8sHandler):
@@ -243,6 +302,11 @@ class ServiceHandler(NamespacedK8sHandler):
     @staticmethod
     def resource() -> str:
         return "service"
+    
+    @classmethod
+    async def links(cls) -> List[LinkInfo]:
+        return [
+        ]
 
 
 class EventHandler(NamespacedK8sHandler):
@@ -261,6 +325,11 @@ class EventHandler(NamespacedK8sHandler):
     @staticmethod
     def resource() -> str:
         return "event"
+    
+    @classmethod
+    async def links(cls) -> List[LinkInfo]:
+        return [
+        ]
 
 
 class EndpointsHandler(NamespacedK8sHandler):
@@ -279,6 +348,12 @@ class EndpointsHandler(NamespacedK8sHandler):
     @staticmethod
     def resource() -> str:
         return "ep"
+    
+    @classmethod
+    async def links(cls) -> List[LinkInfo]:
+        return [
+            # link to service todo
+        ]
 
 
 class GlobalK8sHandler(K8sHandler):
@@ -315,6 +390,11 @@ class NodeHandler(NamespacedK8sHandler):
     @staticmethod
     def resource() -> str:
         return "node"
+    
+    @classmethod
+    async def links(cls) -> List[LinkInfo]:
+        return [
+        ]
 
 
 class PersistentVolumeHandler(NamespacedK8sHandler):
@@ -333,6 +413,11 @@ class PersistentVolumeHandler(NamespacedK8sHandler):
     @staticmethod
     def resource() -> str:
         return "pv"
+    
+    @classmethod
+    async def links(cls) -> List[LinkInfo]:
+        return [
+        ]
 
 
 _CONTEXTS = []
@@ -354,10 +439,13 @@ _CONTEXT_TO_NAMESPACES = {}
 async def _get_namespaces(context):
     if context in _CONTEXT_TO_NAMESPACES:
         return _CONTEXT_TO_NAMESPACES[context]
-    async with await config.new_client_from_config(context=context) as api:
-        client = await DynamicClient(api)
-        v1 = await client.resources.get(api_version="v1", kind="Namespace")
-        response = await v1.get()
-        namespaces = [it.metadata.name for it in response.items]
-        _CONTEXT_TO_NAMESPACES[context] = namespaces
+    try:
+        async with await config.new_client_from_config(context=context) as api:
+            client = await DynamicClient(api)
+            v1 = await client.resources.get(api_version="v1", kind="Namespace")
+            response = await v1.get()
+            namespaces = [it.metadata.name for it in response.items]
+            _CONTEXT_TO_NAMESPACES[context] = namespaces
+    except config.config_exception.ConfigException:
+        raise GenericQueryException(f"Invalid context {context}")
     return _CONTEXT_TO_NAMESPACES[context]

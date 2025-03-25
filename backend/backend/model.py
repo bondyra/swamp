@@ -8,6 +8,14 @@ class Attribute(BaseModel):
     description: str
     query_required: bool
     allowed_values: Optional[List[str]] = None
+    depends_on: Optional[str] = None
+
+
+class LinkInfo(BaseModel):
+    path: str
+    parent_provider: str
+    parent_resource: str
+    parent_path: str
 
 
 class ResourceType(BaseModel):
@@ -83,6 +91,14 @@ class Handler(metaclass=_HandlerMeta):
     @classmethod
     async def attributes(cls) -> List[Attribute]:
         pass
+
+    @classmethod
+    async def links(cls) -> List[LinkInfo]:
+        return []
+    
+    @classmethod
+    async def attribute_values(cls, attribute: str, **kwargs) -> List[str]:
+        raise GenericQueryException(f"Not supported for attribute {attribute}")
 
 
 def handler(provider: str, resource: str) -> Handler:

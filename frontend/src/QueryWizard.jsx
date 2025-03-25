@@ -65,7 +65,7 @@ const validateLabels = (labels) => {
 }
 
 export default function QueryWizard({
-  nodeId, resourceType, labels, doSomethingWithResults, onResourceTypeUpdate, setLabels,
+  nodeId, resourceType, labels, doSomethingWithResults, onResourceTypeUpdate, setLabels, previousLabelVars,
   join,
   childPath, onChildPathUpdate, childPaths, parentPath, onParentPathUpdate, parentPaths, getParentVal, parentResourceType
 }) {
@@ -127,11 +127,11 @@ export default function QueryWizard({
 
   useEffect(() => {
     async function update() {
-      const newResourceTypes = await backend.resourceTypes()
-      setResourceTypes(newResourceTypes)
+      const newResourceTypes = await backend.resourceTypes();
+      setResourceTypes(newResourceTypes);
     }
     update();
-  }, [backend, setResourceTypes])
+  }, [backend, setResourceTypes]);
 
   return (
     <>
@@ -139,7 +139,7 @@ export default function QueryWizard({
         <Stack sx={leftTheme}>
           <Stack direction="row">
             <Box sx={{fontSize: "14px", fontWeight:"600", mr: "10px", fontFamily: "monospace"}}>
-              <p>{join ? "JOIN" : "SELECT"}</p>
+              <p>GET</p>
             </Box>
             <SingleFieldPicker disabled={disabled || false} value={resourceType} updateData={onResourceTypeUpdate} options={resourceTypes} getIconSrc={getIconSrc}
             valuePlaceholder="What?" popperPrompt={join ? "Select resource to join" : "Select resource to query"}/>
@@ -148,7 +148,7 @@ export default function QueryWizard({
             join &&
             <Stack direction="row">
               <Box sx={{fontSize: "12px", fontWeight:"600", mr: "5px", fontFamily: "monospace"}}>
-                <p>ON</p>
+                <p>WHEN</p>
               </Box>
               <SingleFieldPicker disabled={disabled || false} value={childPath} valuePlaceholder="Child field" updateData={onChildPathUpdate} options={childPaths}
               popperPrompt={resourceType ? `Choose attribute of ${resourceType} to join on` : "Please select resource type to join first"}
@@ -161,7 +161,8 @@ export default function QueryWizard({
               />
             </Stack>
           }
-          <LabelPicker nodeId={nodeId} resourceType={resourceType} labels={labels} disabled={disabled || false} setLabels={setLabels}/>
+          <LabelPicker nodeId={nodeId} resourceType={resourceType} labels={labels} 
+          hasRun={disabled || false} setLabels={setLabels} previousLabelVars={previousLabelVars} parentResourceType={parentResourceType}/>
         </Stack>
         <Stack>
           <Tooltip title={message || "Query status will be here"}>

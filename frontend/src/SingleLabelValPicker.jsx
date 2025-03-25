@@ -187,7 +187,18 @@ export default function SingleLabelValPicker({labelVal, options, onFieldUpdate, 
                         },
                       })}
                     >
-                      {option}
+                    {
+                      typeof option === "object" &&
+                      <>
+                        <b>{option.value}</b>
+                        <br/>
+                        <Box sx={{fontSize: "10px"}}><i>{option.description}</i></Box>
+                      </>
+                    }
+                    {
+                      typeof option !== "object" &&
+                      <>{option}</>
+                    }
                     </Box>
                     <Box
                       component={CheckIcon}
@@ -200,7 +211,7 @@ export default function SingleLabelValPicker({labelVal, options, onFieldUpdate, 
                 );
               }}
               options={options}
-              getOptionLabel={(o) => o}
+              getOptionLabel={(o) => o.value ?? o}
               renderInput={(params) => (
                 <StyledInput
                   ref={params.InputProps.ref}

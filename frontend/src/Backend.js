@@ -18,7 +18,23 @@ export default class Backend {
 
   async attributes(resourceType) {
     const [provider, resource] = resourceType.split(".")
-    return fetch(`${this.base_url}/attributes?_provider=${provider}&_resource=${resource}`).then(response => response.json());
+    return fetch(`${this.base_url}/attributes?_provider=${provider}&_resource=${resource}`)
+    .then(response => response.json());
+  }
+
+  async attributeValues(resourceType, attribute, params) {
+    const [provider, resource] = resourceType.split(".")
+    const paramsQs = params.map(x => `${x.key}=${x.val}`).join("&")
+    console.log(paramsQs)
+    return fetch(`${this.base_url}/attribute-values?_provider=${provider}&_resource=${resource}&attribute=${attribute}&${paramsQs}`)
+    .then(response => response.json());
+  }
+
+  async linkSuggestion(childResourceType, parentResourceType) {
+    const [childProvider, childResource] = childResourceType.split(".")
+    const [parentProvider, parentResource] = parentResourceType.split(".")
+    return fetch(`${this.base_url}/link-suggestion?child_provider=${childProvider}&child_resource=${childResource}&parent_provider=${parentProvider}&parent_resource=${parentResource}`)
+    .then(response => response.json());
   }
 
   async query(resourceType, labels) {

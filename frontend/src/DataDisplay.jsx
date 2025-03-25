@@ -25,7 +25,7 @@ const NiceContainer = styled(TableContainer)(({ theme }) => ({
 export default memo(({ data, selectedFields }) => {
   const multiple = Array.isArray(data)
   const fields = multiple ? ["_id"].concat(selectedFields) : selectedFields;
-  console.log(data);
+
   return (
     <NiceContainer>
       <Table size="small" aria-label="a dense table" sx={{mb: "5px"}}>
