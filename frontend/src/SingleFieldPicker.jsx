@@ -132,7 +132,7 @@ const Button = styled(ButtonBase)(({ theme }) => ({
 }));
 
 
-export default function SingleFieldPicker({value, valuePlaceholder, updateData, options, getIconSrc, disabled, popperPrompt}) {
+export default function SingleFieldPicker({value, valuePlaceholder, updateData, options, getIconSrc, disabled, popperPrompt, freeSolo}) {
   const [anchorEl, setAnchorEl] = useState(null);
 
   const handleClick = (event) => {
@@ -203,11 +203,12 @@ export default function SingleFieldPicker({value, valuePlaceholder, updateData, 
             </Box>
             <Autocomplete
               open
+              freeSolo
               onClose={(event, reason) => {
                 handleClose();
               }}
               value={value}
-              onChange={(event, newOption, reason) => {if (newOption) updateData(newOption.value)}}
+              onChange={(event, newOption, reason) => {if (newOption) updateData(newOption.value ?? newOption)}}
               renderTags={() => null}
               noOptionsText="No options available"
               renderOption={(props, option, { selected }) => {

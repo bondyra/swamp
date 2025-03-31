@@ -24,6 +24,16 @@ class ResourceType(BaseModel):
     description: str
 
 
+class Label(BaseModel):
+    key: str
+    val: str
+    op: str
+
+    @classmethod
+    def from_query(cls, query: str):
+        return cls(dict(x.split("=")[:2] for x in query.split(",")))
+
+
 _provider_registry = {}
 _handler_registry = {}
 
@@ -85,7 +95,7 @@ class Handler(metaclass=_HandlerMeta):
         pass
 
     @classmethod
-    async def get(cls, **required_attrs) -> AsyncGenerator[Dict, None]:
+    async def get(cls, labels: List[Label]) -> AsyncGenerator[Dict, None]:
         pass
 
     @classmethod

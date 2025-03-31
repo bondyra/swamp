@@ -1,28 +1,26 @@
 import React, { memo, useEffect, useCallback, useState } from 'react';
 import { Handle, Position, useReactFlow } from '@xyflow/react';
 
-import {JSONPath} from 'jsonpath-plus';
-
 import QueryWizard from './QueryWizard';
-import { getAllJSONPaths } from './Utils';
-import { useBackend } from './BackendProvider';
 
 //todo collapse
 export default memo(({ id, data, isConnectable }) => {
   const reactFlow = useReactFlow();
-    const [childPaths, setChildPaths] = useState([]);
-    const [parentPaths, setParentPaths] = useState([]);
     const [previousLabelVars, setPreviousLabelsVars] = useState(null);
-    const backend = useBackend();
 
   const addNewNodesAndEdges = (items) => {
     var newNodes = [];
     var newEdges = [];
+    const currNode = reactFlow.getNode(id);
+    // todo: move it to querywizard and add link label if it's a join query
     items.forEach(item => {
       const newNodeId = `${item.resourceType}.${item.result._id}`;
       newNodes.push({
         id: newNodeId,
-        position: { x: 0, y: 0 },
+        position: { 
+          x: currNode.position.x ?? 0, 
+          y: currNode.position.y + 100 ?? 0 
+        },
         type: 'resource',
         data: {
           id: newNodeId,
@@ -36,7 +34,7 @@ export default memo(({ id, data, isConnectable }) => {
     reactFlow.addNodes(newNodes);
     reactFlow.addEdges(newEdges);
   };
-  console.log(data)
+
   const updateResourceType = useCallback(
     (newValue) => {
       reactFlow.updateNodeData(id, (node) => {
@@ -53,49 +51,6 @@ export default memo(({ id, data, isConnectable }) => {
         return {...node.data, labels: labels};
       })
     }, [id, reactFlow]);
-  
-  const updateChildPath = useCallback(
-    (newValue) => {
-      reactFlow.updateNodeData(id, (node) => {
-        return { 
-          ...node.data,
-          childPath: newValue
-        };
-      })
-    }, [id, reactFlow]
-  );
-
-  const updateParentPath = useCallback(
-    (newValue) => {
-      reactFlow.updateNodeData(id, (node) => {
-        return { 
-          ...node.data,
-          parentPath: newValue
-        };
-      })
-    }, [id, reactFlow]
-  );
-
-  useEffect(() => {
-    const loadAttributes = async () => {
-      if (data.resourceType === null || data.resourceType === undefined)
-        return []
-      const attributes = await backend.attributes(data.resourceType)
-      setChildPaths(attributes.map(a=> {return {value: a.path, description: a.description}}))
-    };
-    loadAttributes();
-  }, [data.resourceType, setChildPaths, backend]);
-  
-  useEffect(() => {
-    setParentPaths(
-      data.parent ? getAllJSONPaths(data.parent).map(p => {
-        return {
-          value: p,
-          description: JSONPath({path: p, json: data.parent})
-        }
-      }) : []
-    )
-  }, [data.parent])
   
   useEffect(() => {
     var result = new Map();
@@ -119,10 +74,7 @@ export default memo(({ id, data, isConnectable }) => {
             doSomethingWithResults={addNewNodesAndEdges} onResourceTypeUpdate={updateResourceType}
             previousLabelVars={previousLabelVars}
             setLabels={setLabels}
-            join={data.parent !== undefined}
-            childPath={data.childPath} childPaths={childPaths} onChildPathUpdate={updateChildPath}
-            parentPath={data.parentPath} parentPaths={parentPaths} onParentPathUpdate={updateParentPath} parentResourceType={data.parentResourceType}
-            getParentVal={(p) => JSONPath({path: p, json: data.parent})}
+            parent={data.parent} parentResourceType={data.parentResourceType}
             />
             <Handle type="target" position={Position.Top} id="a" style={{opacity: 0}} />
             <Handle type="source" position={Position.Bottom} id="b" style={{opacity: 0}} />

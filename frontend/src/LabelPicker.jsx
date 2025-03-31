@@ -11,10 +11,13 @@ import Stack from '@mui/material/Stack';
 import TextField, { textFieldClasses} from '@mui/material/TextField';
 import React, { useEffect, useState } from 'react';
 
+import {JSONPath} from 'jsonpath-plus';
+
 import { useBackend } from './BackendProvider';
 import SingleFieldPicker from './SingleFieldPicker'
 import SingleLabelValPicker from './SingleLabelValPicker'
 import { Tooltip } from '@mui/material';
+import LabelOp from './LabelOp';
 
 let labelId = 1;
 const newLabelId = () => labelId++;
@@ -39,10 +42,12 @@ const themeFunction = (theme) => ({
 	},
 })
 
-export default function LabelPicker({ resourceType, labels, setLabels, previousLabelVars, parentResourceType, hasRun }) {
+export default function LabelPicker({ resourceType, labels, setLabels, previousLabelVars, parent, parentResourceType }) {
 	const [attributes, setAttributes] = useState(new Map())
-	const [localLabels, setLocalLabels] = useState(labels)
+	const [localLabels, setLocalLabels] = useState([]);
 	const backend = useBackend();
+
+	useEffect(() => {setLocalLabels(labels);}, [setLocalLabels, labels]);
 
 	const labelsWithUpdatedLabelsById = (ll, extraLabels) => {
 		return ll.map(l => {
@@ -58,16 +63,6 @@ export default function LabelPicker({ resourceType, labels, setLabels, previousL
 			...ll.filter(l => !extraLabelKeys.includes(l.key)),
 			...extraLabels
 		]
-	}
-
-	const labelsWithLinkSuggestion = (ll, linkKeyVal) => {
-		if(!linkKeyVal || (linkKeyVal.key === "" && linkKeyVal.val === ""))
-			return ll
-		return ll.map(l => {
-			if (l.id === "link")
-				return {...l, ...linkKeyVal};
-			return l;
-		});
 	}
 
 	useEffect(() => {  // when resourceType changes
@@ -92,6 +87,17 @@ export default function LabelPicker({ resourceType, labels, setLabels, previousL
 				const resp = await backend.linkSuggestion(resourceType, parentResourceType)
 				linkKeyVal = {key: resp.key, val: resp.val}
 			}
+
+			const labelsWithLinkSuggestion = (ll, linkKeyVal) => {
+				if(!linkKeyVal || (linkKeyVal.key === "" && linkKeyVal.val === ""))
+					return ll
+				linkKeyVal.val = JSONPath({path: linkKeyVal.val, json: parent})
+				return ll.map(l => {
+					if (l.id === "link")
+						return {...l, ...linkKeyVal};
+					return l;
+				});
+			}
 			// set the labels (local only to prevent re-render loop)
 			setLocalLabels(oldLabels => {
 				return labelsWithLinkSuggestion(
@@ -101,8 +107,7 @@ export default function LabelPicker({ resourceType, labels, setLabels, previousL
 			});
 		};
         loadAttributes();
-	}, [resourceType, parentResourceType, setLocalLabels, backend, previousLabelVars]);
-
+	}, [resourceType, parentResourceType, setLocalLabels, backend, previousLabelVars, parent]);
 	return (
 		<>
             <List dense={true} sx={{padding: "0px", margin: "0px"}}>
@@ -123,8 +128,9 @@ export default function LabelPicker({ resourceType, labels, setLabels, previousL
 								label.id !== "link" && !label.required && <KeyboardArrowRightIcon sx={{width: "8px", height: "8px", padding: "0px"}}/>
 							}
 							<SingleFieldPicker 
+							freeSolo={true}
 							key={`${label.id}-picker`} value={label.key} valuePlaceholder="Filter" 
-							disabled = {label.keyImmutable || hasRun || false}
+							disabled = {label.keyImmutable || false}
 							updateData={(newKey) => {
 								const newLabels = labelsWithUpdatedLabelsById(
 									localLabels,
@@ -140,13 +146,14 @@ export default function LabelPicker({ resourceType, labels, setLabels, previousL
 								setLabels(newLabels);
 							}} 
 							options={[...attributes.values().filter(v=> !v.query_required).map(v => {return {value: v.path, description: v.description}})]}/>
-							<Box key={`${label.id}-eq`}
-								sx={{
-									padding: '0px 7px 0px 7px',
-									fontWeight: 600, pb: "4px"
-								}}>
-							=
-							</Box>
+							<LabelOp op={label.op ?? "contains"} 
+										change={(val) => {
+											const newLabels = labelsWithUpdatedLabelsById(
+												localLabels, [{...label, op: val}]
+											)
+											setLocalLabels(newLabels);
+											setLabels(newLabels);
+										}}/>
 							<Stack 
 								key={`${label.id}-val-outer`}
 								sx={{
@@ -159,10 +166,9 @@ export default function LabelPicker({ resourceType, labels, setLabels, previousL
 								direction="row"
 							>
 								{
-									(!label.allowedValues && !label.dependsOn && !hasRun) &&
+									(!label.allowedValues && !label.dependsOn) &&
 									<TextField key={`${label.id}-val-inner`}
 										variant="outlined"
-										disabled={hasRun || false}
 										sx={themeFunction}
 										value={label.val}
 										fullWidth= {false}
@@ -174,10 +180,6 @@ export default function LabelPicker({ resourceType, labels, setLabels, previousL
 											setLabels(newLabels);
 										}}
 									/>
-								}
-								{
-									(!label.allowedValues && !label.dependsOn && hasRun) &&
-									<Box sx={{ fontSize: 10, width:"fit-content", color: "#586069"}}>{label.val}</Box>
 								}
 								{
 									(label.allowedValues || label.dependsOn) &&
@@ -194,18 +196,16 @@ export default function LabelPicker({ resourceType, labels, setLabels, previousL
 													return {...l, allowedValues: await backend.attributeValues(resourceType, l.key, [{key: label.key, val: val}])}
 												})
 											)
-											console.log(dependentLabels)
 											const newLabels = labelsWithUpdatedLabelsById(
 												localLabels, [...dependentLabels, {...label, val: val}]
 											);
 											setLocalLabels(newLabels);
 											setLabels(newLabels);
 										}}
-										disabled={hasRun || false}
 										descr={`Select one of allowed values for ${label.key}`}
 									/>
 								}
-								{ (!label.required && !hasRun) &&
+								{ !label.required &&
 								<IconButton key={`${label.id}-val-del-outer`} sx={{padding: "0px", ml: "5px"}} aria-label="delete"
 								onClick={() => {
 									const newLabels = localLabels.filter(x => x.id !== label.id);
@@ -220,19 +220,16 @@ export default function LabelPicker({ resourceType, labels, setLabels, previousL
 					}
 				)
 			}
-			{
-				!hasRun &&
-				<ListItem sx={{padding: "0px"}}>
-					<IconButton aria-label="add" sx={{padding: "0px", margin: "0px", width: "fit-content"}} size="small" disabled={hasRun || false} 
-					onClick={() => {
-						const newLabels = [...localLabels, {id: newLabelId(), key:  "", val: ""}];
-						setLocalLabels(newLabels);
-						setLabels(newLabels);
-					}}>
-						<AddCircleIcon color="primary" sx={{width: "16px", height: "16px", padding: "0px"}}/>
-					</IconButton>
-				</ListItem>
-			}
+			<ListItem sx={{padding: "0px"}}>
+				<IconButton aria-label="add" sx={{padding: "0px", margin: "0px", width: "fit-content"}} size="small"
+				onClick={() => {
+					const newLabels = [...localLabels, {id: newLabelId(), key:  "", val: ""}];
+					setLocalLabels(newLabels);
+					setLabels(newLabels);
+				}}>
+					<AddCircleIcon color="primary" sx={{width: "16px", height: "16px", padding: "0px"}}/>
+				</IconButton>
+			</ListItem>
            	</List>
 		</>
 	);

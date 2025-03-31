@@ -1,10 +1,13 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useReactFlow } from '@xyflow/react';
+import AppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
+import IconButton, {iconButtonClasses} from '@mui/material/IconButton';
 import Button from '@mui/material/Button'
 import Stack from '@mui/material/Stack';
-import { Alert, Tooltip } from '@mui/material';
+import { Alert } from '@mui/material';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
+import AddIcon from '@mui/icons-material/Add';
 import {
   ReactFlow,
   addEdge,
@@ -22,9 +25,14 @@ import '@xyflow/react/dist/base.css';
 import BackendProvider from './BackendProvider';
 import Resource from './Resource';
 import Query from './Query';
+import { D3ForceLayoutProvider } from './D3ForceLayoutProvider';
 import { DagreLayoutProvider } from './DagreLayoutProvider';
+import { randomString } from './Utils'
+import GraphTab from './GraphTab';
+
 
 const version = "v0.0.1"
+const graphPrefix = "__graph_"
 let dummyId = 1;
 const newDummyId = () => `${dummyId++}`;
 
@@ -47,15 +55,21 @@ const nodeTypes = {
   query: Query,
 };
 
-export const downloadJson = ( json ) => {
-  const element = document.createElement( "a" );
-  element.setAttribute( "href", "data:application/json;base64," + btoa(json) );
-  element.setAttribute( "download", `graph-${ Date.now() }` );
-  element.style.display = "none";
-  document.body.appendChild( element );
-  element.click();
-  document.body.removeChild( element );
-}
+const themeFunction = (theme) => ({
+	padding: 0,
+  	color: "#ffffff",
+	'& input': {
+		color: "#ffffff",
+		padding: "0px 0px 0px 5px",
+		fontFamily: "Monospace",
+		fontSize: "10px",
+		height: "20px"
+	},
+	[`&.${iconButtonClasses.root}`]: {
+		width: "100px",
+		minWidth:"10px",
+	},
+})
 
 const SwampApp = () => {
   const reactFlowWrapper = useRef(null);
@@ -65,30 +79,57 @@ const SwampApp = () => {
   // eslint-disable-next-line
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-  const [rfInstance, setRfInstance] = useState(null);
-  // eslint-disable-next-line
-  const [graphName, setGraphName] = useState("default")
-  const [alrt, setAlrt] = useState("")
 
+  const [rfInstance, setRfInstance] = useState(null);
+  const [tabs, setTabs] = useState([]);
+  const [currentTab, setCurrentTab] = useState("default");
+  const [alrt, setAlrt] = useState("");
+
+  // timed display of alert on its change
   useEffect(() => {
     (async () => {
       await new Promise(res => setTimeout(res, 1000));
       setAlrt("")
     })();
-  }, [alrt, setAlrt])
+  }, [alrt, setAlrt]);
 
-  const saveGraph = useCallback(() => {
-    if (rfInstance) {
-      const flow = rfInstance.toObject();
-      localStorage.setItem(graphName, JSON.stringify(flow));
-      setAlrt("Graph saved to local storage!")
-    }
-  }, [rfInstance, graphName])
+  const refreshTabs = useCallback(() => {
+    const t = Object.entries(localStorage).map(it => it[0]).filter(k => k.startsWith(graphPrefix)).map(k => k.replace(graphPrefix, ""));
+    setTabs(t ?? ["default"]);
+  }, [setTabs]);
 
-  // load graph on mount if exists in local storage
+  // load tabs from local storage on mount
+  useEffect(() => {
+    refreshTabs();
+  }, [refreshTabs]);
+
+  // add new tab
+  const addNewTab = useCallback(() => {
+    const newTab = randomString(8);
+    localStorage.setItem(`${graphPrefix}${newTab}`, JSON.stringify({nodes: initialNodes, edges: [], viewport: {}}));
+    refreshTabs();
+    setCurrentTab(newTab);
+  }, [refreshTabs]);
+
+  // rename tab
+  const renameTab = useCallback((newName) => {
+    const content = localStorage.getItem(`${graphPrefix}${currentTab}`);
+    localStorage.setItem(`${graphPrefix}${newName}`, content);
+    localStorage.removeItem(`${graphPrefix}${currentTab}`);
+    refreshTabs();
+    setCurrentTab(newName);
+  }, [setCurrentTab, currentTab, refreshTabs]);
+
+  // // switch tabs
+  // const switchTab = useCallback((name) => {
+  //   setCurrentTab(name);
+
+  // }, []);
+
+  // load graph on start (if exists)
   useEffect(() => {
     async function restoreFlow() {
-      const flow = JSON.parse(localStorage.getItem(graphName));
+      const flow = JSON.parse(localStorage.getItem(`${graphPrefix}${currentTab}`));
       if (flow) {
         const { x = 0, y = 0, zoom = 1 } = flow.viewport;
         setNodes(flow.nodes || []);
@@ -98,8 +139,18 @@ const SwampApp = () => {
       }
     };
     restoreFlow();
-  }, [setNodes, setEdges, reactFlow, graphName])
+  }, [setNodes, setEdges, reactFlow, currentTab]);
 
+  // save graph
+  const saveGraph = useCallback(() => {
+    if (rfInstance) {
+      const flow = rfInstance.toObject();
+      localStorage.setItem(`${graphPrefix}${currentTab}`, JSON.stringify(flow));
+      setAlrt(`Graph saved to local storage!`)
+    }
+  }, [rfInstance, currentTab]);
+
+  // RF stuff
   const onConnect = useCallback(
     (params) =>
       setEdges((eds) =>
@@ -131,17 +182,13 @@ const SwampApp = () => {
     }
   }, [reactFlow, nodes, addDummyNode, delDummyNode, setAddDummyNode, setDelDummyNode])
 
-  useEffect(() => {
-    document.addEventListener("keydown", (event) => {
-      if (event.key === "s" && (navigator.platform.match("Mac") ? event.metaKey : event.ctrlKey)) {
-        event.preventDefault();
+  return (
+    <div className="wrapper" ref={reactFlowWrapper} style={{ width: '100vw', height: '100vh' }} onKeyDown={evt => {
+      if (evt.key === "s" && (navigator.platform.match("Mac") ? evt.metaKey : evt.ctrlKey)) {
+        evt.preventDefault();
         saveGraph();
       }
-    }, false);
-  }, [saveGraph])
-
-  return (
-    <div className="wrapper" ref={reactFlowWrapper} style={{ width: '100vw', height: '100vh' }}>
+    }}>
       <ThemeProvider theme={theme}>
         <ReactFlow 
         nodes={nodes}
@@ -158,8 +205,9 @@ const SwampApp = () => {
         fitView
         >
           <Panel position="top" style={{ width: "100%" }}>
-            <Stack sx={{borderRadius: "10px", background: "#141414", padding: "0px"}} direction="row">
-              <Stack direction="row" sx={{padding: "5px", border: "1px solid gray"}}>
+          <AppBar>
+            <Stack sx={{background: "#141414", padding: "0px"}} direction="row">
+              <Stack direction="row" sx={{padding: "5px"}}>
                 <Box
                   component="img"
                   sx={{
@@ -180,14 +228,20 @@ const SwampApp = () => {
                   <Box component="img" sx={{height: 24, flexShrink: 0, mr: "5px"}} src={"./github.svg"} />
                 </Button>
               </Stack>
-              <Tooltip title="THIS DOESNT DO ANYTHING ATM">
-                <Stack direction="row" sx={{border: "1px solid gray", borderRight: "0px"}}>
-                  <Box key="tab 1" sx={{borderRight: "2px solid gray", fontFamily: "monospace", paddingTop: "14px", paddingLeft: "5px", paddingRight: "5px"}}>MOCK TAB 1</Box>
-                  <Box key="tab 2" sx={{borderRight: "1px solid gray", fontFamily: "monospace", paddingTop: "14px", paddingLeft: "5px", paddingRight: "5px"}}>MOCK TAB 2</Box>
-                  <Box key="tab 3" sx={{borderRight: "1px solid gray", fontFamily: "monospace", paddingTop: "14px", paddingLeft: "5px", paddingRight: "5px"}}>MOCK TAB 3</Box>
-                </Stack>
-              </Tooltip>
+              <Stack direction="row">
+                {
+                  tabs.map(t => {
+                    return (
+                      <GraphTab name={t} selected={t === currentTab} onSelect={setCurrentTab} onEditEnd={renameTab}/>
+                    );
+                  })
+                }
+                <IconButton key={`tab-add}`} onClick={addNewTab} sx={themeFunction}>
+                  <AddIcon/>
+                </IconButton>
+              </Stack>
             </Stack>
+            </AppBar>
           </Panel>
           <Panel position="top-center">
             {alrt && <Alert variant="outlined" severity="success" sx={{color: "lightgreen"}}>{alrt}</Alert>}

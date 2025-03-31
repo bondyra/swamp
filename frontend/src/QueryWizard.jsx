@@ -50,12 +50,6 @@ const leftTheme = (theme) => ({
 	},
 })
 
-const validateJoinLabel = (childPath, parentPath) => {
-  if (!childPath) return "Left side of join cannot be empty!";
-  if (!parentPath) return "Right side of join cannot be empty!";
-  return null;
-}
-
 const validateLabels = (labels) => {
   const invalidAllowedValueLabels = labels.filter(l => l.allowedValues && !l.allowedValues.includes(l.val))
   if(invalidAllowedValueLabels && invalidAllowedValueLabels.length > 0){
@@ -66,10 +60,8 @@ const validateLabels = (labels) => {
 
 export default function QueryWizard({
   nodeId, resourceType, labels, doSomethingWithResults, onResourceTypeUpdate, setLabels, previousLabelVars,
-  join,
-  childPath, onChildPathUpdate, childPaths, parentPath, onParentPathUpdate, parentPaths, getParentVal, parentResourceType
+  parent, parentResourceType
 }) {
-  const [disabled, setDisabled] = useState(false);
   const [loading, setLoading] = useState(false);
   const [resourceTypes, setResourceTypes] = useState([])
   const [status, setStatus] = useState("initial")
@@ -81,11 +73,9 @@ export default function QueryWizard({
     setStatus("failed");
     setMessage(msg);
     setLoading(false);
-    setDisabled(false);
-  }, [setStatus, setMessage, setLoading, setDisabled])
+  }, [setStatus, setMessage, setLoading])
 
   const onClick = useCallback(async () => {
-    setDisabled(true);
     setLoading(true);
     if (!resourceType) {
       setError("You must select a resource type!")
@@ -93,15 +83,6 @@ export default function QueryWizard({
     }
     var queryLabels = labels
     var err = null
-    if (join) {
-      err = validateJoinLabel(childPath, parentPath)
-      if(err) {
-        setError(err);
-        return
-      }
-      const parentVal = getParentVal(parentPath)
-      queryLabels = [...queryLabels, {key: childPath, val: parentVal}]
-    }
     err = validateLabels(queryLabels)
     if(err) {
       setError(err);
@@ -121,9 +102,8 @@ export default function QueryWizard({
     } else {
       setStatus("warning");
       setMessage(`No results!`);
-      setDisabled(false);
     }
-  }, [join, doSomethingWithResults, resourceType, labels, childPath, parentPath, backend, getParentVal, setError])
+  }, [doSomethingWithResults, resourceType, labels, backend, setError])
 
   useEffect(() => {
     async function update() {
@@ -141,28 +121,11 @@ export default function QueryWizard({
             <Box sx={{fontSize: "14px", fontWeight:"600", mr: "10px", fontFamily: "monospace"}}>
               <p>GET</p>
             </Box>
-            <SingleFieldPicker disabled={disabled || false} value={resourceType} updateData={onResourceTypeUpdate} options={resourceTypes} getIconSrc={getIconSrc}
-            valuePlaceholder="What?" popperPrompt={join ? "Select resource to join" : "Select resource to query"}/>
+            <SingleFieldPicker value={resourceType} updateData={onResourceTypeUpdate} options={resourceTypes} getIconSrc={getIconSrc}
+            valuePlaceholder="What?" popperPrompt={parent !== null ? "Select resource to join" : "Select resource to query"}/>
           </Stack>
-          {
-            join &&
-            <Stack direction="row">
-              <Box sx={{fontSize: "12px", fontWeight:"600", mr: "5px", fontFamily: "monospace"}}>
-                <p>WHEN</p>
-              </Box>
-              <SingleFieldPicker disabled={disabled || false} value={childPath} valuePlaceholder="Child field" updateData={onChildPathUpdate} options={childPaths}
-              popperPrompt={resourceType ? `Choose attribute of ${resourceType} to join on` : "Please select resource type to join first"}
-              />
-              <Box sx={{fontSize: "10px", fontWeight:"600", fontFamily: "monospace", padding: '0px 7px 0px 7px'}}>
-                <p>=</p>
-              </Box>
-              <SingleFieldPicker disabled={disabled || false} value={parentPath} valuePlaceholder="Parent field" updateData={onParentPathUpdate} options={parentPaths}
-              popperPrompt={`Choose attribute of parent (${parentResourceType}) to join on`}
-              />
-            </Stack>
-          }
           <LabelPicker nodeId={nodeId} resourceType={resourceType} labels={labels} 
-          hasRun={disabled || false} setLabels={setLabels} previousLabelVars={previousLabelVars} parentResourceType={parentResourceType}/>
+          setLabels={setLabels} previousLabelVars={previousLabelVars} parent={parent} parentResourceType={parentResourceType}/>
         </Stack>
         <Stack>
           <Tooltip title={message || "Query status will be here"}>

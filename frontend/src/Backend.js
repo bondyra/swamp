@@ -25,7 +25,6 @@ export default class Backend {
   async attributeValues(resourceType, attribute, params) {
     const [provider, resource] = resourceType.split(".")
     const paramsQs = params.map(x => `${x.key}=${x.val}`).join("&")
-    console.log(paramsQs)
     return fetch(`${this.base_url}/attribute-values?_provider=${provider}&_resource=${resource}&attribute=${attribute}&${paramsQs}`)
     .then(response => response.json());
   }
@@ -39,7 +38,7 @@ export default class Backend {
 
   async query(resourceType, labels) {
     const [provider, resource] = resourceType.split(".")
-    const qs = (labels ?? []).map(l=> `${l.key}=${l.val}`).join("&")
+    const qs = (labels ?? []).map(l=> encodeURIComponent(`key=${l.key},val=${l.val},op=${l.op ?? "eq"}`)).join("&")
     return fetch(`${this.base_url}/get?_provider=${provider}&_resource=${resource}&${qs}`)
     .then(response => {
       this.throwForStatus(response);
