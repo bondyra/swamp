@@ -5,7 +5,7 @@ from typing import AsyncGenerator, Dict, List
 import aioboto3
 import boto3
 
-from backend.model import Attribute, Handler, Provider, GenericQueryException, LinkInfo
+from backend.model import Attribute, Handler, Label, Provider, GenericQueryException, LinkInfo
 
 
 class AWS(Provider):
@@ -33,12 +33,12 @@ class LegacyAWSAPIHandler(AWSHandler):
         return boto3.client(cls.boto_client_name).meta.service_model.shape_for(cls.shape).documentation
 
     @classmethod
-    async def get(cls, **required_attrs) -> AsyncGenerator[Dict, None]:
-        if "_profile" not in required_attrs:
+    async def get(cls, labels: Dict[str, Label]) -> AsyncGenerator[Dict, None]:
+        if "_profile" not in labels:
             raise GenericQueryException("You need to provide _profile value to query AWS resource")
-        if "_region" not in required_attrs:
+        if "_region" not in labels:
             raise GenericQueryException("You need to provide _region value to query AWS resource")
-        profile, region = required_attrs["_profile"], required_attrs["_region"]
+        profile, region = labels["_profile"].val, labels["_region"].val
         async with aioboto3.Session(profile_name=profile, region_name=region).client(cls.boto_client_name) as client:
             async for item in cls._get(client):
                 yield {

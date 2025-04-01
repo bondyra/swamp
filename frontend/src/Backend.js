@@ -37,21 +37,21 @@ export default class Backend {
   }
 
   async query(resourceType, labels) {
-    const [provider, resource] = resourceType.split(".")
-    const qs = (labels ?? []).map(l=> encodeURIComponent(`key=${l.key},val=${l.val},op=${l.op ?? "eq"}`)).join("&")
+    const [provider, resource] = resourceType.split(".");
+    const qs = (labels ?? []).map(l => `${encodeURIComponent(btoa(l.key))},${encodeURIComponent(btoa(l.op ?? "eq"))},${encodeURIComponent(btoa(l.val))}`).join("&");
     return fetch(`${this.base_url}/get?_provider=${provider}&_resource=${resource}&${qs}`)
-    .then(response => {
-      this.throwForStatus(response);
-      return response.json();
-    })
-    .then(response => {
-      return response.results.map(result => {
-          return {
-            resourceType: resourceType,
-            result: result
-          };
+      .then(response => {
+        this.throwForStatus(response);
+        return response.json();
       })
-    })
+      .then(response => {
+        return response.results.map(result => {
+            return {
+              resourceType: resourceType,
+              result: result
+            };
+        })
+      });
   }
 
   throwForStatus(response) {

@@ -1,4 +1,4 @@
-from typing import AsyncGenerator, Dict, Iterable, List, Optional
+from typing import Any, AsyncGenerator, Dict, Iterable, List, Optional
 
 from pydantic import BaseModel
 
@@ -13,6 +13,7 @@ class Attribute(BaseModel):
 
 class LinkInfo(BaseModel):
     path: str
+    op: str = "eq"
     parent_provider: str
     parent_resource: str
     parent_path: str
@@ -25,13 +26,16 @@ class ResourceType(BaseModel):
 
 
 class Label(BaseModel):
-    key: str
+    key_jsonpath: Any
     val: str
     op: str
 
-    @classmethod
-    def from_query(cls, query: str):
-        return cls(dict(x.split("=")[:2] for x in query.split(",")))
+    def matches(self, data: Dict) -> bool:
+        found_vals = [x.value for x in self.key_jsonpath.find(data)]
+        if self.op == "eq":
+            return found_vals and len(found_vals) == 1 and found_vals[0] == self.val
+        if self.op == "contains":
+            return found_vals and len(found_vals) > 0 and self.val in found_vals
 
 
 _provider_registry = {}
@@ -95,7 +99,7 @@ class Handler(metaclass=_HandlerMeta):
         pass
 
     @classmethod
-    async def get(cls, labels: List[Label]) -> AsyncGenerator[Dict, None]:
+    async def get(cls, labels: Dict[str, Label]) -> AsyncGenerator[Dict, None]:
         pass
 
     @classmethod

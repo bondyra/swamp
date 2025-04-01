@@ -4,7 +4,7 @@ from kubernetes_asyncio import config
 from kubernetes_asyncio.dynamic import DynamicClient
 import requests
 
-from backend.model import Attribute, Handler, Provider, GenericQueryException, LinkInfo
+from backend.model import Attribute, Handler, Label, Provider, GenericQueryException, LinkInfo
 
 
 description = "Module for interacting with Kubernetes resources"
@@ -75,12 +75,12 @@ class K8sHandler(Handler):
 
 class NamespacedK8sHandler(K8sHandler):
     @classmethod
-    async def get(cls, **required_attrs) -> AsyncGenerator[Dict, None]:
-        if "_context" not in required_attrs:
+    async def get(cls, labels: Dict[str, Label]) -> AsyncGenerator[Dict, None]:
+        if "_context" not in labels:
             raise GenericQueryException("You need to provide _context value to query K8S resource")
-        if "_namespace" not in required_attrs:
+        if "_namespace" not in labels:
             raise GenericQueryException("You need to provide _namespace value to query K8S resource")
-        context, namespace = required_attrs["_context"], required_attrs["_namespace"]
+        context, namespace = labels["_context"].val, labels["_namespace"].val
         async with await config.new_client_from_config(context=context) as api:
             client = await DynamicClient(api)
             v1 = await client.resources.get(api_version="v1", kind=cls.kind())
@@ -153,7 +153,7 @@ class ReplicaSetHandler(NamespacedK8sHandler):
     @classmethod
     async def links(cls) -> List[LinkInfo]:
         return [
-            # link to deployment todo
+            LinkInfo(path="metadata.ownerReferences[*].name", parent_provider= "k8s", parent_resource="deployment", parent_path="metadata.name")
             # link to sa todo
             # link to secret todo
             # link to cm todo
@@ -206,8 +206,7 @@ class PodHandler(NamespacedK8sHandler):
     @classmethod
     async def links(cls) -> List[LinkInfo]:
         return [
-            # link to replicaset todo
-            # link to deployment todo
+            LinkInfo(path="metadata.ownerReferences[*].name", parent_provider= "k8s", parent_resource="rs", parent_path="metadata.name")
             # link to sa todo
             # link to secret todo
             # link to cm todo
@@ -358,10 +357,10 @@ class EndpointsHandler(NamespacedK8sHandler):
 
 class GlobalK8sHandler(K8sHandler):
     @classmethod
-    async def get(cls, **required_attrs) -> AsyncGenerator[Dict, None]:
-        if "_context" not in required_attrs:
+    async def get(cls, labels: Dict[str, Label]) -> AsyncGenerator[Dict, None]:
+        if "_context" not in labels:
             raise GenericQueryException("You need to provide _context value to query this K8S resource")
-        context = required_attrs["_context"]
+        context = labels["_context"].val
         async with await config.new_client_from_config() as api:
             client = await DynamicClient(api)
             v1 = await client.resources.get(api_version="v1", kind=cls.kind())

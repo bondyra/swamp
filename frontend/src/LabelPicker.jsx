@@ -85,16 +85,17 @@ export default function LabelPicker({ resourceType, labels, setLabels, previousL
 			var linkKeyVal = null;
 			if (parentResourceType) {
 				const resp = await backend.linkSuggestion(resourceType, parentResourceType)
-				linkKeyVal = {key: resp.key, val: resp.val}
+				linkKeyVal = {key: resp.key, val: resp.val, op: resp.op}
 			}
 
 			const labelsWithLinkSuggestion = (ll, linkKeyVal) => {
 				if(!linkKeyVal || (linkKeyVal.key === "" && linkKeyVal.val === ""))
 					return ll
-				linkKeyVal.val = JSONPath({path: linkKeyVal.val, json: parent})
+				const valToPut = JSONPath({path: linkKeyVal.val, json: parent})
+				console.log(linkKeyVal)
 				return ll.map(l => {
 					if (l.id === "link")
-						return {...l, ...linkKeyVal};
+						return {...l, ...{key: linkKeyVal.key, op: linkKeyVal.op, val: valToPut}};
 					return l;
 				});
 			}
