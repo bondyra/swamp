@@ -25,8 +25,9 @@ import '@xyflow/react/dist/base.css';
 import BackendProvider from './BackendProvider';
 import Resource from './Resource';
 import Query from './Query';
-import { D3ForceLayoutProvider } from './D3ForceLayoutProvider';
-import { DagreLayoutProvider } from './DagreLayoutProvider';
+// import { D3ForceLayoutProvider } from './D3ForceLayoutProvider';
+// import { DagreLayoutProvider } from './DagreLayoutProvider';
+import { ELKLayoutProvider } from './ELKLayoutProvider';
 import { randomString } from './Utils'
 import GraphTab from './GraphTab';
 
@@ -41,13 +42,17 @@ const theme = createTheme({
   },
 });
 
-const initialNodes = [
-  {
-    id: 'root-query',
+const newRootQueryNode = () => {
+  return {
+    id: `root-query-${randomString(4)}`,
     position: { x: 0, y: 0 },
     type: 'query',
     data: {labels: []},
   }
+}
+
+const initialNodes = [
+  newRootQueryNode()
 ]
 
 const nodeTypes = {
@@ -163,14 +168,16 @@ const SwampApp = () => {
   );
 
   const onNodesChangeExt = useCallback((changes) => {
+    console.log(changes);
     onNodesChange(changes);
-    if (changes.some(c=> c.type === "dimensions")){
+    if (changes.some(c=> c.type === "dimensions")){ //dimensions for dagre/d3!!!!!!!!!
       // force layout by adding a dummy node
       setAddDummyNode(true)
     }
   }, [onNodesChange, setAddDummyNode])
 
   useEffect(() => {
+    console.log(`del: ${delDummyNode} add: ${addDummyNode}`)
     if (delDummyNode) {
       reactFlow.deleteElements({nodes: nodes.filter(n => n.id.startsWith("__DUMMY__"))})
       setDelDummyNode(false)
@@ -246,6 +253,9 @@ const SwampApp = () => {
           <Panel position="top-center">
             {alrt && <Alert variant="outlined" severity="success" sx={{color: "lightgreen"}}>{alrt}</Alert>}
           </Panel>
+          <Panel position="top-right">
+            <Button onClick={() => setNodes([...nodes, newRootQueryNode()])}>Add new root node</Button>
+          </Panel>
           <MiniMap />
           <Controls />
         </ReactFlow>
@@ -257,11 +267,11 @@ const SwampApp = () => {
 const App = () => {
   return (
     <ReactFlowProvider>
-      <DagreLayoutProvider skipInitialLayout>
+      <ELKLayoutProvider skipInitialLayout>
         <BackendProvider>
           <SwampApp/>
         </BackendProvider>
-      </DagreLayoutProvider>
+      </ELKLayoutProvider>
     </ReactFlowProvider>
   );
 }

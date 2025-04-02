@@ -11,7 +11,7 @@ import {
 import { collide } from './collide.js';
 
 const simulation = forceSimulation()
-  .force('charge', forceManyBody().strength(-1000))
+  .force('charge', forceManyBody().strength(-10000))
   .force('x', forceX().x(0).strength(0.05))
   .force('y', forceY().y(0).strength(0.05))
   .force('collide', collide())
@@ -31,9 +31,9 @@ const getLayoutedElements = (nodes, edges) => {
     'link',
     forceLink(eds)
       .id((d) => d.id)
-      .strength(0.5)
+      .strength(0.05)
       .distance(100)
-  ).tick(10).stop();
+  ).tick(1000).stop();
   
   const newNodes =  nds.map((node) => ({
     ...node,

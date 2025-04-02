@@ -1,7 +1,11 @@
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button'
+import IconButton from '@mui/material/IconButton';
+import OpenInFullIcon from '@mui/icons-material/OpenInFull';
+import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
 import CircularProgress from '@mui/material/CircularProgress';
 import DownloadForOfflineIcon from '@mui/icons-material/DownloadForOffline';
+import InfoIcon from '@mui/icons-material/Info';
 import ErrorIcon from '@mui/icons-material/Error';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import WarningIcon from '@mui/icons-material/Warning';
@@ -15,6 +19,7 @@ import LabelPicker from './LabelPicker';
 import SingleFieldPicker from './SingleFieldPicker';
 import { useBackend } from './BackendProvider';
 import { getIconSrc } from './Utils';
+
 
 const RunButton = styled(Button)({
   width: "auto",
@@ -53,6 +58,7 @@ const leftTheme = (theme) => ({
 const validateLabels = (labels) => {
   const invalidAllowedValueLabels = labels.filter(l => l.allowedValues && !l.allowedValues.includes(l.val))
   if(invalidAllowedValueLabels && invalidAllowedValueLabels.length > 0){
+    console.log(invalidAllowedValueLabels);
     return `Following labels have not allowed values: ${invalidAllowedValueLabels.map(l => l.key).join(",")}`
   }
   return null
@@ -66,6 +72,7 @@ export default function QueryWizard({
   const [resourceTypes, setResourceTypes] = useState([])
   const [status, setStatus] = useState("initial")
   const [message, setMessage] = useState(null)
+  const [fullSize, setFullSize] = useState(true);
 
   const backend = useBackend();
 
@@ -115,6 +122,8 @@ export default function QueryWizard({
 
   return (
     <>
+    {
+      fullSize &&
       <Stack direction="row">
         <Stack sx={leftTheme}>
           <Stack direction="row">
@@ -128,13 +137,21 @@ export default function QueryWizard({
           setLabels={setLabels} previousLabelVars={previousLabelVars} parent={parent} parentResourceType={parentResourceType}/>
         </Stack>
         <Stack>
-          <Tooltip title={message || "Query status will be here"}>
-            <Box sx={{ml: "5px", mb: "10px", height: "20%"}} justifyContent="center" display="flex" >
-              {status === "failed" && <ErrorIcon sx={{color: "darkred"}} fontSize="small"/>}
-              {status === "warning" && <WarningIcon sx={{color: "yellow"}} fontSize="small"/>}
-              {status === "success" && <CheckCircleIcon sx={{color: "green"}} fontSize="small"/>}
-            </Box>
-          </Tooltip>
+          <Stack direction="row" sx={{justifyContent: "flex-end", height: "30%"}}>
+            <Tooltip title={message || "Query status will be here"}>
+              <Box sx={{ml: "5px", mb: "10px"}} justifyContent="center" display="flex" >
+                {status === "initial" && <InfoIcon sx={{color: "lightblue"}} fontSize="small"/>}
+                {status === "failed" && <ErrorIcon sx={{color: "darkred"}} fontSize="small"/>}
+                {status === "warning" && <WarningIcon sx={{color: "yellow"}} fontSize="small"/>}
+                {status === "success" && <CheckCircleIcon sx={{color: "green"}} fontSize="small"/>}
+              </Box>
+            </Tooltip>
+            <Tooltip title="Minimize">
+              <IconButton onClick={() => setFullSize(false)} sx={{ml: "5px", mb: "10px"}} display="flex">
+                    <CloseFullscreenIcon sx={{color: "gray"}} fontSize="small"/>
+              </IconButton>
+            </Tooltip>
+          </Stack>
           <Tooltip title="Run or refresh">
             <RunButton variant="contained" aria-label="run"  onClick={onClick} backgroundcolor="primary" sx={{ml: "5px", height:"80%"}}>
               {loading && <CircularProgress color="white" size="20px"/>}
@@ -143,6 +160,26 @@ export default function QueryWizard({
           </Tooltip>
         </Stack>
       </Stack>
+    }
+    {
+      !fullSize &&
+      <Stack>
+        <Tooltip title="Maximize">
+          <IconButton onClick={() => setFullSize(true)} sx={{padding: "0px"}}>
+            <OpenInFullIcon sx={{color: "gray"}} fontSize="small"/>
+          </IconButton>
+        </Tooltip>
+        <Box sx={{fontSize: "14px", fontWeight:"600", fontFamily: "monospace", justifyContent: "center", display: "flex"}}>
+          <p>{resourceType ?? "<who knows what>"}</p>
+        </Box>
+        <Tooltip title="Run or refresh">
+          <RunButton variant="contained" aria-label="run"  onClick={onClick} backgroundcolor="primary">
+            {loading && <CircularProgress color="white" size="20px"/>}
+            {!loading && <DownloadForOfflineIcon/>}
+          </RunButton>
+        </Tooltip>
+      </Stack>
+    }
     </> 
   );
 };

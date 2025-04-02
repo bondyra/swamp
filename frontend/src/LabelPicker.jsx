@@ -1,4 +1,3 @@
-import Box from '@mui/material/Box';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import RemoveCircleIcon from '@mui/icons-material/RemoveCircle';
 import IconButton, {iconButtonClasses} from '@mui/material/IconButton';
@@ -44,10 +43,10 @@ const themeFunction = (theme) => ({
 
 export default function LabelPicker({ resourceType, labels, setLabels, previousLabelVars, parent, parentResourceType }) {
 	const [attributes, setAttributes] = useState(new Map())
-	const [localLabels, setLocalLabels] = useState([]);
+	const [localLabels, setLocalLabels] = useState(labels);
 	const backend = useBackend();
 
-	useEffect(() => {setLocalLabels(labels);}, [setLocalLabels, labels]);
+	useEffect(() => {setLabels(localLabels);}, [localLabels, setLabels]);
 
 	const labelsWithUpdatedLabelsById = (ll, extraLabels) => {
 		return ll.map(l => {
@@ -91,11 +90,13 @@ export default function LabelPicker({ resourceType, labels, setLabels, previousL
 			const labelsWithLinkSuggestion = (ll, linkKeyVal) => {
 				if(!linkKeyVal || (linkKeyVal.key === "" && linkKeyVal.val === ""))
 					return ll
-				const valToPut = JSONPath({path: linkKeyVal.val, json: parent})
-				console.log(linkKeyVal)
+				const actualValues = JSONPath({path: linkKeyVal.val, json: parent})
+				if (!actualValues || actualValues.length !== 1)
+					return ll
+				
 				return ll.map(l => {
 					if (l.id === "link")
-						return {...l, ...{key: linkKeyVal.key, op: linkKeyVal.op, val: valToPut}};
+						return {...l, ...{key: linkKeyVal.key, op: linkKeyVal.op, val: actualValues[0]}};
 					return l;
 				});
 			}
@@ -109,6 +110,7 @@ export default function LabelPicker({ resourceType, labels, setLabels, previousL
 		};
         loadAttributes();
 	}, [resourceType, parentResourceType, setLocalLabels, backend, previousLabelVars, parent]);
+
 	return (
 		<>
             <List dense={true} sx={{padding: "0px", margin: "0px"}}>
@@ -144,16 +146,14 @@ export default function LabelPicker({ resourceType, labels, setLabels, previousL
 									}]
 								);
 								setLocalLabels(newLabels);
-								setLabels(newLabels);
 							}} 
 							options={[...attributes.values().filter(v=> !v.query_required).map(v => {return {value: v.path, description: v.description}})]}/>
-							<LabelOp op={label.op ?? "contains"} 
+							<LabelOp op={label.op ?? "eq"} 
 										change={(val) => {
 											const newLabels = labelsWithUpdatedLabelsById(
 												localLabels, [{...label, op: val}]
 											)
 											setLocalLabels(newLabels);
-											setLabels(newLabels);
 										}}/>
 							<Stack 
 								key={`${label.id}-val-outer`}
@@ -178,7 +178,6 @@ export default function LabelPicker({ resourceType, labels, setLabels, previousL
 												localLabels, [{...label, val: event.target.value}]
 											)
 											setLocalLabels(newLabels);
-											setLabels(newLabels);
 										}}
 									/>
 								}
@@ -201,7 +200,6 @@ export default function LabelPicker({ resourceType, labels, setLabels, previousL
 												localLabels, [...dependentLabels, {...label, val: val}]
 											);
 											setLocalLabels(newLabels);
-											setLabels(newLabels);
 										}}
 										descr={`Select one of allowed values for ${label.key}`}
 									/>
@@ -211,7 +209,6 @@ export default function LabelPicker({ resourceType, labels, setLabels, previousL
 								onClick={() => {
 									const newLabels = localLabels.filter(x => x.id !== label.id);
 									setLocalLabels(newLabels);
-									setLabels(newLabels);
 								}}>
 									<RemoveCircleIcon key={`${label.id}-val-del-inner`} color="secondary" sx={{width: "16px", height: "16px", padding: "0px"}}/>
 								</IconButton>
@@ -226,7 +223,6 @@ export default function LabelPicker({ resourceType, labels, setLabels, previousL
 				onClick={() => {
 					const newLabels = [...localLabels, {id: newLabelId(), key:  "", val: ""}];
 					setLocalLabels(newLabels);
-					setLabels(newLabels);
 				}}>
 					<AddCircleIcon color="primary" sx={{width: "16px", height: "16px", padding: "0px"}}/>
 				</IconButton>

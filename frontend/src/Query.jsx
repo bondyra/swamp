@@ -3,7 +3,6 @@ import { Handle, Position, useReactFlow } from '@xyflow/react';
 
 import QueryWizard from './QueryWizard';
 
-//todo collapse
 export default memo(({ id, data, isConnectable }) => {
   const reactFlow = useReactFlow();
     const [previousLabelVars, setPreviousLabelsVars] = useState(null);
@@ -70,11 +69,11 @@ export default memo(({ id, data, isConnectable }) => {
         <div className="inner">
           <div className="body">
             <QueryWizard 
-            nodeId={id} resourceType={data.resourceType} labels={data.labels} 
-            doSomethingWithResults={addNewNodesAndEdges} onResourceTypeUpdate={updateResourceType}
-            previousLabelVars={previousLabelVars}
-            setLabels={setLabels}
-            parent={data.parent} parentResourceType={data.parentResourceType}
+              nodeId={id} resourceType={data.resourceType} labels={data.labels} 
+              doSomethingWithResults={addNewNodesAndEdges} onResourceTypeUpdate={updateResourceType}
+              previousLabelVars={previousLabelVars}
+              setLabels={setLabels}
+              parent={data.parent} parentResourceType={data.parentResourceType}
             />
             <Handle type="target" position={Position.Top} id="a" style={{opacity: 0}} />
             <Handle type="source" position={Position.Bottom} id="b" style={{opacity: 0}} />
