@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useEffect, useState } from 'react';
+import React, { memo, useCallback, useState } from 'react';
 import { styled } from '@mui/material/styles';
 import { Handle, Position, useReactFlow } from '@xyflow/react';
 import ButtonBase from '@mui/material/ButtonBase';
@@ -9,14 +9,11 @@ import DatasetLinkedIcon from '@mui/icons-material/DatasetLinked';
 import SettingsEthernetIcon from '@mui/icons-material/SettingsEthernet';
 import { Tooltip } from '@mui/material';
 
-import {JSONPath} from 'jsonpath-plus';
-
 import DataDisplay from './DataDisplay';
 import QueryWizard from './QueryWizard';
 import MultipleFieldPicker from './MultipleFieldPicker';
 import { Box } from '@mui/material';
-import { useBackend } from './BackendProvider';
-import { getAllJSONPaths, getIconSrc } from './Utils';
+import { getIconSrc, getAllUniqueValues } from './Utils';
 
 
 let linkId = 1;
@@ -51,11 +48,7 @@ const Button = styled(ButtonBase)(({ theme }) => ({
 export default memo(({ id, data, isConnectable }) => {
   const reactFlow = useReactFlow();
   const [isLinked, setIsLinked] = useState(false);
-  const [inlineChildPaths, setInlineChildPaths] = useState([]);
-  const [inlineParentPaths, setInlineParentPaths] = useState([]);
   const [inlineCollapsed, setInlineCollapsed] = useState(true);
-  const [previousLabelVars, setPreviousLabelsVars] = useState(null)
-  const backend = useBackend();
 
   const addQuery = useCallback((event) => {
     const targetNodeId = `${id}-${newLinkId()}`
@@ -76,7 +69,7 @@ export default memo(({ id, data, isConnectable }) => {
         labels: [
           {
             id: "link", key: "", val: "", required: true, 
-            allowedValues: data.result ? getAllJSONPaths(data.result).map(p => { return {value: p, description: JSONPath({path: p, json: data.result})}}) : [],
+            allowedValues: getAllUniqueValues(data.result),
             dependsOn: null
           }
         ]
@@ -112,27 +105,6 @@ export default memo(({ id, data, isConnectable }) => {
       })
     }, [id, reactFlow]);
 
-  useEffect(() => {
-    const loadAttributes = async () => {
-      if (data.inline.resourceType === null || data.inline.resourceType === undefined)
-        return []
-			const attributes = await backend.attributes(data.inline.resourceType)
-      setInlineChildPaths(attributes.map(a=> {return {value: a.path, description: a.description}}))
-    };
-    loadAttributes();
-  }, [data.inline.resourceType, setInlineChildPaths, backend]);
-
-  useEffect(() => {
-    setInlineParentPaths(
-      getAllJSONPaths(data.result).map(p => {
-        return {
-          value: p,
-          description: JSONPath({path: p, json: data.result})
-        }
-      })
-    )
-  }, [data, setInlineParentPaths])
-
   const updateSelectedFields = useCallback(
     (newValue) => {
       reactFlow.updateNodeData(id, (node) => {
@@ -155,28 +127,6 @@ export default memo(({ id, data, isConnectable }) => {
     }, [id, reactFlow]
   );
 
-  const updateInlineChildPath = useCallback(
-    (newValue) => {
-      reactFlow.updateNodeData(id, (node) => {
-        return { 
-          ...node.data,
-          inline: {...node.data.inline, childPath: newValue}
-        };
-      })
-    }, [id, reactFlow]
-  );
-
-  const updateInlineParentPath = useCallback(
-    (newValue) => {
-      reactFlow.updateNodeData(id, (node) => {
-        return { 
-          ...node.data,
-          inline: {...node.data.inline, parentPath: newValue}
-        };
-      })
-    }, [id, reactFlow]
-  );
-
   const setInlineLabels = useCallback(
     (labels) => {
       reactFlow.updateNodeData(id, (node) => {
@@ -187,17 +137,23 @@ export default memo(({ id, data, isConnectable }) => {
       })
     }, [id, reactFlow]);
 
-  useEffect(() => {
-    var result = new Map();
-    reactFlow.getNodes().forEach(n => {
-      (n.data.labels ?? []).forEach(l => {
-        if(! result[l.key])
-          result[l.key] = new Set()
-        result[l.key].add(l.val)
-      })
-    })
-    setPreviousLabelsVars(result)
-  }, [setPreviousLabelsVars, reactFlow])
+  const propagateFieldsToSiblings = useCallback(
+    () => {
+      reactFlow.setNodes(
+        reactFlow.getNodes().map(n => {
+          if (n.data.queryId !== data.queryId || n.id === id)
+            return n;
+          return {
+            ...n,
+            data: {
+              ...n.data,
+              selectedFields: data.selectedFields
+            }
+          }
+        })
+      )
+    }, [reactFlow, data.queryId, data.selectedFields, id]
+  )
 
   return (
     <>
@@ -226,8 +182,8 @@ export default memo(({ id, data, isConnectable }) => {
             <Stack direction="row">
               <MultipleFieldPicker data={data.result} selectedFields={data.selectedFields || []} updateSelectedFields={updateSelectedFields}
               header={"Select fields"} descr={`Select fields of ${data.resourceType} to display`}/>
-              <Tooltip title="Propagate selections to all siblings (NOT WORKING YET)">
-                <Button disableRipple aria-describedby={id} sx={{width: "auto", pb: "0px"}}> 
+              <Tooltip title="Propagate selections to all siblings">
+                <Button disableRipple aria-describedby={id} sx={{width: "auto", pb: "0px"}} onClick={propagateFieldsToSiblings}> 
                   <SettingsEthernetIcon/>
                 </Button>
               </Tooltip>
@@ -248,12 +204,10 @@ export default memo(({ id, data, isConnectable }) => {
               <Collapse in={!inlineCollapsed} timeout="auto" unmountOnExit>
               <Box sx={{borderLeft: "1px solid gray", ml: "12px", pl:"12px", mt:"0px", pt: "0px"}}>
                 <QueryWizard 
-                nodeId={id} resourceType={data.inline.resourceType} labels={data.inline.labels || []} doSomethingWithResults={inlineResources} onResourceTypeUpdate={updateInlineResourceType}
-                setLabels={setInlineLabels} previousLabelVars={previousLabelVars}
-                join={true}
-                childPath={data.inline.childPath} childPaths={inlineChildPaths} onChildPathUpdate={updateInlineChildPath} 
-                parentPath={data.inline.parentPath} parentPaths={inlineParentPaths} onParentPathUpdate={updateInlineParentPath}
-                getParentVal={(p) => JSONPath({path: p, json: data.result})} parentResourceType={data.resourceType}
+                nodeId={id} resourceType={data.inline.resourceType} labels={data.inline.labels || [{id: "link", key: "", val: "", required: true, allowedValues: getAllUniqueValues(data.result), dependsOn: null}]}
+                doSomethingWithResults={inlineResources} onResourceTypeUpdate={updateInlineResourceType}
+                setLabels={setInlineLabels}
+                parent={data.result} parentResourceType={data.resourceType}
                 />
                 <MultipleFieldPicker data={data.inline.results} selectedFields={data.inline.selectedFields || []} updateSelectedFields={updateInlineSelectedFields} header="Results"/>
                 <DataDisplay multiple nodeId={id} data={data.inline.results || []} selectedFields={data.inline.selectedFields || []}/>

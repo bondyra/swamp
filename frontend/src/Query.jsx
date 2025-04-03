@@ -1,11 +1,10 @@
-import React, { memo, useEffect, useCallback, useState } from 'react';
+import React, { memo, useCallback } from 'react';
 import { Handle, Position, useReactFlow } from '@xyflow/react';
 
 import QueryWizard from './QueryWizard';
 
 export default memo(({ id, data, isConnectable }) => {
   const reactFlow = useReactFlow();
-    const [previousLabelVars, setPreviousLabelsVars] = useState(null);
 
   const addNewNodesAndEdges = (items) => {
     var newNodes = [];
@@ -25,7 +24,8 @@ export default memo(({ id, data, isConnectable }) => {
           id: newNodeId,
           resourceType: item.resourceType,
           inline: {},
-          result: item.result
+          result: item.result,
+          queryId: id
         },
       });
       newEdges.push({id: `${id}-${newNodeId}`, source: id, target: newNodeId, style: {strokeWidth: 5} });
@@ -50,18 +50,6 @@ export default memo(({ id, data, isConnectable }) => {
         return {...node.data, labels: labels};
       })
     }, [id, reactFlow]);
-  
-  useEffect(() => {
-    var result = new Map();
-    reactFlow.getNodes().forEach(n => {
-      (n.data.labels ?? []).forEach(l => {
-        if(! result[l.key])
-          result[l.key] = new Set()
-        result[l.key].add(l.val)
-      })
-    })
-    setPreviousLabelsVars(result)
-  }, [setPreviousLabelsVars, reactFlow])
 
   return (
     <>
@@ -71,7 +59,6 @@ export default memo(({ id, data, isConnectable }) => {
             <QueryWizard 
               nodeId={id} resourceType={data.resourceType} labels={data.labels} 
               doSomethingWithResults={addNewNodesAndEdges} onResourceTypeUpdate={updateResourceType}
-              previousLabelVars={previousLabelVars}
               setLabels={setLabels}
               parent={data.parent} parentResourceType={data.parentResourceType}
             />

@@ -14,6 +14,7 @@ import { styled } from '@mui/material/styles';
 import { Tooltip } from '@mui/material';
 import React, { useEffect } from 'react';
 import { useCallback, useState } from 'react';
+import { useReactFlow } from '@xyflow/react';
 
 import LabelPicker from './LabelPicker';
 import SingleFieldPicker from './SingleFieldPicker';
@@ -58,21 +59,33 @@ const leftTheme = (theme) => ({
 const validateLabels = (labels) => {
   const invalidAllowedValueLabels = labels.filter(l => l.allowedValues && !l.allowedValues.includes(l.val))
   if(invalidAllowedValueLabels && invalidAllowedValueLabels.length > 0){
-    console.log(invalidAllowedValueLabels);
     return `Following labels have not allowed values: ${invalidAllowedValueLabels.map(l => l.key).join(",")}`
   }
   return null
 }
 
 export default function QueryWizard({
-  nodeId, resourceType, labels, doSomethingWithResults, onResourceTypeUpdate, setLabels, previousLabelVars,
-  parent, parentResourceType
+  nodeId, resourceType, labels, doSomethingWithResults, onResourceTypeUpdate, setLabels, parent, parentResourceType
 }) {
+  const reactFlow = useReactFlow();
   const [loading, setLoading] = useState(false);
   const [resourceTypes, setResourceTypes] = useState([])
   const [status, setStatus] = useState("initial")
   const [message, setMessage] = useState(null)
   const [fullSize, setFullSize] = useState(true);
+  const [previousLabelVars, setPreviousLabelsVars] = useState(null);
+    
+  useEffect(() => {
+      var result = new Map();
+      reactFlow.getNodes().forEach(n => {
+        (n.data.labels ?? []).forEach(l => {
+          if(! result[l.key])
+            result[l.key] = new Set()
+          result[l.key].add(l.val)
+        })
+      })
+      setPreviousLabelsVars(result)
+  }, [setPreviousLabelsVars, reactFlow])
 
   const backend = useBackend();
 

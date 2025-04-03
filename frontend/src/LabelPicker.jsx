@@ -55,15 +55,6 @@ export default function LabelPicker({ resourceType, labels, setLabels, previousL
 		})
 	}
 
-	const labelsWithNewLabels = (ll, extraLabels) => {
-		const extraLabelKeys = extraLabels.map(l => l.key)
-
-		return [
-			...ll.filter(l => !extraLabelKeys.includes(l.key)),
-			...extraLabels
-		]
-	}
-
 	useEffect(() => {  // when resourceType changes
 		const loadAttributes = async () => {
 			if (resourceType === null || resourceType === undefined)
@@ -73,7 +64,7 @@ export default function LabelPicker({ resourceType, labels, setLabels, previousL
 			const requiredAttributes = attributes.filter(a => a.query_required);
 			setAttributes(new Map(attributes.map(a=> [a.path, a])));
 			// refresh labels with potentially new required attributes
-			const newRequiredAttributes = requiredAttributes.map(a => {
+			const newRequiredLabels = requiredAttributes.map(a => {
 				const val = [...(previousLabelVars ?? new Map())[a.path] ?? [""]][0]
 				return {
 					id: newLabelId(), key: a.path, val: val, keyImmutable: true, 
@@ -83,8 +74,8 @@ export default function LabelPicker({ resourceType, labels, setLabels, previousL
 			// if there's a link label, try to get default link key val
 			var linkKeyVal = null;
 			if (parentResourceType) {
-				const resp = await backend.linkSuggestion(resourceType, parentResourceType)
-				linkKeyVal = {key: resp.key, val: resp.val, op: resp.op}
+				const resp = await backend.linkSuggestion(resourceType, parentResourceType);
+				linkKeyVal = {key: resp.key, val: resp.val, op: resp.op};
 			}
 
 			const labelsWithLinkSuggestion = (ll, linkKeyVal) => {
@@ -93,17 +84,31 @@ export default function LabelPicker({ resourceType, labels, setLabels, previousL
 				const actualValues = JSONPath({path: linkKeyVal.val, json: parent})
 				if (!actualValues || actualValues.length !== 1)
 					return ll
-				
 				return ll.map(l => {
 					if (l.id === "link")
 						return {...l, ...{key: linkKeyVal.key, op: linkKeyVal.op, val: actualValues[0]}};
 					return l;
 				});
+			};
+
+			const labelsWithUpdatedRequiredLabels = (ll) => {
+				const currentLabelKeys = ll.map(l => l.key)
+				const requiredLabelKeys = newRequiredLabels.map(l => l.key)
+
+				return [
+					...ll.map(l => {
+						if (!requiredLabelKeys.includes(l.key) || l.val !== "")
+							return l;
+						return newRequiredLabels.filter(r => r.key === l.key)[0]
+					}),
+					...newRequiredLabels.filter(l => !currentLabelKeys.includes(l.key))  // add any new required label
+				]
 			}
+
 			// set the labels (local only to prevent re-render loop)
 			setLocalLabels(oldLabels => {
 				return labelsWithLinkSuggestion(
-					labelsWithNewLabels(oldLabels, newRequiredAttributes), 
+					labelsWithUpdatedRequiredLabels(oldLabels), 
 					linkKeyVal
 				)
 			});
@@ -135,15 +140,15 @@ export default function LabelPicker({ resourceType, labels, setLabels, previousL
 							key={`${label.id}-picker`} value={label.key} valuePlaceholder="Filter" 
 							disabled = {label.keyImmutable || false}
 							updateData={(newKey) => {
+								const newContent = label.id === "link" ? { key: newKey } : { 
+									key: newKey, 
+									allowedValues: (attributes.get(newKey) ?? Object()).allowed_values, 
+									required: (attributes.get(newKey) ?? Object()).query_required ?? false,
+									dependsOn: (attributes.get(newKey) ?? Object()).depends_on ?? null,
+								}
 								const newLabels = labelsWithUpdatedLabelsById(
 									localLabels,
-									[{
-										...label, 
-										key: newKey, 
-										allowedValues: (attributes.get(newKey) ?? Object()).allowed_values, 
-										required: (attributes.get(newKey) ?? Object()).query_required ?? false,
-										dependsOn: (attributes.get(newKey) ?? Object()).depends_on ?? null,
-									}]
+									[{...label, ...newContent}]
 								);
 								setLocalLabels(newLabels);
 							}} 

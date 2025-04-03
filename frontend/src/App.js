@@ -28,12 +28,11 @@ import Query from './Query';
 // import { D3ForceLayoutProvider } from './D3ForceLayoutProvider';
 // import { DagreLayoutProvider } from './DagreLayoutProvider';
 import { ELKLayoutProvider } from './ELKLayoutProvider';
-import { randomString } from './Utils'
+import { randomString, listGraphNames, getGraph, putGraph, removeGraph } from './Utils'
 import GraphTab from './GraphTab';
 
 
 const version = "v0.0.1"
-const graphPrefix = "__graph_"
 let dummyId = 1;
 const newDummyId = () => `${dummyId++}`;
 
@@ -98,43 +97,35 @@ const SwampApp = () => {
     })();
   }, [alrt, setAlrt]);
 
-  const refreshTabs = useCallback(() => {
-    const t = Object.entries(localStorage).map(it => it[0]).filter(k => k.startsWith(graphPrefix)).map(k => k.replace(graphPrefix, ""));
-    setTabs(t ?? ["default"]);
-  }, [setTabs]);
-
-  // load tabs from local storage on mount
   useEffect(() => {
-    refreshTabs();
-  }, [refreshTabs]);
+    const tabs = listGraphNames();
+    if(!tabs || tabs.length == 0) {
+      putGraph("default", JSON.stringify({nodes: initialNodes, edges: [], viewport: {}}));
+      setCurrentTab("default");
+    } else {
+      setTabs(tabs);
+    }
+  }, [currentTab, setTabs, setCurrentTab]);
 
   // add new tab
   const addNewTab = useCallback(() => {
-    const newTab = randomString(8);
-    localStorage.setItem(`${graphPrefix}${newTab}`, JSON.stringify({nodes: initialNodes, edges: [], viewport: {}}));
-    refreshTabs();
+    const newTab = `0_${randomString(4)}`;
+    putGraph(newTab, JSON.stringify({nodes: initialNodes, edges: [], viewport: {}}))
     setCurrentTab(newTab);
-  }, [refreshTabs]);
+  }, []);
 
   // rename tab
   const renameTab = useCallback((newName) => {
-    const content = localStorage.getItem(`${graphPrefix}${currentTab}`);
-    localStorage.setItem(`${graphPrefix}${newName}`, content);
-    localStorage.removeItem(`${graphPrefix}${currentTab}`);
-    refreshTabs();
+    const content = getGraph(currentTab);
+    putGraph(newName, content);
+    removeGraph(currentTab);
     setCurrentTab(newName);
-  }, [setCurrentTab, currentTab, refreshTabs]);
-
-  // // switch tabs
-  // const switchTab = useCallback((name) => {
-  //   setCurrentTab(name);
-
-  // }, []);
+  }, [setCurrentTab, currentTab]);
 
   // load graph on start (if exists)
   useEffect(() => {
     async function restoreFlow() {
-      const flow = JSON.parse(localStorage.getItem(`${graphPrefix}${currentTab}`));
+      const flow = JSON.parse(getGraph(currentTab));
       if (flow) {
         const { x = 0, y = 0, zoom = 1 } = flow.viewport;
         setNodes(flow.nodes || []);
@@ -150,8 +141,8 @@ const SwampApp = () => {
   const saveGraph = useCallback(() => {
     if (rfInstance) {
       const flow = rfInstance.toObject();
-      localStorage.setItem(`${graphPrefix}${currentTab}`, JSON.stringify(flow));
-      setAlrt(`Graph saved to local storage!`)
+      putGraph(currentTab, JSON.stringify(flow));
+      setAlrt(`Graph saved to local storage!`);
     }
   }, [rfInstance, currentTab]);
 
@@ -168,16 +159,14 @@ const SwampApp = () => {
   );
 
   const onNodesChangeExt = useCallback((changes) => {
-    console.log(changes);
     onNodesChange(changes);
-    if (changes.some(c=> c.type === "dimensions")){ //dimensions for dagre/d3!!!!!!!!!
+    if (changes.some(c=> c.type === "dimensions")){
       // force layout by adding a dummy node
       setAddDummyNode(true)
     }
   }, [onNodesChange, setAddDummyNode])
 
   useEffect(() => {
-    console.log(`del: ${delDummyNode} add: ${addDummyNode}`)
     if (delDummyNode) {
       reactFlow.deleteElements({nodes: nodes.filter(n => n.id.startsWith("__DUMMY__"))})
       setDelDummyNode(false)
@@ -197,7 +186,8 @@ const SwampApp = () => {
       }
     }}>
       <ThemeProvider theme={theme}>
-        <ReactFlow 
+        <ReactFlow
+        key={currentTab}
         nodes={nodes}
         edges={edges}
         deleteKeyCode={null}
@@ -237,9 +227,9 @@ const SwampApp = () => {
               </Stack>
               <Stack direction="row">
                 {
-                  tabs.map(t => {
+                  tabs.sort().map(t => {
                     return (
-                      <GraphTab name={t} selected={t === currentTab} onSelect={setCurrentTab} onEditEnd={renameTab}/>
+                      <GraphTab key={t} name={t} selected={t === currentTab} onSelect={setCurrentTab} onEditEnd={renameTab}/>
                     );
                   })
                 }

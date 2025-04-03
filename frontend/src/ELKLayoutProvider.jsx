@@ -44,7 +44,9 @@ export const ELKLayoutProvider = (props) => {
         'elk.spacing.nodeNode': 80,
         'elk.direction': 'DOWN'
       };
-      const nnodes = getNodes()
+      const nnodes = getNodes();
+      const existingNodeIds = nnodes.map(n => n.id);
+      const eedges = getEdges().filter(e => existingNodeIds.includes(e.source) && existingNodeIds.includes(e.target));
       const graph = {
         id: 'root',
         layoutOptions: layoutOptions,
@@ -53,7 +55,7 @@ export const ELKLayoutProvider = (props) => {
           width: node.measured.width,
           height: node.measured.height,
         })),
-        edges: getEdges(),
+        edges: eedges,
       };
     
       elk.layout(graph).then(({ children }) => {

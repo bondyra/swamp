@@ -1,3 +1,6 @@
+import {JSONPath} from 'jsonpath-plus';
+
+
 export function getAllJSONPaths(obj, prefix = '') {
 	let results = [];
 	
@@ -19,6 +22,10 @@ export function getAllJSONPaths(obj, prefix = '') {
 		}
 	}
 	return results;
+}
+
+export function getAllUniqueValues(data) {
+    return getAllJSONPaths(data).map(p => { return JSONPath({path: p, json: data})[0]}).filter((x, i, a) => a.indexOf(x) === i).map(x => `${x}`);
 }
 
 export function randomString(length) {
@@ -63,7 +70,7 @@ export function getIconSrc(resourceType) {
         case "k8s":
             switch(resource){
                 case "cm":
-                    return "https://raw.githubusercontent.com/kubernetes/community/19094aa6e60eb4a481650c4cbdb94badd9919b5br/icons/svg/resources/unlabeled/cm.svg"
+                    return "https://raw.githubusercontent.com/kubernetes/community/487f994c013ea61d92cf9a341af7620037abbce3/icons/svg/resources/unlabeled/cm.svg"
                 case "ep":
                     return "https://raw.githubusercontent.com/kubernetes/community/19094aa6e60eb4a481650c4cbdb94badd9919b5b/icons/svg/resources/unlabeled/ep.svg"
                 case "pod":
@@ -88,4 +95,22 @@ export function getIconSrc(resourceType) {
         default:
             return "./asset.svg"
     }
+}
+
+const graphPrefix = "__graph_"
+
+export function listGraphNames() {
+    return Object.entries(localStorage).map(it => it[0]).filter(k => k.startsWith(graphPrefix)).map(k => k.replace(graphPrefix, ""));
+}
+
+export function getGraph(name) {
+    return localStorage.getItem(`${graphPrefix}${name}`);
+}
+
+export function putGraph(name, content) {
+    localStorage.setItem(`${graphPrefix}${name}`, content);
+}
+
+export function removeGraph(name) {
+    localStorage.removeItem(`${graphPrefix}${name}`);
 }
