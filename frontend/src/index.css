@@ -1,0 +1,135 @@
+@import "tailwindcss";
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+.react-flow {
+  --bg-color: #1E1E1E;
+  --text-color: rgb(243, 244, 246);
+  --node-border-radius: 3px;
+  --xy-edge-stroke-selected: #b0b3b0;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+}
+
+.react-flow__node {
+  border-radius: var(--node-border-radius);
+  /* display: flex; */
+  font-family: Monospace;
+  font-weight: 500;
+  letter-spacing: -0.2px;
+  overflow: auto;
+  width: fit-content;
+  height: fit-content;
+  background: #666666
+}
+ 
+.react-flow__node .wrapper {
+  overflow: hidden;
+  display: flex;
+  padding: 2px;
+  position: relative;
+  border-radius: var(--node-border-radius);
+  flex-grow: 1;
+}
+
+.react-flow__node.selected {
+  background: #b0b3b0
+}
+
+.react-flow__node .inner {
+  background: var(--bg-color);
+  padding: 4px 4px;
+  border-radius: var(--node-border-radius);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  flex-grow: 1;
+  position: relative;
+}
+
+.react-flow__node-query {
+  border-color: blue;
+  border-width: 4px;
+}
+
+.smallPadding {
+  padding: 2px 2px;
+}
+
+.react-flow__node .body {
+  display: flex;
+  flex-direction: column;
+}
+ 
+.react-flow__node .resource-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  width: 100%;
+}
+ 
+.react-flow__node .title {
+  font-size: 16px;
+  margin-bottom: 2px;
+  line-height: 1;
+}
+
+.react-flow__node .subline {
+  font-size: 12px;
+  color: rgb(191, 191, 192);
+}
+
+.react-flow__node .swamp-resource {
+  font-size: 8px;
+  font-style: italic;
+  color: rgb(191, 191, 192);
+}
+
+.react-flow__node .swamp-resource-id {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgb(243, 244, 246);
+}
+ 
+.react-flow__handle {
+  opacity: 1;
+  background-image: url("./link.svg");
+}
+ 
+.react-flow__node:focus {
+  outline: none;
+}
+
+.header-icon {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.header-label {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  margin-left: 6px;
+}
+
+.header-label-row {
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
