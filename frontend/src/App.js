@@ -31,11 +31,6 @@ import { ELKLayoutProvider } from './ELKLayoutProvider';
 import { randomString, listGraphNames, getGraph, putGraph, removeGraph } from './Utils'
 import GraphTab from './GraphTab';
 
-
-const version = "v0.0.1"
-let dummyId = 1;
-const newDummyId = () => `${dummyId++}`;
-
 const theme = createTheme({
   palette: {
   },
@@ -99,7 +94,7 @@ const SwampApp = () => {
 
   useEffect(() => {
     const tabs = listGraphNames();
-    if(!tabs || tabs.length == 0) {
+    if(!tabs || tabs.length === 0) {
       putGraph("default", JSON.stringify({nodes: initialNodes, edges: [], viewport: {}}));
       setCurrentTab("default");
     } else {
@@ -172,7 +167,7 @@ const SwampApp = () => {
       setDelDummyNode(false)
     }
     if (addDummyNode) {
-      reactFlow.addNodes([{id: `__DUMMY__${newDummyId()}`, position: { x: 0, y: 0 }}])
+      reactFlow.addNodes([{id: `__DUMMY__${randomString(8)}`, position: { x: 0, y: 0 }}])
       setAddDummyNode(false)
       setDelDummyNode(true)  // immediately mark this node for deletion
     }
@@ -219,7 +214,7 @@ const SwampApp = () => {
                 />
                 <Stack direction="row">
                   <Box sx={{fontSize: "24px", fontWeight: 800, fontStyle: "bold", fontFamily: "monospace"}}>Swamp</Box>
-                  <Box sx={{fontSize: "16px", fontWeight: 100, fontFamily: "monospace", mt: "8px", ml: "5px"}}>{version}</Box>
+                  <Box sx={{fontSize: "16px", fontWeight: 100, fontFamily: "monospace", mt: "8px", ml: "5px"}}>{process.env.REACT_APP_VERSION}</Box>
                 </Stack>
                 <Button href="https://github.com/bondyra/swamp">
                   <Box component="img" sx={{height: 24, flexShrink: 0, mr: "5px"}} src={"./github.svg"} />

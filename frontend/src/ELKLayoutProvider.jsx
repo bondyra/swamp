@@ -41,6 +41,7 @@ export const ELKLayoutProvider = (props) => {
       const layoutOptions = {
         'elk.algorithm': 'layered',
         'elk.layered.spacing.nodeNodeBetweenLayers': 100,
+        'elk.layered.considerModelOrder.strategy': 'PREFER_NODES',
         'elk.spacing.nodeNode': 80,
         'elk.direction': 'DOWN'
       };

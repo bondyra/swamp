@@ -6,32 +6,61 @@ import QueryWizard from './QueryWizard';
 export default memo(({ id, data, isConnectable }) => {
   const reactFlow = useReactFlow();
 
+  function* getItemIdsToDelete (nodeIds, parentId) {
+    // 1 traverse graph to identify which nodes/edges to delete
+    // - when nodeId has only one parent (parentId), we need to delete it + getItemIdsToDelete for its child nodes
+    // - when nodeId has multiple parents, we delete the edge parentId->nodeId only
+    const nodeIdAndItsParentEdges = nodeIds.map(ni => {return {nodeId: ni, parentEdges: reactFlow.getEdges().filter(e => e.target === ni)}});
+    const nodeIdsToDelete = nodeIdAndItsParentEdges.filter(x => x.parentEdges.length <= 1).map(x => x.nodeId);
+    const edgeIdsToDelete = nodeIdAndItsParentEdges.filter(x => x.parentEdges.length > 1).map(x => x.parentEdges.filter(e => e.source === parentId).map(e => e.id)[0]);
+    for (const nodeId of nodeIds) {
+      const childrenNodeIds = reactFlow.getEdges().filter(e => e.source === nodeId).map(e => e.target);
+      yield* getItemIdsToDelete(childrenNodeIds, nodeId);
+    }
+    yield* nodeIdsToDelete.map(i => {return {type: "node", id: i}});
+    yield* edgeIdsToDelete.map(i => {return {type: "edge", id: i}});
+  }
+
   const addNewNodesAndEdges = (items) => {
+    const thisQueryNode = reactFlow.getNode(id);
+    const allChildrenNodesOfThisQueryNode = reactFlow.getNodes().filter(n => n.data.queryId === id);
+    const allChildrenNodeIds = allChildrenNodesOfThisQueryNode.map(n => n.id);
+    const newItems = items.map(item => { return {...item, nodeId: `${item.resourceType}.${item.result._id}`}});
+    const newIds = newItems.map(ni => ni.nodeId)
+    const childrenNodeIdsToDelete = allChildrenNodeIds.filter(i => !newIds.includes(i))
+    const itemIdsToDelete = [...getItemIdsToDelete(childrenNodeIdsToDelete, id)];
+    const nodeIdsToDelete = itemIdsToDelete.filter(x => x.type === "node").map(x => x.id);
+    const edgeIdsToDelete = itemIdsToDelete.filter(x => x.type === "edge").map(x => x.id);
     var newNodes = [];
     var newEdges = [];
-    const currNode = reactFlow.getNode(id);
-    // todo: move it to querywizard and add link label if it's a join query
-    items.forEach(item => {
-      const newNodeId = `${item.resourceType}.${item.result._id}`;
+    newItems.forEach(item => {
+      if (allChildrenNodeIds.includes(item.nodeId))  // if node already exists, don't overwrite it
+        return
       newNodes.push({
-        id: newNodeId,
+        id: item.nodeId,
         position: { 
-          x: currNode.position.x ?? 0, 
-          y: currNode.position.y + 100 ?? 0 
+          x: thisQueryNode.position.x ?? 0, 
+          y: thisQueryNode.position.y + 100 ?? 0 
         },
         type: 'resource',
         data: {
-          id: newNodeId,
+          id: item.nodeId,
           resourceType: item.resourceType,
           inline: {},
           result: item.result,
           queryId: id
         },
       });
-      newEdges.push({id: `${id}-${newNodeId}`, source: id, target: newNodeId, style: {strokeWidth: 5} });
+      newEdges.push({id: `${id}-${item.nodeId}`, source: id, target: item.nodeId, style: {strokeWidth: 5} });
     });
-    reactFlow.addNodes(newNodes);
-    reactFlow.addEdges(newEdges);
+    reactFlow.setNodes([
+      ...reactFlow.getNodes().filter(n => !nodeIdsToDelete.includes(n.id)),
+      ...newNodes
+    ])
+    reactFlow.setEdges([
+      ...reactFlow.getEdges().filter(e => !edgeIdsToDelete.includes(e.id)),
+      ...newEdges
+    ])
   };
 
   const updateResourceType = useCallback(

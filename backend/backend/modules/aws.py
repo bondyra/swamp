@@ -75,6 +75,31 @@ class LegacyAWSAPIHandler(AWSHandler):
             yield Attribute(path=path, description=obj.documentation.replace("<p>", "").replace("</p>", ""), query_required=False)
 
 
+class EC2Handler(LegacyAWSAPIHandler):
+    boto_client_name = "ec2"
+    shape = "Instance"
+
+    @staticmethod
+    def resource() -> str:
+        return "ec2"
+
+    @classmethod
+    async def _get(cls, client) -> AsyncGenerator[Dict, None]:
+        response = await client.describe_instances()
+        for item in [inst for res in response.get("Reservations",[]) for inst in res.get("Instances")]:
+            yield {
+                **{"_id": item["InstanceId"]},
+                **item
+            }
+
+    @classmethod
+    async def links(cls) -> List[LinkInfo]:
+        return [
+            LinkInfo(path="VpcId", parent_provider= "aws", parent_resource="vpc", parent_path="VpcId"),
+            LinkInfo(path="SubnetId", parent_provider= "aws", parent_resource="vpc", parent_path="SubnetId"),
+        ]
+
+
 class VpcHandler(LegacyAWSAPIHandler):
     boto_client_name = "ec2"
     shape = "Vpc"

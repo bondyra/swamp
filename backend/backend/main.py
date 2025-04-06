@@ -107,7 +107,6 @@ def iter_request_labels(request: Request) -> Iterable[Tuple[str, Label]]:
 async def do_get(provider, resource, labels):
     # some of the filters might not get used in handler, running this for the second time on actual results
     results = [r async for r in handler(provider, resource).get(labels)]
-    print(results)
     return [r for r in results if all(l.matches(r) for l in labels.values())]
 
 

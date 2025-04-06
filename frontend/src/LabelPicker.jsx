@@ -17,9 +17,8 @@ import SingleFieldPicker from './SingleFieldPicker'
 import SingleLabelValPicker from './SingleLabelValPicker'
 import { Tooltip } from '@mui/material';
 import LabelOp from './LabelOp';
+import { randomString } from './Utils';
 
-let labelId = 1;
-const newLabelId = () => labelId++;
 
 const themeFunction = (theme) => ({
 	padding: 0,
@@ -67,7 +66,7 @@ export default function LabelPicker({ resourceType, labels, setLabels, previousL
 			const newRequiredLabels = requiredAttributes.map(a => {
 				const val = [...(previousLabelVars ?? new Map())[a.path] ?? [""]][0]
 				return {
-					id: newLabelId(), key: a.path, val: val, keyImmutable: true, 
+					id: randomString(8), key: a.path, val: val, keyImmutable: true, 
 					required: true, allowedValues: a.allowed_values, dependsOn: a.depends_on
 				}
 			});
@@ -226,7 +225,7 @@ export default function LabelPicker({ resourceType, labels, setLabels, previousL
 			<ListItem sx={{padding: "0px"}}>
 				<IconButton aria-label="add" sx={{padding: "0px", margin: "0px", width: "fit-content"}} size="small"
 				onClick={() => {
-					const newLabels = [...localLabels, {id: newLabelId(), key:  "", val: ""}];
+					const newLabels = [...localLabels, {id: randomString(8), key:  "", val: ""}];
 					setLocalLabels(newLabels);
 				}}>
 					<AddCircleIcon color="primary" sx={{width: "16px", height: "16px", padding: "0px"}}/>

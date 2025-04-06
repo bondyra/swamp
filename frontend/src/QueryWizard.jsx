@@ -177,11 +177,21 @@ export default function QueryWizard({
     {
       !fullSize &&
       <Stack>
-        <Tooltip title="Maximize">
-          <IconButton onClick={() => setFullSize(true)} sx={{padding: "0px"}}>
-            <OpenInFullIcon sx={{color: "gray"}} fontSize="small"/>
-          </IconButton>
-        </Tooltip>
+        <Stack direction="row" sx={{justifyContent: "center"}}>
+          <Tooltip title={message || "Query status will be here"}>
+            <Box justifyContent="center" display="flex" >
+              {status === "initial" && <InfoIcon sx={{color: "lightblue"}} fontSize="small"/>}
+              {status === "failed" && <ErrorIcon sx={{color: "darkred"}} fontSize="small"/>}
+              {status === "warning" && <WarningIcon sx={{color: "yellow"}} fontSize="small"/>}
+              {status === "success" && <CheckCircleIcon sx={{color: "green"}} fontSize="small"/>}
+            </Box>
+          </Tooltip>
+          <Tooltip title="Maximize">
+            <IconButton onClick={() => setFullSize(true)} sx={{padding: "0px"}}>
+              <OpenInFullIcon sx={{color: "gray"}} fontSize="small"/>
+            </IconButton>
+          </Tooltip>
+        </Stack>
         <Box sx={{fontSize: "14px", fontWeight:"600", fontFamily: "monospace", justifyContent: "center", display: "flex"}}>
           <p>{resourceType ?? "<who knows what>"}</p>
         </Box>

@@ -42,7 +42,7 @@ export default memo(({ data, selectedFields }) => {
             multiple &&
             data.map(d => 
                   <TableRow key={d._id}>
-                    {fields.map(f => <TableCell key={`${d._id}-${f}`} align="left">{JSONPath({path: f, json: d})}</TableCell>)}
+                    {fields.map(f => <TableCell key={`${d._id}-${f}`} align="left">{JSONPath({path: f, json: d}) ?? ""}</TableCell>)}
                 </TableRow>
             )
           }
@@ -51,7 +51,7 @@ export default memo(({ data, selectedFields }) => {
             fields.map(f => 
                   <TableRow key={f}>
                     <TableCell key={`${f}-key`} align="left" sx={{fontSize: "10px"}}><b>{f}</b></TableCell>
-                    <TableCell key={`${f}-val`} align="left">{JSONPath({path: f, json: data})}</TableCell>
+                    <TableCell key={`${f}-val`} align="left">{JSONPath({path: f, json: data}) ?? ""}</TableCell>
                 </TableRow>
             )
           }
