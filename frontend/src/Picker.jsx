@@ -1,4 +1,4 @@
-import * as React from 'react';
+import {Fragment, useState} from 'react';
 import PropTypes from 'prop-types';
 import { styled } from '@mui/material/styles';
 import Popper from '@mui/material/Popper';
@@ -7,7 +7,6 @@ import Autocomplete, { autocompleteClasses } from '@mui/material/Autocomplete';
 import ButtonBase from '@mui/material/ButtonBase';
 import InputBase from '@mui/material/InputBase';
 import Box from '@mui/material/Box';
-import CheckIcon from '@mui/icons-material/Check';
 
 
 const StyledAutocompletePopper = styled('div')(({ theme }) => ({
@@ -44,16 +43,19 @@ const StyledAutocompletePopper = styled('div')(({ theme }) => ({
   },
 }));
 
+
 function PopperComponent(props) {
   const { disablePortal, anchorEl, open, ...other } = props;
   return <StyledAutocompletePopper {...other} />;
 }
+
 
 PopperComponent.propTypes = {
   anchorEl: PropTypes.any,
   disablePortal: PropTypes.bool,
   open: PropTypes.bool.isRequired,
 };
+
 
 const StyledPopper = styled(Popper)(({ theme }) => ({
   border: '1px solid #e1e4e8',
@@ -63,6 +65,7 @@ const StyledPopper = styled(Popper)(({ theme }) => ({
   borderRadius: 6,
   width: 300,
   zIndex: theme.zIndex.modal,
+  fontSize: 13,
   ...theme.applyStyles('dark', {
     border: '1px solid #30363d',
     boxShadow: '0 8px 24px rgb(1, 4, 9)',
@@ -71,9 +74,10 @@ const StyledPopper = styled(Popper)(({ theme }) => ({
   }),
 }));
 
+
 const StyledInput = styled(InputBase)(({ theme }) => ({
   padding: 10,
-  width: 'fit-content',
+  width: '100%',
   borderBottom: '1px solid #eaecef',
   ...theme.applyStyles('dark', {
     borderBottom: '1px solid #30363d',
@@ -99,9 +103,9 @@ const StyledInput = styled(InputBase)(({ theme }) => ({
   },
 }));
 
+
 const Button = styled(ButtonBase)(({ theme }) => ({
-  width: 'fit-content',
-  textAlign: 'left',
+  fontSize: "14px",
   fontWeight: 600,
   color: '#ffffff',
   ...theme.applyStyles('dark', {
@@ -114,7 +118,7 @@ const Button = styled(ButtonBase)(({ theme }) => ({
     }),
   },
   '& span': {
-    width: 'fit-content',
+    width: '100%',
   },
   '& svg': {
     width: 16,
@@ -122,9 +126,9 @@ const Button = styled(ButtonBase)(({ theme }) => ({
   },
 }));
 
-export default function SingleLabelValPicker({labelVal, options, onFieldUpdate, descr, disabled}) {
-  const [anchorEl, setAnchorEl] = React.useState(null);
 
+export default function Picker({value, valuePlaceholder, getValue, getDescription, getIcon, updateData, options, disabled, popperPrompt}) {
+  const [anchorEl, setAnchorEl] = useState(null);
   const handleClick = (event) => {
     setAnchorEl(event.currentTarget);
   };
@@ -140,10 +144,41 @@ export default function SingleLabelValPicker({labelVal, options, onFieldUpdate, 
   const id = open ? 'github-label' : undefined;
 
   return (
-    <React.Fragment>
-      <Box sx={{ width: '100%'}}>
-        <Button disableRipple aria-describedby={id} onClick={handleClick} disabled={disabled || false}>
-          <span>{labelVal ? labelVal : "Choose field"}</span>
+    <Fragment>
+      <Box>
+        <Button disabled={disabled || false} disableRipple aria-describedby={id} onClick={handleClick} sx={{padding: "0", margin:"0"}}>
+          { getIcon &&
+            <Box
+              component="img"
+              sx={{
+                height: 20,
+                flexShrink: 0,
+                bgcolor: "white",
+                borderRadius: '3px',
+                mt: '0px',
+                mr: "5px"
+              }}
+              alt=""
+              src={getIcon(value)}
+            />
+          }
+          <Box
+            key={value}
+            sx={{
+              mt: '0px',
+              height: 20,
+              padding: '.15em 2px',
+              fontWeight: 600,
+              lineHeight: '15px',
+              borderRadius: '2px',
+            }}
+            // style={{
+            //   backgroundColor: "#fff",
+            //   color: theme.palette.getContrastText("#fff"),
+            // }}
+          >
+            {value || valuePlaceholder}
+          </Box>
         </Button>
       </Box>
       <StyledPopper id={id} open={open} anchorEl={anchorEl} placement="bottom-start">
@@ -159,19 +194,37 @@ export default function SingleLabelValPicker({labelVal, options, onFieldUpdate, 
                 }),
               })}
             >
-              {descr ?? "Choose one of the values"}
+              {popperPrompt || "Choose option"}
             </Box>
             <Autocomplete
               open
-              onClose={(event, reason) => handleClose()}
-              value={labelVal}
-              onChange={(event, newValue, reason) => {onFieldUpdate(newValue)}}
+              freeSolo
+              onClose={(event, reason) => {
+                handleClose();
+              }}
+              value={value}
+              onChange={(event, newOption, reason) => {if (newOption) updateData(newOption)}}
               renderTags={() => null}
-              noOptionsText="No labels"
+              noOptionsText="No options available"
               renderOption={(props, option, { selected }) => {
                 const { key, ...optionProps } = props;
                 return (
                   <li key={key} {...optionProps}>
+                    {
+                      getIcon &&
+                      <Box
+                        component="img"
+                        sx={{
+                          height: 20,
+                          flexShrink: 0,
+                          borderRadius: '3px',
+                          mr: 1,
+                          mt: '2px',
+                        }}
+                        alt=""
+                        src={getIcon(getValue(option))}
+                      />
+                    }
                     <Box
                       sx={(t) => ({
                         flexGrow: 1,
@@ -183,37 +236,21 @@ export default function SingleLabelValPicker({labelVal, options, onFieldUpdate, 
                         },
                       })}
                     >
-                    {
-                      typeof option === "object" &&
-                      <>
-                        <b>{option.value}</b>
-                        <br/>
-                        <Box sx={{fontSize: "10px"}}><i>{option.description}</i></Box>
-                      </>
-                    }
-                    {
-                      typeof option !== "object" &&
-                      <>{option}</>
-                    }
+                      <b>{getValue(option)}</b>
+                      <br/>
+                      <Box sx={{fontSize: "10px"}}><i>{getDescription(option)}</i></Box>
                     </Box>
-                    <Box
-                      component={CheckIcon}
-                      sx={{ opacity: 0.6, width: 18, height: 18 }}
-                      style={{
-                        visibility: selected ? 'visible' : 'hidden',
-                      }}
-                    />
                   </li>
                 );
               }}
               options={options}
-              getOptionLabel={(o) => o.value ?? o}
+              getOptionLabel={(o) => getValue(o)}
               renderInput={(params) => (
                 <StyledInput
                   ref={params.InputProps.ref}
                   inputProps={params.inputProps}
                   autoFocus
-                  placeholder="Select value"
+                  placeholder="Filter labels"
                 />
               )}
               slots={{
@@ -223,6 +260,6 @@ export default function SingleLabelValPicker({labelVal, options, onFieldUpdate, 
           </div>
         </ClickAwayListener>
       </StyledPopper>
-    </React.Fragment>
+    </Fragment>
   );
 }

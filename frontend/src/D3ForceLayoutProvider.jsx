@@ -11,7 +11,7 @@ import {
 import { collide } from './collide.js';
 
 const simulation = forceSimulation()
-  .force('charge', forceManyBody().strength(-10000))
+  .force('charge', forceManyBody().strength(-1000))
   .force('x', forceX().x(0).strength(0.05))
   .force('y', forceY().y(0).strength(0.05))
   .force('collide', collide())
@@ -78,7 +78,7 @@ export const D3ForceLayoutProvider = (props) => {
     // dagreGraph.graph().height and width, which allows us to fit the viewport to the layout
     try{
       const nodes = getLayoutedElements(getNodes(), getEdges());
-
+      console.log("RE-LAYOUT")
       setNodes(
         nodes.map(n => ({
           ...n,

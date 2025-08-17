@@ -14,7 +14,6 @@ const StyledAutocompletePopper = styled('div')(({ theme }) => ({
     boxShadow: 'none',
     margin: 0,
     color: 'inherit',
-    fontSize: 13,
   },
   [`& .${autocompleteClasses.listbox}`]: {
     padding: 0,
@@ -87,7 +86,6 @@ const StyledInput = styled(InputBase)(({ theme }) => ({
     borderRadius: 4,
     padding: 8,
     transition: theme.transitions.create(['border-color', 'box-shadow']),
-    fontSize: 10,
     backgroundColor: '#fff',
     border: '1px solid #30363d',
     ...theme.applyStyles('dark', {
@@ -107,10 +105,7 @@ const StyledInput = styled(InputBase)(({ theme }) => ({
 
 
 const Button = styled(ButtonBase)(({ theme }) => ({
-  fontSize: 10,
-  width: '100%',
-  textAlign: 'left',
-  paddingBottom: 8,
+  fontSize: "14px",
   fontWeight: 600,
   color: '#ffffff',
   ...theme.applyStyles('dark', {
@@ -132,9 +127,8 @@ const Button = styled(ButtonBase)(({ theme }) => ({
 }));
 
 
-export default function SingleFieldPicker({value, valuePlaceholder, updateData, options, getIconSrc, disabled, popperPrompt, freeSolo}) {
+export default function SingleFieldPicker({value, valuePlaceholder, updateData, options, getIconSrc, disabled, popperPrompt}) {
   const [anchorEl, setAnchorEl] = useState(null);
-
   const handleClick = (event) => {
     setAnchorEl(event.currentTarget);
   };
@@ -151,7 +145,7 @@ export default function SingleFieldPicker({value, valuePlaceholder, updateData, 
 
   return (
     <Fragment>
-      <Box sx={{ fontSize: 10, width:"fit-content"}}>
+      <Box>
         <Button disabled={disabled || false} disableRipple aria-describedby={id} onClick={handleClick} sx={{padding: "0", margin:"0"}}>
           { getIconSrc &&
             <Box
@@ -159,6 +153,7 @@ export default function SingleFieldPicker({value, valuePlaceholder, updateData, 
               sx={{
                 height: 20,
                 flexShrink: 0,
+                bgcolor: "white",
                 borderRadius: '3px',
                 mt: '0px',
                 mr: "5px"

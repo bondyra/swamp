@@ -2,7 +2,6 @@ import base64
 from fastapi import FastAPI, Request
 from fastapi.exceptions import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-import jsonpath_ng
 import uvicorn
 from typing import Iterable, Tuple
 
@@ -29,22 +28,6 @@ async def resource_types():
     return list(iter_all_resource_types())
 
 
-@app.get("/link-suggestion")
-async def link_suggestion(child_provider: str, child_resource: str, parent_provider: str, parent_resource: str):
-    try:
-        links = await handler(child_provider, child_resource).links()
-        matching_links = [
-            l for l in links
-            if l.parent_provider == parent_provider and l.parent_resource == parent_resource
-        ]
-        if not matching_links:
-            return {"key": "", "val": "", "op": "eq"}
-        m = matching_links[0]
-        return {"key": m.path, "val": m.parent_path, "op": m.op}
-    except Exception as e:
-        return {"key": "", "val": "", "op": "eq"}
-
-
 @app.get("/attributes")
 async def attributes(r: Request):
     provider, resource = extract_provider_and_resource(r)
@@ -62,6 +45,16 @@ async def attribute_values(r: Request):
         raise HTTPException(status_code=400, detail='You must specify "attribute"')
     try:
         result = await handler(provider, resource).attribute_values(**r.query_params)
+        return result
+    except GenericQueryException as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/example")
+async def example(r: Request):
+    provider, resource = extract_provider_and_resource(r)
+    try:
+        result = await handler(provider, resource).example()
         return result
     except GenericQueryException as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -96,7 +89,7 @@ def iter_request_labels(request: Request) -> Iterable[Tuple[str, Label]]:
         try:
             label_key, label_op, label_val = key.split(",")
             k = base64.b64decode(label_key).decode()
-            l = Label(key_jsonpath=jsonpath_ng.parse(k), val=base64.b64decode(label_val).decode(), op=base64.b64decode(label_op).decode())
+            l = Label(key=k, val=base64.b64decode(label_val).decode(), op=base64.b64decode(label_op).decode())
             yield k, l
         except ValueError:
             raise HTTPException(status_code=400, detail='Invalid label provided - it must be in form KEY,OP,VAL')
@@ -106,6 +99,7 @@ def iter_request_labels(request: Request) -> Iterable[Tuple[str, Label]]:
 
 async def do_get(provider, resource, labels):
     # some of the filters might not get used in handler, running this for the second time on actual results
+    print(f"get {provider} {resource} {labels}")
     results = [r async for r in handler(provider, resource).get(labels)]
     return [r for r in results if all(l.matches(r) for l in labels.values())]
 

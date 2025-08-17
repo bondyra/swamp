@@ -22,6 +22,12 @@ export default class Backend {
     .then(response => response.json());
   }
 
+  async example(resourceType) {
+    const [provider, resource] = resourceType.split(".")
+    return fetch(`${this.base_url}/example?_provider=${provider}&_resource=${resource}`)
+    .then(response => response.json());
+  }
+
   async attributeValues(resourceType, attribute, params) {
     const [provider, resource] = resourceType.split(".")
     const paramsQs = params.map(x => `${x.key}=${x.val}`).join("&")
@@ -29,16 +35,17 @@ export default class Backend {
     .then(response => response.json());
   }
 
-  async linkSuggestion(childResourceType, parentResourceType) {
-    const [childProvider, childResource] = childResourceType.split(".")
-    const [parentProvider, parentResource] = parentResourceType.split(".")
-    return fetch(`${this.base_url}/link-suggestion?child_provider=${childProvider}&child_resource=${childResource}&parent_provider=${parentProvider}&parent_resource=${parentResource}`)
-    .then(response => response.json());
+  async* query(vertices) {
+    // todo: error handling
+    const promises = vertices.filter(v => v.resourceType).map(v => {
+      return this.queryOne(v.resourceType, v.labels, v.id);
+    });
+    yield* this.asCompleted(promises);
   }
 
-  async query(resourceType, labels) {
+  async queryOne(resourceType, labels, vertexId) {
     const [provider, resource] = resourceType.split(".");
-    const qs = (labels ?? []).map(l => `${encodeURIComponent(btoa(l.key))},${encodeURIComponent(btoa(l.op ?? "eq"))},${encodeURIComponent(btoa(l.val))}`).join("&");
+    const qs = (labels ?? []).map(l => `${encodeURIComponent(btoa(l.key))},${encodeURIComponent(btoa(l.op ?? "=="))},${encodeURIComponent(btoa(l.val))}`).join("&");
     return fetch(`${this.base_url}/get?_provider=${provider}&_resource=${resource}&${qs}`)
       .then(response => {
         this.throwForStatus(response);
@@ -48,10 +55,36 @@ export default class Backend {
         return response.results.map(result => {
             return {
               resourceType: resourceType,
-              result: result
+              result: result,
+              vertexId: vertexId,
             };
         })
       });
+  }
+
+  async* asCompleted(promises) {
+    const pending = new Set(promises.map(async (p, i) => {
+      const items = await p;
+      return { items, index: i };
+    }));
+
+    while (pending.size > 0) {
+      const { items, index } = await Promise.race(pending);
+      
+      for (const p of pending) {
+        p.then(result => {
+          if (result.index === index) {
+            pending.delete(p);
+          }
+        }).catch(() => {
+          pending.delete(p);
+        });
+      }
+
+      for (const item of items) {
+        yield item;
+      }
+    }
   }
 
   throwForStatus(response) {
