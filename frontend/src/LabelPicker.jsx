@@ -1,37 +1,33 @@
-import AddCircleIcon from '@mui/icons-material/AddCircle';
+import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
+import DoubleArrowIcon from '@mui/icons-material/DoubleArrow';
 import RemoveCircleIcon from '@mui/icons-material/RemoveCircle';
 import IconButton, {iconButtonClasses} from '@mui/material/IconButton';
-import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
-import LinkIcon from '@mui/icons-material/Link';
 import EmergencyIcon from '@mui/icons-material/Emergency';
-import List from '@mui/material/List';
-import ListItem from '@mui/material/ListItem';
 import Stack from '@mui/material/Stack';
 import TextField, { textFieldClasses} from '@mui/material/TextField';
-import React, { useEffect, useState } from 'react';
+import Box from '@mui/material/Box';
 
-import {JSONPath} from 'jsonpath-plus';
-
-import { useBackend } from './BackendProvider';
-import SingleFieldPicker from './SingleFieldPicker'
+import JQPicker from './JQPicker'
 import SingleLabelValPicker from './SingleLabelValPicker'
 import { Tooltip } from '@mui/material';
 import LabelOp from './LabelOp';
 import { randomString } from './Utils';
+import { useBackend } from './BackendProvider';
+import { useState, useEffect } from 'react';
 
 
 const themeFunction = (theme) => ({
-	padding: 0,
   	color: "#ffffff",
 	'& input': {
 		color: "#ffffff",
 		padding: "0px 0px 0px 5px",
 		fontFamily: "Monospace",
-		fontSize: "10px",
+		fontSize: "14px",
+  		fontWeight: 600,
 		height: "20px"
 	},
 	[`&.${textFieldClasses.root}`]: {
-		width: "100px",
+		width: "50px",
 		minWidth:"10px",
 	},
 	[`&.${iconButtonClasses.root}`]: {
@@ -40,129 +36,67 @@ const themeFunction = (theme) => ({
 	},
 })
 
-export default function LabelPicker({ resourceType, labels, setLabels, previousLabelVars, parent, parentResourceType }) {
-	const [attributes, setAttributes] = useState(new Map())
-	const [localLabels, setLocalLabels] = useState(labels);
+export default function LabelPicker({ resourceType, labels, setLabels, attributes }) {
 	const backend = useBackend();
-
-	useEffect(() => {setLabels(localLabels);}, [localLabels, setLabels]);
-
 	const labelsWithUpdatedLabelsById = (ll, extraLabels) => {
 		return ll.map(l => {
 			const ul = extraLabels.filter(x => l.id === x.id)
 			return ul ? {...l, ...ul[0]} : l
 		})
 	}
+	const [example, setExample] = useState({})
 
-	useEffect(() => {  // when resourceType changes
-		const loadAttributes = async () => {
-			if (resourceType === null || resourceType === undefined)
-				return [];
-			// re-load attributes
-			const attributes = await backend.attributes(resourceType);
-			const requiredAttributes = attributes.filter(a => a.query_required);
-			setAttributes(new Map(attributes.map(a=> [a.path, a])));
-			// refresh labels with potentially new required attributes
-			const newRequiredLabels = requiredAttributes.map(a => {
-				const val = [...(previousLabelVars ?? new Map())[a.path] ?? [""]][0]
-				return {
-					id: randomString(8), key: a.path, val: val, keyImmutable: true, 
-					required: true, allowedValues: a.allowed_values, dependsOn: a.depends_on
-				}
-			});
-			// if there's a link label, try to get default link key val
-			var linkKeyVal = null;
-			if (parentResourceType) {
-				const resp = await backend.linkSuggestion(resourceType, parentResourceType);
-				linkKeyVal = {key: resp.key, val: resp.val, op: resp.op};
+    useEffect(() => {
+        async function update() {
+			if (resourceType){
+				const ex = await backend.example(resourceType);
+				setExample(ex);
 			}
-
-			const labelsWithLinkSuggestion = (ll, linkKeyVal) => {
-				if(!linkKeyVal || (linkKeyVal.key === "" && linkKeyVal.val === ""))
-					return ll
-				const actualValues = JSONPath({path: linkKeyVal.val, json: parent})
-				if (!actualValues || actualValues.length !== 1)
-					return ll
-				return ll.map(l => {
-					if (l.id === "link")
-						return {...l, ...{key: linkKeyVal.key, op: linkKeyVal.op, val: actualValues[0]}};
-					return l;
-				});
-			};
-
-			const labelsWithUpdatedRequiredLabels = (ll) => {
-				const currentLabelKeys = ll.map(l => l.key)
-				const requiredLabelKeys = newRequiredLabels.map(l => l.key)
-
-				return [
-					...ll.map(l => {
-						if (!requiredLabelKeys.includes(l.key) || l.val !== "")
-							return l;
-						return newRequiredLabels.filter(r => r.key === l.key)[0]
-					}),
-					...newRequiredLabels.filter(l => !currentLabelKeys.includes(l.key))  // add any new required label
-				]
-			}
-
-			// set the labels (local only to prevent re-render loop)
-			setLocalLabels(oldLabels => {
-				return labelsWithLinkSuggestion(
-					labelsWithUpdatedRequiredLabels(oldLabels), 
-					linkKeyVal
-				)
-			});
-		};
-        loadAttributes();
-	}, [resourceType, parentResourceType, setLocalLabels, backend, previousLabelVars, parent]);
+        }
+        update();
+	}, [backend, resourceType, setExample])
 
 	return (
 		<>
-            <List dense={true} sx={{padding: "0px", margin: "0px"}}>
+            <Stack direction="row" sx={{padding: "2px", flexWrap: 'wrap'}}>
 			{
-				localLabels
-				.sort((a, b) => (b.id === "link") - (a.id === "link"))
+				labels
 				.sort((a, b) => b.required - a.required)  // meaning: put required labels first - descending order based on "required" flag (true=1, false=0)
 				.map(
 					label => {
-						return <ListItem key={`${label.id}-list-item`} sx={{padding: "0px", margin: "0px", height:"16px"}}>		
+						return <Box key={`${label.id}-list-item`} sx={{padding: "0", border: "1px solid gray", borderRadius: "10px"}}>
+						<Stack direction="row" sx={{alignItems: "center"}}>
 							{
-								label.id === "link" && <Tooltip title="Specify how to link this?"><LinkIcon sx={{width: "8px", height: "8px", padding: "0px", color: "yellow"}}/></Tooltip>
+								!label.required && <Tooltip title="User specified JQ query"><DoubleArrowIcon sx={{width: "16px", height: "16px", color: "yellow"}}/></Tooltip>
 							}
 							{
-								label.id !== "link" && label.required && <Tooltip title="Required by provider"><EmergencyIcon sx={{width: "8px", height: "8px", padding: "0px", color: "darkred"}}/></Tooltip>
+								label.required && <Tooltip title="Required by provider"><EmergencyIcon sx={{width: "16px", height: "16px", color: "darkred"}}/></Tooltip>
 							}
-							{
-								label.id !== "link" && !label.required && <KeyboardArrowRightIcon sx={{width: "8px", height: "8px", padding: "0px"}}/>
-							}
-							<SingleFieldPicker 
-							freeSolo={true}
-							key={`${label.id}-picker`} value={label.key} valuePlaceholder="Filter" 
-							disabled = {label.keyImmutable || false}
-							updateData={(newKey) => {
-								const newContent = label.id === "link" ? { key: newKey } : { 
-									key: newKey, 
-									allowedValues: (attributes.get(newKey) ?? Object()).allowed_values, 
-									required: (attributes.get(newKey) ?? Object()).query_required ?? false,
-									dependsOn: (attributes.get(newKey) ?? Object()).depends_on ?? null,
-								}
-								const newLabels = labelsWithUpdatedLabelsById(
-									localLabels,
-									[{...label, ...newContent}]
-								);
-								setLocalLabels(newLabels);
-							}} 
-							options={[...attributes.values().filter(v=> !v.query_required).map(v => {return {value: v.path, description: v.description}})]}/>
-							<LabelOp op={label.op ?? "eq"} 
+							<JQPicker 
+								key={`${label.id}-picker`} 
+								value={label.key}
+								example={example}
+								disabled = {label.required || false}
+								updateData={(newKey) => {
+									const newContent = { key: newKey };
+									const newLabels = labelsWithUpdatedLabelsById(
+										labels, [{...label, ...newContent}]
+									);
+									setLabels(newLabels);
+								}}
+								// not needed V ?
+								options={[...attributes.values().filter(v=> !v.query_required).map(v => {return {value: v.path, description: v.description}})]}
+							/>
+							<LabelOp op={label.op ?? "=="} 
 										change={(val) => {
 											const newLabels = labelsWithUpdatedLabelsById(
-												localLabels, [{...label, op: val}]
+												labels, [{...label, op: val}]
 											)
-											setLocalLabels(newLabels);
+											setLabels(newLabels);
 										}}/>
-							<Stack 
+							<Stack
 								key={`${label.id}-val-outer`}
 								sx={{
-								height: 20,
 								padding: '0px',
 								fontWeight: 600,
 								lineHeight: '15px',
@@ -178,10 +112,9 @@ export default function LabelPicker({ resourceType, labels, setLabels, previousL
 										value={label.val}
 										fullWidth= {false}
 										onChange={(event) => {
-											const newLabels = labelsWithUpdatedLabelsById(
-												localLabels, [{...label, val: event.target.value}]
-											)
-											setLocalLabels(newLabels);
+											setLabels(labelsWithUpdatedLabelsById(
+												labels, [{...label, val: event.target.value}]
+											));
 										}}
 									/>
 								}
@@ -194,44 +127,39 @@ export default function LabelPicker({ resourceType, labels, setLabels, previousL
 											// update allowed values for each label for which it key dependsOn this key
 											const val = typeof newValue === "object" ? newValue.value : newValue;  // TODO: label val should object
 											const dependentLabels = await Promise.all(
-												localLabels
+												labels
 												.filter(l => l.dependsOn === label.key)
 												.map(async l => {
 													return {...l, allowedValues: await backend.attributeValues(resourceType, l.key, [{key: label.key, val: val}])}
 												})
 											)
 											const newLabels = labelsWithUpdatedLabelsById(
-												localLabels, [...dependentLabels, {...label, val: val}]
+												labels, [...dependentLabels, {...label, val: val}]
 											);
-											setLocalLabels(newLabels);
+											setLabels(newLabels);
 										}}
 										descr={`Select one of allowed values for ${label.key}`}
 									/>
 								}
 								{ !label.required &&
 								<IconButton key={`${label.id}-val-del-outer`} sx={{padding: "0px", ml: "5px"}} aria-label="delete"
-								onClick={() => {
-									const newLabels = localLabels.filter(x => x.id !== label.id);
-									setLocalLabels(newLabels);
-								}}>
+								onClick={() => {setLabels(labels.filter(x => x.id !== label.id));}}>
 									<RemoveCircleIcon key={`${label.id}-val-del-inner`} color="secondary" sx={{width: "16px", height: "16px", padding: "0px"}}/>
 								</IconButton>
 								}
 							</Stack>
-						</ListItem>
+						</Stack>
+						</Box>
 					}
 				)
 			}
-			<ListItem sx={{padding: "0px"}}>
-				<IconButton aria-label="add" sx={{padding: "0px", margin: "0px", width: "fit-content"}} size="small"
-				onClick={() => {
-					const newLabels = [...localLabels, {id: randomString(8), key:  "", val: ""}];
-					setLocalLabels(newLabels);
-				}}>
-					<AddCircleIcon color="primary" sx={{width: "16px", height: "16px", padding: "0px"}}/>
+			<Box sx={{padding: "0", pl: "2px", pb: "4px"}}>
+				<IconButton aria-label="add" sx={{width: "fit-content", padding: "0"}} size="small"
+				onClick={() => {setLabels([...labels, {id: randomString(8), key:  "", val: "", required: false}]);}}>
+					<AddCircleOutlineIcon sx={{width: "16px", height: "16px", padding: "0px", color: "gray"}}/>
 				</IconButton>
-			</ListItem>
-           	</List>
+			</Box>
+           	</Stack>
 		</>
 	);
 }

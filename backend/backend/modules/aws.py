@@ -5,7 +5,7 @@ from typing import AsyncGenerator, Dict, List
 import aioboto3
 import boto3
 
-from backend.model import Attribute, Handler, Label, Provider, GenericQueryException, LinkInfo
+from backend.model import Attribute, Handler, Label, Provider, GenericQueryException
 
 
 class AWS(Provider):
@@ -55,24 +55,29 @@ class LegacyAWSAPIHandler(AWSHandler):
     async def attributes(cls) -> List[Attribute]:
         shp = boto3.client(cls.boto_client_name).meta.service_model.shape_for(cls.shape)
         return [
-            Attribute(path="_profile", description="AWS profile to use", query_required=True, allowed_values=_get_profiles()),
-            Attribute(path="_region", description="AWS region", query_required=True, allowed_values=_ALL_AWS_REGIONS),
-            *cls._attributes_rec(shp, path="")
+            Attribute(path="_profile", description="AWS profile to use", allowed_values=_get_profiles()),
+            Attribute(path="_region", description="AWS region", allowed_values=_ALL_AWS_REGIONS)
         ]
 
     @classmethod
-    def _attributes_rec(cls, obj, path=""):
+    async def example(cls) -> Dict:
+        shp = boto3.client(cls.boto_client_name).meta.service_model.shape_for(cls.shape)
+        return cls._example_rec(shp, f"{cls.provider()}.{cls.resource()}")
+
+    @classmethod
+    def _example_rec(cls, obj, n):
         if "type_name" in dir(obj) and obj.type_name == "structure":
-            for name, member in obj.members.items():
-                new_path = f"{path}.{name}" if path else name
-                yield from cls._attributes_rec(member, new_path)
-        elif "type_name" in dir(obj) and obj.type_name == "list": # <- ignoring lists for now
-            return
-        #     for name, member in obj.member.members.items():
-        #         new_path = f"{path}[*].{name}"
-        #         yield from cls._attributes_rec(member, new_path)
+            return {
+                name: cls._example_rec(member, name)
+                for name, member in obj.members.items()
+            }
+        elif "type_name" in dir(obj) and obj.type_name == "list":
+            el = cls._example_rec(obj.member, obj.name)
+            return [el, el]
+        elif "type_name" in dir(obj) and obj.type_name in {"string", "boolean", "integer"}:
+            return f"{n}_VALUE"
         else:
-            yield Attribute(path=path, description=obj.documentation.replace("<p>", "").replace("</p>", ""), query_required=False)
+            return None
 
 
 class EC2Handler(LegacyAWSAPIHandler):
@@ -91,13 +96,6 @@ class EC2Handler(LegacyAWSAPIHandler):
                 **{"_id": item["InstanceId"]},
                 **item
             }
-
-    @classmethod
-    async def links(cls) -> List[LinkInfo]:
-        return [
-            LinkInfo(path="VpcId", parent_provider= "aws", parent_resource="vpc", parent_path="VpcId"),
-            LinkInfo(path="SubnetId", parent_provider= "aws", parent_resource="vpc", parent_path="SubnetId"),
-        ]
 
 
 class VpcHandler(LegacyAWSAPIHandler):
@@ -135,12 +133,6 @@ class SubnetHandler(LegacyAWSAPIHandler):
                 **item
             }
 
-    @classmethod
-    async def links(cls) -> List[LinkInfo]:
-        return [
-            LinkInfo(path="VpcId", parent_provider= "aws", parent_resource="vpc", parent_path="VpcId")
-        ]
-
 
 class RouteTableHandler(LegacyAWSAPIHandler):
     boto_client_name = "ec2"
@@ -158,12 +150,6 @@ class RouteTableHandler(LegacyAWSAPIHandler):
                 **{"_id": item["RouteTableId"]},
                 **item
             }
-
-    @classmethod
-    async def links(cls) -> List[LinkInfo]:
-        return [
-            LinkInfo(path="VpcId", parent_provider= "aws", parent_resource="vpc", parent_path="VpcId")
-        ]
 
 
 class InternetGatewayHandler(LegacyAWSAPIHandler):
@@ -183,12 +169,6 @@ class InternetGatewayHandler(LegacyAWSAPIHandler):
                 **item
             }
 
-    @classmethod
-    async def links(cls) -> List[LinkInfo]:
-        return [
-            LinkInfo(path="VpcId", parent_provider= "aws", parent_resource="vpc", parent_path="VpcId")
-        ]
-
 
 class SecurityGroupHandler(LegacyAWSAPIHandler):
     boto_client_name = "ec2"
@@ -206,12 +186,6 @@ class SecurityGroupHandler(LegacyAWSAPIHandler):
                 **{"_id": item["GroupId"]},
                 **item
             }
-
-    @classmethod
-    async def links(cls) -> List[LinkInfo]:
-        return [
-            LinkInfo(path="VpcId", parent_provider= "aws", parent_resource="vpc", parent_path="VpcId")
-        ]
 
 
 class NATGatewayHandler(LegacyAWSAPIHandler):
@@ -231,12 +205,6 @@ class NATGatewayHandler(LegacyAWSAPIHandler):
                 **item
             }
 
-    @classmethod
-    async def links(cls) -> List[LinkInfo]:
-        return [
-            LinkInfo(path="VpcId", parent_provider= "aws", parent_resource="vpc", parent_path="VpcId")
-        ]
-
 
 class ElasticIpHandler(LegacyAWSAPIHandler):
     boto_client_name = "ec2"
@@ -254,12 +222,6 @@ class ElasticIpHandler(LegacyAWSAPIHandler):
                 **{"_id": item["AllocationId"]},
                 **item
             }
-
-    @classmethod
-    async def links(cls) -> List[LinkInfo]:
-        return [
-            LinkInfo(path="VpcId", parent_provider= "aws", parent_resource="vpc", parent_path="VpcId")
-        ]
 
 
 class NetworkInterfaceHandler(LegacyAWSAPIHandler):
@@ -279,12 +241,6 @@ class NetworkInterfaceHandler(LegacyAWSAPIHandler):
                 **item
             }
 
-    @classmethod
-    async def links(cls) -> List[LinkInfo]:
-        return [
-            LinkInfo(path="VpcId", parent_provider= "aws", parent_resource="vpc", parent_path="VpcId")
-        ]
-
 
 class NetworkAclHandler(LegacyAWSAPIHandler):
     boto_client_name = "ec2"
@@ -302,12 +258,6 @@ class NetworkAclHandler(LegacyAWSAPIHandler):
                 **{"_id": item["NetworkAclId"]},
                 **item
             }
-
-    @classmethod
-    async def links(cls) -> List[LinkInfo]:
-        return [
-            LinkInfo(path="VpcId", parent_provider= "aws", parent_resource="vpc", parent_path="VpcId")
-        ]
 
 
 _PROFILES = []

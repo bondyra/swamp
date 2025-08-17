@@ -4,7 +4,7 @@ from kubernetes_asyncio import config
 from kubernetes_asyncio.dynamic import DynamicClient
 import requests
 
-from backend.model import Attribute, Handler, Label, Provider, GenericQueryException, LinkInfo
+from backend.model import Attribute, Handler, Label, Provider, GenericQueryException
 
 
 description = "Module for interacting with Kubernetes resources"
@@ -23,12 +23,12 @@ class Kubernetes(Provider):
 _OPENAPI_SCHEMA = None
 
 
-async def _load_attributes_from_openapi_schema(openapi_path: str) -> List[Attribute]:
+async def _generate_example_from_openapi_schema(openapi_path: str) -> Dict:
     global _OPENAPI_SCHEMA
     if not _OPENAPI_SCHEMA:
         _OPENAPI_SCHEMA = await _load_openapi_schema()
     definition = _OPENAPI_SCHEMA["definitions"][openapi_path]
-    return _attributes_rec(_OPENAPI_SCHEMA, definition, path="")
+    return _generate_example_rec(_OPENAPI_SCHEMA, definition, openapi_path)
 
 
 async def _load_openapi_schema():
@@ -46,21 +46,31 @@ async def _load_openapi_schema():
         return response.json()
 
 
-def _attributes_rec(schema, definition, path=""):
+def _generate_example_rec(schema, definition, name) -> Dict:
     properties = definition.get("properties")
     if properties:
-        for key, val in properties.items():
-            if key in {"apiVersion", "kind"}:
-                continue
-            if "$ref" in val:
-                new_definition = schema["definitions"][val["$ref"].replace("#/definitions/", "")]
-                yield from _attributes_rec(schema, new_definition, path=f"{path}.{key}" if path else key)
-            elif val["type"] == "array":  # TODO: don't really know what to do with lists for now
-                continue
-            else:
-                yield Attribute(path=f"{path}.{key}" if path else key, description=val["description"], query_required=False)
+        return {
+            key: _process_val(schema, key, val)
+            for key, val in properties.items()
+            if key not in {"apiVersion", "kind"}
+        }
     else:
-        yield Attribute(path=path, description=definition["description"], query_required=False)
+        return f"{name}_VALUE"
+
+
+def _process_val(schema, key, val):
+    if "$ref" in val:
+        new_definition = schema["definitions"][val["$ref"].replace("#/definitions/", "")]
+        return _generate_example_rec(schema, new_definition, key)
+    elif val["type"] == "array":
+        if "$ref" in val["items"]:
+            new_definition = schema["definitions"][val["items"]["$ref"].replace("#/definitions/", "")]
+            el = _generate_example_rec(schema, new_definition, key)
+            return [el, el]
+        else:
+            return [f"{key}_VALUE", f"{key}_VALUE"]
+    else:
+        return f"{key}_VALUE"
 
 
 class K8sHandler(Handler):
@@ -76,6 +86,12 @@ class K8sHandler(Handler):
                 raise GenericQueryException(f"To get attribute values of namespace, we need context")
             return await _get_namespaces(kwargs["_context"])
         raise GenericQueryException(f"Not supported for attribute {attribute}")
+    
+    @classmethod
+    async def example(cls) -> Dict:
+        # TODO: actual attributes might vary on context due to different kube versions! selecting default context for now
+        result = await _generate_example_from_openapi_schema(cls.openapi_path())
+        return result
 
 
 class NamespacedK8sHandler(K8sHandler):
@@ -104,14 +120,9 @@ class NamespacedK8sHandler(K8sHandler):
 
     @classmethod
     async def attributes(cls) -> List[Attribute]:
-        # TODO: allowed_values of namespace depends on context, which must be chosen!
-        # TODO: actual attributes might vary on context due to different kube versions! selecting default context for now
-        resource_attributes = await _load_attributes_from_openapi_schema(cls.openapi_path())
-        
         return [
-            Attribute(path="_context", description="Kubernetes context to use", query_required=True, allowed_values=await _get_contexts()),
-            Attribute(path="_namespace", description="Kubernetes namespace this resource sits in", query_required=True, depends_on="_context"),
-            *resource_attributes
+            Attribute(path="_context", description="Kubernetes context to use", allowed_values=await _get_contexts()),
+            Attribute(path="_namespace", description="Kubernetes namespace this resource sits in", depends_on="_context")
         ]
 
 
@@ -131,11 +142,6 @@ class ConfigMapHandler(NamespacedK8sHandler):
     @staticmethod
     def resource() -> str:
         return "cm"
-
-    @classmethod
-    async def links(cls) -> List[LinkInfo]:
-        return [
-        ]
     
 
 class ReplicaSetHandler(NamespacedK8sHandler):
@@ -154,15 +160,6 @@ class ReplicaSetHandler(NamespacedK8sHandler):
     @staticmethod
     def resource() -> str:
         return "rs"
-
-    @classmethod
-    async def links(cls) -> List[LinkInfo]:
-        return [
-            LinkInfo(path="metadata.ownerReferences[*].name", parent_provider= "k8s", parent_resource="deployment", parent_path="metadata.name")
-            # link to sa todo
-            # link to secret todo
-            # link to cm todo
-        ]
     
 
 class DeploymentHandler(NamespacedK8sHandler):
@@ -181,14 +178,6 @@ class DeploymentHandler(NamespacedK8sHandler):
     @staticmethod
     def resource() -> str:
         return "deployment"
-    
-    @classmethod
-    async def links(cls) -> List[LinkInfo]:
-        return [
-            # link to sa todo
-            # link to secret todo
-            # link to cm todo
-        ]
 
 
 class PodHandler(NamespacedK8sHandler):
@@ -207,17 +196,6 @@ class PodHandler(NamespacedK8sHandler):
     @staticmethod
     def resource() -> str:
         return "pod"
-    
-    @classmethod
-    async def links(cls) -> List[LinkInfo]:
-        return [
-            LinkInfo(path="metadata.ownerReferences[*].name", parent_provider= "k8s", parent_resource="rs", parent_path="metadata.name")
-            # link to sa todo
-            # link to secret todo
-            # link to cm todo
-            # link to service todo
-            # link to ep todo
-        ]
 
 
 class PersistentVolumeClaimHandler(NamespacedK8sHandler):
@@ -236,12 +214,6 @@ class PersistentVolumeClaimHandler(NamespacedK8sHandler):
     @staticmethod
     def resource() -> str:
         return "pvc"
-    
-    @classmethod
-    async def links(cls) -> List[LinkInfo]:
-        return [
-            # link to PV todo
-        ]
 
 
 class SecretHandler(NamespacedK8sHandler):
@@ -260,11 +232,6 @@ class SecretHandler(NamespacedK8sHandler):
     @staticmethod
     def resource() -> str:
         return "secret"
-    
-    @classmethod
-    async def links(cls) -> List[LinkInfo]:
-        return [
-        ]
 
 
 class ServiceAccountHandler(NamespacedK8sHandler):
@@ -283,11 +250,6 @@ class ServiceAccountHandler(NamespacedK8sHandler):
     @staticmethod
     def resource() -> str:
         return "sa"
-    
-    @classmethod
-    async def links(cls) -> List[LinkInfo]:
-        return [
-        ]
 
 
 class ServiceHandler(NamespacedK8sHandler):
@@ -306,11 +268,6 @@ class ServiceHandler(NamespacedK8sHandler):
     @staticmethod
     def resource() -> str:
         return "service"
-    
-    @classmethod
-    async def links(cls) -> List[LinkInfo]:
-        return [
-        ]
 
 
 class EventHandler(NamespacedK8sHandler):
@@ -329,11 +286,6 @@ class EventHandler(NamespacedK8sHandler):
     @staticmethod
     def resource() -> str:
         return "event"
-    
-    @classmethod
-    async def links(cls) -> List[LinkInfo]:
-        return [
-        ]
 
 
 class EndpointsHandler(NamespacedK8sHandler):
@@ -352,12 +304,6 @@ class EndpointsHandler(NamespacedK8sHandler):
     @staticmethod
     def resource() -> str:
         return "ep"
-    
-    @classmethod
-    async def links(cls) -> List[LinkInfo]:
-        return [
-            # link to service todo
-        ]
 
 
 class GlobalK8sHandler(K8sHandler):
@@ -378,7 +324,7 @@ class GlobalK8sHandler(K8sHandler):
                 }
 
 
-class NodeHandler(NamespacedK8sHandler):
+class NodeHandler(NamespacedK8sHandler):  # TODO: it shouldn't be namespaced
     @classmethod
     def description(cls) -> str:
         return "Kubernetes node"
@@ -394,14 +340,9 @@ class NodeHandler(NamespacedK8sHandler):
     @staticmethod
     def resource() -> str:
         return "node"
-    
-    @classmethod
-    async def links(cls) -> List[LinkInfo]:
-        return [
-        ]
 
 
-class PersistentVolumeHandler(NamespacedK8sHandler):
+class PersistentVolumeHandler(NamespacedK8sHandler):  # TODO: it shouldn't be namespaced
     @classmethod
     def description(cls) -> str:
         return "Persistent volume"
@@ -417,11 +358,6 @@ class PersistentVolumeHandler(NamespacedK8sHandler):
     @staticmethod
     def resource() -> str:
         return "pv"
-    
-    @classmethod
-    async def links(cls) -> List[LinkInfo]:
-        return [
-        ]
 
 
 _CONTEXTS = []

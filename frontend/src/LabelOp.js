@@ -1,24 +1,18 @@
 
 
 import React, { memo } from 'react';
-import Button from '@mui/material/Button';
-import Stack from '@mui/material/Stack';
-import { Tooltip } from '@mui/material';
+import SingleFieldPicker from './SingleFieldPicker';
 
 
 export default memo(({ op, change }) => {
+    const options = [
+        {value: "==", description: "Left equals to right"},
+        {value: "!=", description: "Left not equals to right"},
+        {value: "~~", description: "Left like right"},
+        {value: "!~", description: "Left not like right"},
+    ]
   return (
-    <Stack direction="row" sx={{padding: '0px 7px 0px 7px', fontWeight: 600, pb: "4px"}}>
-        <Tooltip title="equals">
-            <Button sx={{color: op === "eq" ? "white": "gray", height: "16px", width: "16px", minWidth: "16px"}} onClick={() => change("eq")}>
-                =
-            </Button>
-        </Tooltip>
-        <Tooltip title="contains">
-            <Button sx={{color: op === "contains" ? "white": "gray", height: "16px", width: "16px", minWidth: "16px", transform: "rotate(180deg)"}} onClick={() => change("contains")}>
-                ∈
-            </Button>
-        </Tooltip>
-    </Stack>
+    <SingleFieldPicker value={op} updateData={(v) => {change(v)}} options={options}
+    valuePlaceholder="op" popperPrompt="Select operation"/>
   );
 });

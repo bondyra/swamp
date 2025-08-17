@@ -103,9 +103,11 @@ code {
   color: rgb(243, 244, 246);
 }
  
-.react-flow__handle {
-  opacity: 1;
-  background-image: url("./link.svg");
+.react-flow .react-flow__handle {
+  min-width: 1px;
+  min-height: 1px;
+  top: 50%;
+  left: 50%;
 }
  
 .react-flow__node:focus {

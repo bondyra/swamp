@@ -36,7 +36,6 @@ export const ELKLayoutProvider = (props) => {
     }
 
     setRecomputeTriggered(false);
-  
     try{
       const layoutOptions = {
         'elk.algorithm': 'layered',

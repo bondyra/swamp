@@ -96,21 +96,3 @@ export function getIconSrc(resourceType) {
             return "./asset.svg"
     }
 }
-
-const graphPrefix = "__graph_"
-
-export function listGraphNames() {
-    return Object.entries(localStorage).map(it => it[0]).filter(k => k.startsWith(graphPrefix)).map(k => k.replace(graphPrefix, ""));
-}
-
-export function getGraph(name) {
-    return localStorage.getItem(`${graphPrefix}${name}`);
-}
-
-export function putGraph(name, content) {
-    localStorage.setItem(`${graphPrefix}${name}`, content);
-}
-
-export function removeGraph(name) {
-    localStorage.removeItem(`${graphPrefix}${name}`);
-}

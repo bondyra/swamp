@@ -1,4 +1,5 @@
 from typing import Any, AsyncGenerator, Dict, Iterable, List, Optional
+import jq
 
 from pydantic import BaseModel
 
@@ -6,17 +7,8 @@ from pydantic import BaseModel
 class Attribute(BaseModel):
     path: str
     description: str
-    query_required: bool
     allowed_values: Optional[List[str]] = None
     depends_on: Optional[str] = None
-
-
-class LinkInfo(BaseModel):
-    path: str
-    op: str = "eq"
-    parent_provider: str
-    parent_resource: str
-    parent_path: str
 
 
 class ResourceType(BaseModel):
@@ -26,16 +18,25 @@ class ResourceType(BaseModel):
 
 
 class Label(BaseModel):
-    key_jsonpath: Any
+    key: str
     val: str
     op: str
+    jq_key: Optional[str] = None
 
     def matches(self, data: Dict) -> bool:
-        found_vals = [x.value for x in self.key_jsonpath.find(data)]
-        if self.op == "eq":
-            return found_vals and len(found_vals) == 1 and found_vals[0] == self.val
-        if self.op == "contains":
-            return found_vals and len(found_vals) > 0 and self.val in found_vals
+        if not self.jq_key:
+            self.jq_key = jq.compile(self.key if self.key.startswith(".") else f".{self.key}")
+
+        results = [str(x) for x in self.jq_key.input_value(data).all() if x]
+        if self.op == "==":
+            return results and len(results) == 1 and results[0] == self.val
+        if self.op == "!=":
+            return results and len(results) == 1 and results[0] != self.val
+        if self.op == "~~":
+            return results and len(results) > 0 and self.val in results
+        if self.op == "!~":
+            return results and len(results) > 0 and self.val not in results
+        return False
 
 
 _provider_registry = {}
@@ -105,14 +106,14 @@ class Handler(metaclass=_HandlerMeta):
     @classmethod
     async def attributes(cls) -> List[Attribute]:
         pass
-
-    @classmethod
-    async def links(cls) -> List[LinkInfo]:
-        return []
     
     @classmethod
     async def attribute_values(cls, attribute: str, **kwargs) -> List[str]:
         raise GenericQueryException(f"Not supported for attribute {attribute}")
+    
+    @classmethod
+    def example(cls) -> Dict:
+        pass
 
 
 def handler(provider: str, resource: str) -> Handler:
