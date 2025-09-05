@@ -15,6 +15,7 @@ class ResourceType(BaseModel):
     provider: str
     resource: str
     description: str
+    icon: str
 
 
 class Label(BaseModel):
@@ -40,16 +41,20 @@ class Label(BaseModel):
 
 
 _provider_registry = {}
-_handler_registry = {}
+
+
+def provider(name: str):
+    return _provider_registry[name]
 
 
 def iter_all_resource_types() -> Iterable[ResourceType]:
     for p in _provider_registry:
-        for r in _handler_registry[p]:
+        for r in _provider_registry[p].resources():
             yield ResourceType(
                 provider=p, 
                 resource=r,
-                description =_handler_registry[p][r].description().replace("<p>", "").replace("</p>", "")
+                description =_provider_registry[p].description(r).replace("<p>", "").replace("</p>", ""),
+                icon=_provider_registry[p].icon(r)
             )
 
 
@@ -60,61 +65,46 @@ class GenericQueryException(Exception):
 class _ProviderMeta(type):
     def __new__(cls, *args, **kwargs):
         inst = super().__new__(cls, *args)
-        if inst.name():
-            if inst.name() in _provider_registry:
-                raise ValueError(f"Provider {inst.name()} already registered")
-            _provider_registry[inst.name()] = inst
+        if inst.provider_name():
+            if inst.provider_name() in _provider_registry:
+                raise ValueError(f"Provider {inst.provider_name()} already registered")
+            _provider_registry[inst.provider_name()] = inst
         return inst
 
 
 class Provider(metaclass=_ProviderMeta):
     @staticmethod
-    def description() -> str:
+    def provider_description() -> str:
         pass
 
     @staticmethod
-    def name() -> str:
-        pass
-
-
-class _HandlerMeta(type):
-    def __new__(cls, name, bases, *args, **kwargs):
-        inst = super().__new__(cls, name, bases, *args)
-        if inst.provider() and inst.resource():
-            _handler_registry.setdefault(inst.provider(), {})
-            _handler_registry[inst.provider()][inst.resource()] = inst
-        return inst
-
-
-class Handler(metaclass=_HandlerMeta):
-    @staticmethod
-    def provider() -> str:
+    def provider_name() -> str:
         pass
     
     @staticmethod
-    def resource() -> str:
+    def resources() -> List[str]:
         pass
 
     @staticmethod
-    def description() -> str:
+    def description(resource: str) -> str:
+        pass
+
+    @staticmethod
+    def icon(resource: str) -> str:
         pass
 
     @classmethod
-    async def get(cls, labels: Dict[str, Label]) -> AsyncGenerator[Dict, None]:
+    async def get(cls, resource: str, labels: Dict[str, Label]) -> AsyncGenerator[Dict, None]:
         pass
 
     @classmethod
-    async def attributes(cls) -> List[Attribute]:
+    async def attributes(cls, resource: str) -> List[Attribute]:
         pass
     
     @classmethod
-    async def attribute_values(cls, attribute: str, **kwargs) -> List[str]:
-        raise GenericQueryException(f"Not supported for attribute {attribute}")
+    async def attribute_values(cls, resource: str, attribute: str, **kwargs) -> List[str]:
+        raise GenericQueryException(f"Not supported for resource {resource}, attribute {attribute}")
     
     @classmethod
-    def example(cls) -> Dict:
+    def example(cls, resource: str) -> Dict:
         pass
-
-
-def handler(provider: str, resource: str) -> Handler:
-    return _handler_registry[provider][resource]

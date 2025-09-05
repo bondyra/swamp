@@ -1,4 +1,4 @@
-import {Fragment, useState} from 'react';
+import {Fragment, useEffect, useState} from 'react';
 import PropTypes from 'prop-types';
 import { styled } from '@mui/material/styles';
 import Popper from '@mui/material/Popper';
@@ -115,6 +115,16 @@ export default function JQPicker({value, updateData, example, disabled, handleCl
       await handleCloseExt();
   };
 
+  useEffect(() => {
+    const runJq = async () => {
+      if (value === null || value === undefined)
+        return;
+      const newVal = await jq.raw(example, value, ["-r", "-c"]);
+      setResult(newVal.stdout);
+    }
+    runJq();
+  }, [value])
+
   const open = Boolean(anchorEl);
   const id = open ? 'github-label' : undefined;
 
@@ -161,8 +171,6 @@ export default function JQPicker({value, updateData, example, disabled, handleCl
                 },
               }} value={value} placeholder='Write JQ query here' onChange={async e => {
                   updateData(e.target.value);
-                  const newVal = await jq.raw(example, e.target.value, ["-r", "-c"]);
-                  setResult(newVal.stdout);
               }}/>
             </Stack>
             <Stack>
