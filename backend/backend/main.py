@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 from typing import Iterable, Tuple
 
-from backend.model import Label, GenericQueryException, handler, iter_all_resource_types
+from backend.model import Label, GenericQueryException, iter_all_resource_types, provider
 from backend.modules.aws import AWS
 from backend.modules.k8s import Kubernetes
 
@@ -30,9 +30,9 @@ async def resource_types():
 
 @app.get("/attributes")
 async def attributes(r: Request):
-    provider, resource = extract_provider_and_resource(r)
+    p, resource = extract_provider_and_resource(r)
     try:
-        result = await handler(provider, resource).attributes()
+        result = await provider(p).attributes(resource)
         return result
     except GenericQueryException as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -40,11 +40,11 @@ async def attributes(r: Request):
 
 @app.get("/attribute-values")
 async def attribute_values(r: Request):
-    provider, resource = extract_provider_and_resource(r)
+    p, resource = extract_provider_and_resource(r)
     if "attribute" not in r.query_params:  # todo - label
         raise HTTPException(status_code=400, detail='You must specify "attribute"')
     try:
-        result = await handler(provider, resource).attribute_values(**r.query_params)
+        result = await provider(p).attribute_values(resource, **r.query_params)
         return result
     except GenericQueryException as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -52,9 +52,9 @@ async def attribute_values(r: Request):
 
 @app.get("/example")
 async def example(r: Request):
-    provider, resource = extract_provider_and_resource(r)
+    p, resource = extract_provider_and_resource(r)
     try:
-        result = await handler(provider, resource).example()
+        result = await provider(p).example(resource)
         return result
     except GenericQueryException as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -62,10 +62,10 @@ async def example(r: Request):
 
 @app.get("/get")
 async def get(r: Request):
-    provider, resource = extract_provider_and_resource(r)
+    p, resource = extract_provider_and_resource(r)
     labels = {k: v for k, v in iter_request_labels(r)}
     try:
-        results = await do_get(provider, resource, labels)
+        results = await do_get(p, resource, labels)
         return {"results": results}
     except GenericQueryException as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -97,10 +97,11 @@ def iter_request_labels(request: Request) -> Iterable[Tuple[str, Label]]:
             raise HTTPException(status_code=400, detail='Invalid label provided - all keys, ops and vals must be base64 encoded!')
 
 
-async def do_get(provider, resource, labels):
-    # some of the filters might not get used in handler, running this for the second time on actual results
-    print(f"get {provider} {resource} {labels}")
-    results = [r async for r in handler(provider, resource).get(labels)]
+async def do_get(p, resource, labels):
+    # some of the filters might not get used, running this for the second time on actual results
+    print(f"get {p} {resource} {labels}")
+    results = [r async for r in provider(p).get(resource, labels)]
+    print(results)
     return [r for r in results if all(l.matches(r) for l in labels.values())]
 
 

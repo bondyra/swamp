@@ -10,14 +10,15 @@ import { useBackend } from './BackendProvider';
 import { IconButton } from '@mui/material';
 import HighlightOffIcon from '@mui/icons-material/HighlightOff';
 import Picker from './Picker';
+import JQPicker from './JQPicker';
 
 
 export default memo(({ link }) => {
   const links = useQueryStore((state) => state.links);
   const updateLink = useQueryStore((state) => state.updateLink);
   const removeLink = useQueryStore((state) => state.removeLink);
-  const [fromOptions, setFromOptions] = useState([]);
-  const [toOptions, setToOptions] = useState([]);
+  const [fromExample, setFromExample] = useState([]);
+  const [toExample, setToExample] = useState([]);
   const updateVertex = useQueryStore((state) => state.updateVertex);
   const vertices = useQueryStore((state) => state.vertices);
   const backend = useBackend();
@@ -29,24 +30,28 @@ export default memo(({ link }) => {
   }, [links, updateLink, link, updateVertex, vertices]);
 
   useEffect(() => {
-    const loadAttributes = async () => {
+    const loadFromExample = async () => {
       if (link.from === null || link.from === undefined)
         return;
-      const attrs = await backend.attributes(link.from);
-      setFromOptions(attrs.map(a => {return {value: a.path, description: a.description}}))
+      const example = await backend.example(link.from);
+      setFromExample(example);
     };
-    loadAttributes();
-  }, [link.from, setFromOptions, backend]);
-
-  useEffect(() => {
-    const loadAttributes = async () => {
+    const loadToExample = async () => {
       if (link.to === null || link.to === undefined)
         return;
-      const attrs = await backend.attributes(link.to);
-      setToOptions(attrs.map(a => {return {value: a.path, description: a.description}}))
+      const example = await backend.example(link.to);
+      setToExample(example)
     };
-    loadAttributes();
-  }, [link.to, setToOptions, backend]);
+    const setDefaultValues = async () => {
+      const data = await backend.suggestion(link.from, link.to);
+      if (data === null || data === undefined)
+        return
+      updateLink(link.id, {fromAttr: data.fromAttr, op: data.op, toAttr: data.toAttr});
+    }
+    loadFromExample();
+    loadToExample();
+    setDefaultValues();
+  }, [link.from, link.to, setFromExample, setToExample, updateLink, backend]);
 
   return (
     <Stack direction="row" sx={{border: link.selected ? "3px solid #aaaaff" : "1px solid gray", borderRadius: "10px"}} onClick={select}>
@@ -70,11 +75,14 @@ export default memo(({ link }) => {
             valuePlaceholder="To" popperPrompt="Select to vertex"/>
         </Grid2>
         <Grid2 size={4} sx={{fontSize: "16px"}}>
-            <Picker 
+          <JQPicker 
             value={link.fromAttr}
-            getValue={(v) => v.value} getDescription={(v) => v.description} getIcon={null}
-            updateData={(v) => updateLink(link.id, {fromAttr: v.value})} options={fromOptions}
-            valuePlaceholder="From" popperPrompt="Select from attr"/>
+            example={fromExample}
+            placeholder='Select from attr'
+            updateData={(newVal) => {
+              updateLink(link.id, {fromAttr: newVal});
+            }}
+          />
         </Grid2>
         <Grid2 size={4} sx={{fontSize: "16px"}}>
           <LabelOp
@@ -83,11 +91,14 @@ export default memo(({ link }) => {
           />
         </Grid2>
         <Grid2 size={4} sx={{fontSize: "16px"}}>
-            <Picker 
+          <JQPicker 
             value={link.toAttr}
-            getValue={(v) => v.value} getDescription={(v) => v.description} getIcon={null}
-            updateData={(v) => updateLink(link.id, {toAttr: v.value})} options={toOptions}
-            valuePlaceholder="To" popperPrompt="Select to attr"/>
+            example={toExample}
+            placeholder='Select to attr'
+            updateData={(newVal) => {
+              updateLink(link.id, {toAttr: newVal});
+            }}
+          />
         </Grid2>
       </Grid2>
       </Box>

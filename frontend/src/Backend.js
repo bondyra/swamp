@@ -35,6 +35,12 @@ export default class Backend {
     .then(response => response.json());
   }
 
+  async suggestion(from, to) {
+    if (from === "aws.vpc" && to === "aws.subnet")
+      return {fromAttr: ".VpcId", op: "=", toAttr: ".VpcId"}
+    return null;
+  }
+
   async* query(vertices) {
     // todo: error handling
     const promises = vertices.filter(v => v.resourceType).map(v => {

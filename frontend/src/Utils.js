@@ -37,6 +37,8 @@ export function randomString(length) {
     return result;
 }
 
+
+// todo move to backend (needs prefetched global cache)
 export function getIconSrc(resourceType) {
     if(!resourceType)
         return "./icons/asset.svg"

@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Panel, useReactFlow } from '@xyflow/react';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
-import { Button } from '@mui/material';
 import {
   ReactFlow,
   addEdge,
@@ -14,6 +13,8 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/base.css';
 
+import { NiceButton } from './NiceButton';
+import Refresh from '@mui/icons-material/Refresh';
 import Resource from './Resource';
 import Query from './Query';
 import { DagreLayoutProvider } from './DagreLayoutProvider';
@@ -129,7 +130,7 @@ const SwampFlow = () => {
     }
     setTriggered(false);
     update();
-  }, [backend, triggered, setTriggered]);
+  }, [backend, triggered, setTriggered, links, nodes, setEdges, setNodes, vertices]);
 
   // RF stuff
   const onConnect = useCallback(
@@ -186,7 +187,10 @@ const SwampFlow = () => {
             <MiniMap />
             <Controls />
           <Panel position='top'>
-            <Button onClick={() => setAddDummyNode(true)}>aaaaaaa</Button>
+            <NiceButton variant="contained"  onClick={() => setAddDummyNode(true)}>
+              <Refresh sx={{mr: "5px"}}/>
+              <p>Refresh graph</p>
+            </NiceButton>
           </Panel>
         </ReactFlow>
     </ThemeProvider>
