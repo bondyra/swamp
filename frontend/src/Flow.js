@@ -21,7 +21,7 @@ import { DagreLayoutProvider } from './DagreLayoutProvider';
 import { randomString } from './Utils'
 import { useBackend } from './BackendProvider';
 import { useQueryStore } from './QueryState';
-import { JSONPath } from 'jsonpath-plus';
+
 
 const theme = createTheme({
   palette: {},
@@ -105,9 +105,10 @@ const SwampFlow = () => {
           for (const lt of linksTo) {
             const potentialToNodes = allNodes.filter(n => lt.toVertexId === n.data.vertexId);
             if (potentialToNodes){
-              const fromValue = JSONPath({path: lt.fromAttr, json: item.result});
+              const fromValue = await jq.raw(item.result, lt.fromAttr, ["-r", "-c"]);
+              ///// const fromValue = JSONPath({path: lt.fromAttr, json: item.result});
               // todo: op, for now it's hardcoded to "eq"
-              potentialToNodes.filter(n => JSONPath({path: lt.toAttr, json: n.data.result}) === fromValue).forEach(n => {
+              potentialToNodes.filter(async n => await jq.raw(n.data.result, lt.toAttr, ["-r", "-c"]) === fromValue).forEach(n => {
                 setEdges(oe => [...oe, {id: `${id}-${n.id}`, source: id, target: n.id, style: {strokeWidth: 5} }]);
               });
             }
@@ -118,9 +119,9 @@ const SwampFlow = () => {
           for (const lf of linksFrom) {
             const potentialFromNodes = allNodes.filter(n => lf.fromVertexId === n.data.vertexId);
             if (potentialFromNodes){
-              const toValue = JSONPath({path: lf.toAttr, json: item.result})[0];
+              const toValue = await jq.raw(item.result, lf.toAttr, ["-r", "-c"]);
               // todo: op, for now it's hardcoded to "eq"
-              potentialFromNodes.filter(n => JSONPath({path: lf.fromAttr, json: n.data.result})[0] === toValue).forEach(n => {
+              potentialFromNodes.filter(async n => await jq.raw(n.data.result, lf.fromAttr, ["-r", "-c"]) === toValue).forEach(n => {
                 setEdges(oe => [...oe, {id: `${n.id}-${id}`, source: n.id, target: id, style: {strokeWidth: 5} }]);
               });
             }

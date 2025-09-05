@@ -1,33 +1,3 @@
-import {JSONPath} from 'jsonpath-plus';
-
-
-export function getAllJSONPaths(obj, prefix = '') {
-	let results = [];
-	
-	if (typeof obj === 'object' && obj !== null) {
-		for (let key in obj) {
-		  if (Array.isArray(obj[key])) {
-            for(var i = 0; i < obj[key].length; i++) {
-                let newPrefix = prefix === '' ? `${key}[${i}]` : `${prefix}.${key}[${i}]`;
-                results = results.concat(getAllJSONPaths(obj[key][i], newPrefix));
-            }
-		  }
-		  else if (typeof obj[key] === 'object'){
-            let newPrefix = prefix === '' ? key : `${prefix}.${key}`;
-            results = results.concat(getAllJSONPaths(obj[key], newPrefix));
-		  } else {
-            let newPrefix = prefix === '' ? key : `${prefix}.${key}`;
-            results.push(newPrefix);
-		  }
-		}
-	}
-	return results;
-}
-
-export function getAllUniqueValues(data) {
-    return getAllJSONPaths(data).map(p => { return JSONPath({path: p, json: data})[0]}).filter((x, i, a) => a.indexOf(x) === i).map(x => `${x}`);
-}
-
 export function randomString(length) {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
     let result = "";
