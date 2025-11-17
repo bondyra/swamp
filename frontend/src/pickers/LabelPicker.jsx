@@ -10,9 +10,9 @@ import Box from '@mui/material/Box';
 import JQPicker from './JQPicker'
 import SingleLabelValPicker from './SingleLabelValPicker'
 import { Tooltip } from '@mui/material';
-import LabelOp from './LabelOp';
-import { randomString } from './Utils';
-import { useBackend } from './BackendProvider';
+import LabelOp from '../LabelOp';
+import { randomString } from '../Utils';
+import { useBackend } from '../BackendProvider';
 import { useState, useEffect } from 'react';
 
 

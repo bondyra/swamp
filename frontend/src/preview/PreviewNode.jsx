@@ -1,8 +1,8 @@
-import React, { memo } from 'react';
+import { memo } from 'react';
 import { Handle, Position, useReactFlow } from '@xyflow/react';
 import Stack from '@mui/material/Stack';
 import { Box } from '@mui/material';
-import { getIconSrc } from './Utils';
+import { getIconSrc } from '../Utils';
 
 export default memo(({ id, data, isConnectable }) => {
   const reactFlow = useReactFlow();

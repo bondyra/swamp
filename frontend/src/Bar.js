@@ -1,6 +1,6 @@
 import '@xyflow/react/dist/base.css';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import IconButton, {iconButtonClasses} from '@mui/material/IconButton';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import Divider from '@mui/material/Divider';
@@ -8,7 +8,7 @@ import { Button } from '@mui/material';
 import Stack from '@mui/material/Stack';
 import Box from '@mui/material/Box';
 import GraphTab from './GraphTab';
-import { useQueryStore } from './QueryState';
+import { useQueryStore } from './state/QueryState';
 
 import { randomString } from './Utils'
 
@@ -134,7 +134,7 @@ const Bar = () => {
               mr: "5px",
               mt: "5px"
               }}
-              src={"./asset.svg"} alt=""
+              src={"./icons/asset.svg"} alt=""
           />
           <Box sx={{fontSize: "36px", fontWeight: 800, color: "gray", fontStyle: "bold"}}>Swamp</Box>
           <Box sx={{fontSize: "16px", fontWeight: 100, color: "gray",  mt: "8px", ml: "5px"}}>{process.env.REACT_APP_VERSION ?? "dev"}</Box>

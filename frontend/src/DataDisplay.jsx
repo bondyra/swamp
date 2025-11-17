@@ -1,7 +1,7 @@
 import React, { memo } from 'react';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
-import { useQueryStore } from './QueryState';
+import { useQueryStore } from './state/QueryState';
 import DisplayRecord from './DisplayRecord';
 import { IconButton } from '@mui/material';
 import AddBoxIcon from '@mui/icons-material/AddBox';

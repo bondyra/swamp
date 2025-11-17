@@ -16,8 +16,8 @@ import React, { useEffect } from 'react';
 import { useCallback, useState } from 'react';
 import { useReactFlow } from '@xyflow/react';
 
-import LabelPicker from './LabelPicker';
-import SingleFieldPicker from './SingleFieldPicker';
+import LabelPicker from './pickers/LabelPicker';
+import SingleFieldPicker from './pickers/SingleFieldPicker';
 import { useBackend } from './BackendProvider';
 import { getIconSrc } from './Utils';
 

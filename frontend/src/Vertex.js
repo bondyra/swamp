@@ -4,11 +4,11 @@ import React, { memo, useEffect, useCallback, useState } from 'react';
 import Stack from '@mui/material/Stack';
 import Box from '@mui/material/Box';
 import { getIconSrc } from './Utils';
-import SingleFieldPicker from './SingleFieldPicker';
-import LabelPicker from './LabelPicker';
+import SingleFieldPicker from './pickers/SingleFieldPicker';
+import LabelPicker from './pickers/LabelPicker';
 
 import { useBackend } from './BackendProvider';
-import { useQueryStore } from './QueryState';
+import { useQueryStore } from './state/QueryState';
 
 import { randomString } from './Utils';
 import { IconButton, linkClasses } from '@mui/material';

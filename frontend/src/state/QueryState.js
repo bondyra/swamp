@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-import { randomString } from './Utils';
+import { randomString } from '../Utils';
 
 export const useQueryStore = create((set) => ({
   vertices: [],

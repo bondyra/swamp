@@ -13,14 +13,15 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/base.css';
 
-import { NiceButton } from './NiceButton';
+import { NiceButton } from './ui-elements/NiceButton';
 import Refresh from '@mui/icons-material/Refresh';
 import Resource from './Resource';
 import Query from './Query';
-import { DagreLayoutProvider } from './DagreLayoutProvider';
+import { DagreLayoutProvider } from './layout/DagreLayoutProvider';
 import { randomString } from './Utils'
 import { useBackend } from './BackendProvider';
-import { useQueryStore } from './QueryState';
+import { useQueryStore } from './state/QueryState';
+import * as jq from "jq-wasm";
 
 
 const theme = createTheme({
@@ -28,16 +29,16 @@ const theme = createTheme({
 });
 
 const initialNodes = [
-  {id: "1", position: {x: 0, y: 0}, type: 'resource', data: {id: "1", vertexId: "a", resourceType: "twoja.stara1", result: {a: 1, b: 2}}},
-  {id: "2", position: {x: 0, y: 0}, type: 'resource', data: {id: "2", vertexId: "b", resourceType: "twoja.stara2", result: {a: 1, b: 2}}},
-  {id: "3", position: {x: 0, y: 0}, type: 'resource', data: {id: "3", vertexId: "c", resourceType: "twoja.stara3", result: {a: 1, b: 2}}},
-  {id: "4", position: {x: 0, y: 0}, type: 'resource', data: {id: "4", vertexId: "d", resourceType: "twoja.stara4", result: {a: 1, b: 2}}},
+  // {id: "1", position: {x: 0, y: 0}, type: 'resource', data: {id: "1", vertexId: "a", resourceType: "twoja.stara1", result: {a: 1, b: 2}}},
+  // {id: "2", position: {x: 0, y: 0}, type: 'resource', data: {id: "2", vertexId: "b", resourceType: "twoja.stara2", result: {a: 1, b: 2}}},
+  // {id: "3", position: {x: 0, y: 0}, type: 'resource', data: {id: "3", vertexId: "c", resourceType: "twoja.stara3", result: {a: 1, b: 2}}},
+  // {id: "4", position: {x: 0, y: 0}, type: 'resource', data: {id: "4", vertexId: "d", resourceType: "twoja.stara4", result: {a: 1, b: 2}}},
 ]
 
 const initialEdges = [
-  {id: `1-2`, source: "1", target: "2", style: {strokeWidth: 5} },
-  {id: `2-3`, source: "2", target: "3", style: {strokeWidth: 5} },
-  {id: `2-4`, source: "2", target: "4", style: {strokeWidth: 5} },
+  // {id: `1-2`, source: "1", target: "2", style: {strokeWidth: 5} },
+  // {id: `2-3`, source: "2", target: "3", style: {strokeWidth: 5} },
+  // {id: `2-4`, source: "2", target: "4", style: {strokeWidth: 5} },
 ]
 
 const nodeTypes = {

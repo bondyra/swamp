@@ -1,7 +1,7 @@
 import React, { memo, useEffect, useState } from 'react';
 import { Stack } from '@mui/material';
-import { useQueryStore } from './QueryState';
-import JQPicker from './JQPicker';
+import { useQueryStore } from './state/QueryState';
+import JQPicker from './pickers/JQPicker';
 import {Box} from '@mui/material';
 import * as jq from "jq-wasm"
 

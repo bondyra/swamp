@@ -8,9 +8,9 @@ import ListItem from '@mui/material/ListItem';
 import Vertex from './Vertex';
 import Link from './Link';
 import { useBackend } from './BackendProvider';
-import { useQueryStore } from './QueryState';
-import PreviewFlow from './PreviewFlow';
-import { NiceButton } from './NiceButton';
+import { useQueryStore } from './state/QueryState';
+import PreviewFlow from './preview/PreviewFlow';
+import { NiceButton } from './ui-elements/NiceButton';
 
 const menuTheme = (theme) => ({
     backgroundColor: "black",
