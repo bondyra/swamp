@@ -1,7 +1,7 @@
 
 
 import React, { memo } from 'react';
-import SingleFieldPicker from './SingleFieldPicker';
+import SingleFieldPicker from './pickers/SingleFieldPicker';
 
 
 export default memo(({ op, change }) => {

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import {
   ReactFlow,
@@ -9,10 +9,10 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/base.css';
 import { ReactFlowProvider, useReactFlow, MarkerType } from '@xyflow/react';
-import { useQueryStore } from './QueryState';
+import { useQueryStore } from '../state/QueryState';
 
 import PreviewNode from './PreviewNode';
-import { DagreLayoutProvider } from './DagreLayoutProvider';
+import { DagreLayoutProvider } from '../layout/DagreLayoutProvider';
 
 const theme = createTheme({
   palette: {
@@ -42,12 +42,12 @@ const SwampPreview = () => {
               data: {resourceType: v.resourceType ?? "null", selected: v.selected}
           };
       }));
-      reactFlow.setEdges(links.filter(l => l.from && l.to).map(l => {
+      reactFlow.setEdges(links.filter(l => l.fromVertexId && l.toVertexId).map(l => {
           return {
               type: 'straight',
-              id: `${l.from}-${l.to}`,
-              source: l.from,
-              target: l.to, 
+              id: `${l.fromVertexId}-${l.toVertexId}`,
+              source: l.fromVertexId,
+              target: l.toVertexId,
               style: {strokeWidth: 2, stroke: l.selected ? '#aaaaff' : '#3e3e3e'},
               markerEnd: {
                 type: MarkerType.Arrow,

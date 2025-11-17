@@ -1,0 +1,38 @@
+// GENERATED WITH icons.py
+export default {};
+
+export const ICONS = new Set([
+  "/icons/asset.svg",
+  "/icons/_DEFAULT_.svg",
+  "/icons/k8s/ep.svg",
+  "/icons/k8s/pod.svg",
+  "/icons/k8s/pvc.svg",
+  "/icons/k8s/rs.svg",
+  "/icons/k8s/cm.svg",
+  "/icons/k8s/deploy.svg",
+  "/icons/k8s/node.svg",
+  "/icons/k8s/pv.svg",
+  "/icons/k8s/secret.svg",
+  "/icons/k8s/_DEFAULT_.svg",
+  "/icons/k8s/sa.svg",
+  "/icons/aws/elasticache.svg",
+  "/icons/aws/sfn.svg",
+  "/icons/aws/rds.svg",
+  "/icons/aws/vpc.svg",
+  "/icons/aws/asg.svg",
+  "/icons/aws/tgw.svg",
+  "/icons/aws/elb.svg",
+  "/icons/aws/eventbus.svg",
+  "/icons/aws/privatelink.svg",
+  "/icons/aws/redshift.svg",
+  "/icons/aws/aurora.svg",
+  "/icons/aws/zone.svg",
+  "/icons/aws/sg.svg",
+  "/icons/aws/role.svg",
+  "/icons/aws/dynamodb.svg",
+  "/icons/aws/eks.svg",
+  "/icons/aws/ec2.svg",
+  "/icons/aws/sns.svg",
+  "/icons/aws/_DEFAULT_.svg",
+  "/icons/aws/sqs.svg"
+]);

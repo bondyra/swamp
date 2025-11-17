@@ -1,16 +1,16 @@
-import React, { memo, useEffect, useState, useCallback } from 'react';
+import { memo, useEffect, useState, useCallback } from 'react';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import Grid2 from '@mui/material/Grid2';
 import { getIconSrc } from './Utils';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
-import { useQueryStore } from './QueryState';
+import { useQueryStore } from './state/QueryState';
 import LabelOp from './LabelOp';
 import { useBackend } from './BackendProvider';
 import { IconButton } from '@mui/material';
 import HighlightOffIcon from '@mui/icons-material/HighlightOff';
-import Picker from './Picker';
-import JQPicker from './JQPicker';
+import Picker from './pickers/Picker';
+import JQPicker from './pickers/JQPicker';
 
 
 export default memo(({ link }) => {

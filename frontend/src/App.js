@@ -10,8 +10,8 @@ import CircularProgress from '@mui/material/CircularProgress';
 import PlayCircleIcon from '@mui/icons-material/PlayCircle';
 import Stack from '@mui/material/Stack';
 import Box from '@mui/material/Box';
-import { useQueryStore } from './QueryState';
-import { NiceVerticalButton } from './NiceButton';
+import { useQueryStore } from './state/QueryState';
+import { NiceVerticalButton } from './ui-elements/NiceButton';
 
 
 const App = () => {

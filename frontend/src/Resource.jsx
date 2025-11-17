@@ -3,11 +3,8 @@ import { styled } from '@mui/material/styles';
 import { Handle, Position, useReactFlow } from '@xyflow/react';
 import ButtonBase from '@mui/material/ButtonBase';
 import Stack from '@mui/material/Stack';
-import SettingsEthernetIcon from '@mui/icons-material/SettingsEthernet';
-import { Tooltip } from '@mui/material';
 
 import DataDisplay from './DataDisplay';
-import MultipleFieldPicker from './MultipleFieldPicker';
 import { Box } from '@mui/material';
 import { getIconSrc } from './Utils';
 
