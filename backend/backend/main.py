@@ -6,8 +6,6 @@ import uvicorn
 from typing import Iterable, Tuple
 
 from backend.model import Label, GenericQueryException, iter_all_resource_types, provider
-from backend.modules.aws import AWS
-from backend.modules.k8s import Kubernetes
 
 
 app = FastAPI()
@@ -101,7 +99,7 @@ async def do_get(p, resource, labels):
     # some of the filters might not get used, running this for the second time on actual results
     print(f"get {p} {resource} {labels}")
     results = [r async for r in provider(p).get(resource, labels)]
-    print(results)
+
     return [r for r in results if all(l.matches(r) for l in labels.values())]
 
 
