@@ -8,8 +8,10 @@ export default memo(({ op, change }) => {
     const options = [
         {value: "==", description: "Left equals to right"},
         {value: "!=", description: "Left not equals to right"},
-        {value: "~~", description: "Left like right"},
-        {value: "!~", description: "Left not like right"},
+        {value: "like", description: "Left like right"},
+        {value: "not like", description: "Left not like right"},
+        {value: "contains", description: "Left contains right"},
+        {value: "not contains", description: "Left not contains right"},
     ]
   return (
     <SingleFieldPicker value={op} updateData={(v) => {change(v)}} options={options}

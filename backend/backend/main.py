@@ -4,6 +4,7 @@ from fastapi.exceptions import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 from typing import Iterable, Tuple
+import logging
 
 from backend.model import Label, GenericQueryException, iter_all_resource_types, provider
 
@@ -60,14 +61,15 @@ async def example(r: Request):
 
 @app.get("/get")
 async def get(r: Request):
-    p, resource = extract_provider_and_resource(r)
-    labels = {k: v for k, v in iter_request_labels(r)}
     try:
+        p, resource = extract_provider_and_resource(r)
+        labels = {k: v for k, v in iter_request_labels(r)}
         results = await do_get(p, resource, labels)
         return {"results": results}
     except GenericQueryException as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
+        logging.exception(e)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -99,7 +101,7 @@ async def do_get(p, resource, labels):
     # some of the filters might not get used, running this for the second time on actual results
     print(f"get {p} {resource} {labels}")
     results = [r async for r in provider(p).get(resource, labels)]
-
+    print(len(results))
     return [r for r in results if all(l.matches(r) for l in labels.values())]
 
 

@@ -74,65 +74,73 @@ const SwampFlow = () => {
   const links = useQueryStore((state) => state.links);
   const triggered = useQueryStore((state) => state.triggered);
   const setTriggered = useQueryStore((state) => state.setTriggered);
+  const setAlert = useQueryStore((state) => state.setAlert);
 
   useEffect(() => {
     async function update() {
       if (!triggered) {
         return;
       }
-      var allNodes = [...nodes];
-      var linkFromMap = linksToMap(links, (l) => l.fromVertexId);
-      var linkToMap = linksToMap(links, (l) => l.toVertexId);
-      for await (const item of backend.query(vertices)) {
-        const id = `${item.resourceType}.${item.result._id}`
-        const newNode = {
-          id: id,
-          position: {
-            x: 0,
-            y: 0
-          },
-          type: 'resource',
-          data: {
+      setNodes(oldNodes => []);
+      setEdges(oldEdges => []);
+      try {
+        var allNodes = [...nodes];
+        var linkFromMap = linksToMap(links, (l) => l.fromVertexId);
+        var linkToMap = linksToMap(links, (l) => l.toVertexId);
+        for await (const item of backend.query(vertices, setAlert)) {
+          const id = `${item.resourceType}.${item.result._id}`
+          const newNode = {
             id: id,
-            vertexId: item.vertexId,
-            resourceType: item.resourceType,
-            result: item.result
-          },
-        };
-        allNodes.push(newNode);
-        setNodes(oldNodes => [...oldNodes, newNode]);
-        if (item.vertexId in linkFromMap){
-          const linksTo = linkFromMap[item.vertexId];
-          for (const lt of linksTo) {
-            const potentialToNodes = allNodes.filter(n => lt.toVertexId === n.data.vertexId);
-            if (potentialToNodes){
-              const fromValue = await jq.raw(item.result, lt.fromAttr, ["-r", "-c"]);
-              ///// const fromValue = JSONPath({path: lt.fromAttr, json: item.result});
-              // todo: op, for now it's hardcoded to "eq"
-              potentialToNodes.filter(async n => await jq.raw(n.data.result, lt.toAttr, ["-r", "-c"]) === fromValue).forEach(n => {
-                setEdges(oe => [...oe, {id: `${id}-${n.id}`, source: id, target: n.id, style: {strokeWidth: 5} }]);
-              });
+            position: {
+              x: 0,
+              y: 0
+            },
+            type: 'resource',
+            data: {
+              id: id,
+              vertexId: item.vertexId,
+              resourceType: item.resourceType,
+              result: item.result
+            },
+          };
+          allNodes.push(newNode);
+          setNodes(oldNodes => [...oldNodes, newNode]);
+          if (item.vertexId in linkFromMap){
+            const linksTo = linkFromMap[item.vertexId];
+            for (const lt of linksTo) {
+              const potentialToNodes = allNodes.filter(n => lt.toVertexId === n.data.vertexId);
+              if (potentialToNodes){
+                const fromValue = await jq.raw(item.result, lt.fromAttr, ["-r", "-c"]);
+                ///// const fromValue = JSONPath({path: lt.fromAttr, json: item.result});
+                // todo: op, for now it's hardcoded to "eq"
+                potentialToNodes.filter(async n => await jq.raw(n.data.result, lt.toAttr, ["-r", "-c"]) === fromValue).forEach(n => {
+                  setEdges(oe => [...oe, {id: `${id}-${n.id}`, source: id, target: n.id, style: {strokeWidth: 5} }]);
+                });
+              }
             }
           }
-        }
-        if (item.vertexId in linkToMap){
-          const linksFrom = linkToMap[item.vertexId];
-          for (const lf of linksFrom) {
-            const potentialFromNodes = allNodes.filter(n => lf.fromVertexId === n.data.vertexId);
-            if (potentialFromNodes){
-              const toValue = await jq.raw(item.result, lf.toAttr, ["-r", "-c"]);
-              // todo: op, for now it's hardcoded to "eq"
-              potentialFromNodes.filter(async n => await jq.raw(n.data.result, lf.fromAttr, ["-r", "-c"]) === toValue).forEach(n => {
-                setEdges(oe => [...oe, {id: `${n.id}-${id}`, source: n.id, target: id, style: {strokeWidth: 5} }]);
-              });
+          if (item.vertexId in linkToMap){
+            const linksFrom = linkToMap[item.vertexId];
+            for (const lf of linksFrom) {
+              const potentialFromNodes = allNodes.filter(n => lf.fromVertexId === n.data.vertexId);
+              if (potentialFromNodes){
+                const toValue = await jq.raw(item.result, lf.toAttr, ["-r", "-c"]);
+                // todo: op, for now it's hardcoded to "eq"
+                potentialFromNodes.filter(async n => await jq.raw(n.data.result, lf.fromAttr, ["-r", "-c"]) === toValue).forEach(n => {
+                  setEdges(oe => [...oe, {id: `${n.id}-${id}`, source: n.id, target: id, style: {strokeWidth: 5} }]);
+                });
+              }
             }
           }
         }
       }
+      catch (err) {
+        setAlert(err.toString(), "error")
+      }
     }
     setTriggered(false);
     update();
-  }, [backend, triggered, setTriggered, links, nodes, setEdges, setNodes, vertices]);
+  }, [backend, triggered, setTriggered, links, nodes, setEdges, setNodes, vertices, setAlert]);
 
   // RF stuff
   const onConnect = useCallback(

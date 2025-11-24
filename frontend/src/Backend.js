@@ -38,6 +38,14 @@ export default class Backend {
   async suggestion(from, to) {
     if (from === "aws.vpc" && to === "aws.subnet")
       return {fromAttr: ".VpcId", op: "=", toAttr: ".VpcId"}
+    if (from === "aws.vpc" && to === "aws.route_table")
+      return {fromAttr: ".VpcId", op: "=", toAttr: ".VpcId"}
+    if (from === "aws.vpc" && to === "aws.network_acl")
+      return {fromAttr: ".VpcId", op: "=", toAttr: ".VpcId"}
+    if (from === "aws.network_acl" && to === "aws.subnet")
+      return {fromAttr: ".Associations[].SubnetId", op: "contains", toAttr: ".SubnetId"}
+    if (from === "aws.subnet" && to === "aws.network_acl")
+      return {fromAttr: ".SubnetId", op: "contains", toAttr: ".Associations[].SubnetId"}
     return null;
   }
 
@@ -53,10 +61,10 @@ export default class Backend {
     const [provider, resource] = resourceType.split(".");
     const qs = (labels ?? []).map(l => `${encodeURIComponent(btoa(l.key))},${encodeURIComponent(btoa(l.op ?? "=="))},${encodeURIComponent(btoa(l.val))}`).join("&");
     return fetch(`${this.base_url}/get?_provider=${provider}&_resource=${resource}&${qs}`)
-      .then(response => {
-        this.throwForStatus(response);
+      .then(async response => {
+        await this.throwForStatus(response);
         return response.json();
-      })
+      }) 
       .then(response => {
         return response.results.map(result => {
             return {
@@ -93,12 +101,13 @@ export default class Backend {
     }
   }
 
-  throwForStatus(response) {
+  async throwForStatus(response) {
     const firstDigit = Math.floor(response.status/100)
     switch (firstDigit) {
       case 4:
       case 5:
-        throw new Error(`HTTP status ${response.status} on request to backend.`)
+        const rr = await response.json();
+        throw new Error(`HTTP status ${response.status} on request to backend: ${rr.detail}.`);
       default:
         break;
     }
