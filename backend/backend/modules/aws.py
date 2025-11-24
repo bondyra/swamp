@@ -4,8 +4,10 @@ from typing import AsyncGenerator, Dict, List
 
 import aioboto3
 import boto3
+from itertools import product
 
 from backend.model import Attribute, Label, Provider, GenericQueryException
+from backend.utils import get_matches
 
 
 class AWS(Provider):
@@ -16,7 +18,7 @@ class AWS(Provider):
     @staticmethod
     def provider_description() -> str:
         return "Provider for interacting with AWS resources via boto3"
-    
+
     @staticmethod
     def resources() -> List[str]:
         return list(_resources.keys())
@@ -32,27 +34,35 @@ class AWS(Provider):
 
     @classmethod
     async def get(cls, r: str, labels: Dict[str, Label]) -> AsyncGenerator[Dict, None]:
-        if "_profile" not in labels:
-            raise GenericQueryException("You need to provide _profile value to query AWS resource")
-        if "_region" not in labels:
-            raise GenericQueryException("You need to provide _region value to query AWS resource")
-        profile, region = labels["_profile"].val, labels["_region"].val
+        if "_aws_profile" not in labels:
+            raise GenericQueryException("You need to provide _aws_profile value to query AWS resource")
+        if "_aws_region" not in labels:
+            raise GenericQueryException("You need to provide _aws_region value to query AWS resource")
+        profile_label, region_label = labels["_aws_profile"], labels["_aws_region"]
         client = _resources[r]["client"]
+        profiles = get_matches(profile_label,  _get_profiles())
+        regions = get_matches(region_label, _ALL_AWS_REGIONS)
+        for profile, region in product(profiles, regions):
+            async for x in cls._single_get(client, r, profile, region):
+                yield x
+
+    @classmethod
+    async def _single_get(cls, client, r: str, profile: str, region: str) -> AsyncGenerator[Dict, None]:
         async with aioboto3.Session(profile_name=profile, region_name=region).client(client) as client:
             response = await _resources[r]["api_call"](client)
             for item in _resources[r]["iter_items"](response):
                 yield {
                     **{"_id": _resources[r]["get_id"](item)},
-                    "_profile": profile,
-                    "_region": region,
+                    "_aws_profile": profile,
+                    "_aws_region": region,
                     **item
                 }
 
     @classmethod
     async def attributes(cls, r: str) -> List[Attribute]:
         return [
-            Attribute(path="_profile", description="AWS profile to use", allowed_values=_get_profiles()),
-            Attribute(path="_region", description="AWS region", allowed_values=_ALL_AWS_REGIONS)
+            Attribute(path="_aws_profile", description="AWS profile to use", allowed_values=_get_profiles()),
+            Attribute(path="_aws_region", description="AWS region", allowed_values=_ALL_AWS_REGIONS)
         ]
 
     @classmethod

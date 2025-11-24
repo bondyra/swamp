@@ -34,10 +34,6 @@ export const useQueryStore = create((set) => ({
   removeLink: (linkId) => set((state) => ({ links: state.links.filter(l => l.id !== linkId) })),
   updateLink: (linkId, data) => set((state) => ({ links: state.links.map(l => { if (l.id !== linkId) return l; return {...l, ...data}; })})),
   setLinks: (ll) => set((state) => ({links: ll}) ),
-  parameters: [],
-  addParameter: () => set((state) => ({ parameters: [...state.parameters, {id: randomString(8)}] })),
-  removeParameter: (parameterId) => set((state) => ({ parameters: state.parameters.filter(p => p.id !== parameterId) })),
-  updateParameter: (parameterId, data) => set((state) => ({ parameters: state.parameters.map(p => { if (p.id !== parameterId) return p; return {...p, ...data}; })})),
   triggered: false, // used to actually requery backend
   setTriggered: (val) => set((state) => ({triggered: val})),
   redisplay: false,  // used to trigger JQ queries on display
@@ -49,5 +45,6 @@ export const useQueryStore = create((set) => ({
   setFields: (ff) => set((state) => ({fields: ff}) ),
   // alerts
   alert: "Hello",
-  setAlert: (alrt) => set((state) => ({alert: alrt}))
+  alertType: "info",
+  setAlert: (alrt, alrtType="info") => set((state) => ({alert: alrt, alertType: alrtType}))
 }));

@@ -117,7 +117,7 @@ export default function JQPicker({value, updateData, example, disabled, handleCl
 
   useEffect(() => {
     const runJq = async () => {
-      if (value === null || value === undefined)
+      if (value === null || value === undefined || !value)
         return;
       const newVal = await jq.raw(example, value, ["-r", "-c"]);
       setResult(newVal.stdout);

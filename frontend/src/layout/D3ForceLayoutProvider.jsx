@@ -8,7 +8,7 @@ import {
   forceX,
   forceY,
 } from 'd3-force';
-import { collide } from '../collide.js';
+import { collide } from './collide.js';
 
 const simulation = forceSimulation()
   .force('charge', forceManyBody().strength(-1000))

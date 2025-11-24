@@ -3,8 +3,10 @@ from typing import AsyncGenerator, Dict, List
 from kubernetes_asyncio import config
 from kubernetes_asyncio.dynamic import DynamicClient
 import requests
+from typing import Optional
 
 from backend.model import Attribute, Label, Provider, GenericQueryException
+from backend.utils import get_matches
 
 
 description = "Module for interacting with Kubernetes resources"
@@ -87,17 +89,17 @@ class Kubernetes(Provider):
 
     @classmethod
     async def attributes(cls, r: str) -> List[Attribute]:
-        ctx = Attribute(path="_context", description="Kubernetes context to use", allowed_values=await _get_contexts())
-        ns = Attribute(path="_namespace", description="Kubernetes namespace this resource sits in", depends_on="_context")
+        ctx = Attribute(path="_k8s_context", description="Kubernetes context to use", allowed_values=await _get_contexts())
+        ns = Attribute(path="_k8s_namespace", description="Kubernetes namespace this resource sits in", depends_on="_k8s_context")
         return [ctx, ns] if _resources[r]["namespaced"] else [ctx]
     
     @classmethod
     async def attribute_values(cls, r: str, attribute: str, **kwargs) -> List[str]:
         # stupidly hardwired for now (and probably for a long time)
-        if attribute == "_namespace":
-            if "_context" not in kwargs:
+        if attribute == "_k8s_namespace":
+            if "_k8s_context" not in kwargs:
                 raise GenericQueryException(f"To get attribute values of namespace, we need context")
-            return await _get_namespaces(kwargs["_context"])
+            return await _get_namespaces(kwargs["_k8s_context"])
         raise GenericQueryException(f"Not supported for attribute {attribute}")
     
     @classmethod
@@ -110,24 +112,35 @@ class Kubernetes(Provider):
     @classmethod
     async def get(cls, r: str, labels: Dict[str, Label]) -> AsyncGenerator[Dict, None]:
         namespaced = _resources[r]["namespaced"]
-        if "_context" not in labels:
-            raise GenericQueryException("You need to provide _context value to query K8S resource")
-        if namespaced and "_namespace" not in labels:
-            raise GenericQueryException("You need to provide _namespace value to query K8S resource")
-        context = labels["_context"].val
-        namespace = labels["_namespace"].val if namespaced else None
+        if "_k8s_context" not in labels:
+            raise GenericQueryException("You need to provide _k8s_context value to query K8S resource")
+        if namespaced and "_k8s_namespace" not in labels:
+            raise GenericQueryException("You need to provide _k8s_namespace value to query K8S resource")
+        context_label = labels["_k8s_context"]
+        contexts = get_matches(context_label,  await _get_contexts())
+        args_list = contexts
+        if namespaced:
+            namespace_label = labels["_k8s_namespace"]
+            args_list = [(context, ns) for context in contexts for ns in get_matches(namespace_label,  await _get_namespaces(context))]
+        for args in args_list:
+            async for x in cls._single_get(r, *args):
+                yield x
+
+    @classmethod
+    async def _single_get(cls, r: str, context: str, namespace: Optional[str] = None):
         async with await config.new_client_from_config(context=context) as api:
             client = await DynamicClient(api)
             v1 = await client.resources.get(api_version=_resources[r]["api_version"], kind=_resources[r]["kind"])
             kwargs, extra_return_values = {}, {}
-            if namespaced:
+            if namespace:
                 kwargs["namespace"] = namespace
-                extra_return_values["_namespace"] = namespace
+                extra_return_values["_k8s_namespace"] = namespace
             response = await v1.get(**kwargs)
+            print(kwargs)
             for item in response.items:
                 yield {
                     "_id": item.metadata.name,
-                    "_context": context,
+                    "_k8s_context": context,
                     **extra_return_values,
                     **item.to_dict()
                 }

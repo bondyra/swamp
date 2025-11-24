@@ -18,6 +18,7 @@ const App = () => {
   const [loading, setLoading] = useState(false);
   const setTriggered = useQueryStore((state) => state.setTriggered);
   const alert = useQueryStore((state) => state.alert);
+  const alertType = useQueryStore((state) => state.alertType);
   const setAlert = useQueryStore((state) => state.setAlert);
 
   // timed display of alert on its change
@@ -27,7 +28,7 @@ const App = () => {
           return;
         const timer = setTimeout(() => {
           setAlert("");
-        }, 1000);
+        }, 2000);
         return (() => clearTimeout(timer));
     })();
   }, [alert, setAlert]);
@@ -39,7 +40,8 @@ const App = () => {
           {
             alert && 
             <Stack sx={{background:"black", position: "absolute", alignSelf: "center", width: "auto"}}>
-              <Alert variant="outlined" severity="info" sx={{color: "lightblue", fontFamily: "monospace", fontWeight: 600, fontSize: "16px"}}>
+              <Alert variant="outlined" severity={alertType} 
+              sx={{color: alertType === "error" ? "red": "lightblue", fontFamily: "monospace", fontWeight: 600, fontSize: "16px"}}>
                 {alert}
               </Alert>
             </Stack>
