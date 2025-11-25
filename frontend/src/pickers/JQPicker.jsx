@@ -123,7 +123,7 @@ export default function JQPicker({value, updateData, example, disabled, handleCl
       setResult(newVal.stdout);
     }
     runJq();
-  }, [value])
+  }, [value, example])
 
   const open = Boolean(anchorEl);
   const id = open ? 'github-label' : undefined;

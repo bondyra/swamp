@@ -77,7 +77,7 @@ const Bar = () => {
       fields: fields ?? [],
     };
     const content = JSON.stringify(state);
-    saveTab(name, content)
+    saveTab(name, content);
     setAlert(`Graph saved to ${name}`);
   }, [vertices, links, fields, setAlert]);
 
@@ -90,7 +90,7 @@ const Bar = () => {
       setFields(state["fields"] ?? []);
       setAlert(`Graph "${name}" loaded`);
     }
-  }, [setVertices, setLinks, setFields, setAlert])
+  }, [setVertices, setLinks, setFields, setAlert]);
 
     // when current tab changes
     useEffect(() => {
