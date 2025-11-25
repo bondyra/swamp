@@ -1,6 +1,6 @@
 
 
-import React, { memo, useEffect, useCallback, useState } from 'react';
+import { memo, useEffect, useCallback, useState } from 'react';
 import Stack from '@mui/material/Stack';
 import Box from '@mui/material/Box';
 import { getIconSrc } from './Utils';
@@ -11,7 +11,7 @@ import { useBackend } from './BackendProvider';
 import { useQueryStore } from './state/QueryState';
 
 import { randomString } from './Utils';
-import { IconButton, linkClasses } from '@mui/material';
+import { IconButton } from '@mui/material';
 import HighlightOffIcon from '@mui/icons-material/HighlightOff';
 
 
