@@ -34,9 +34,11 @@ export default memo(({ vertex, resourceTypes }) => {
   const updateVertex = useQueryStore((state) => state.updateVertex);
   const removeVertex = useQueryStore((state) => state.removeVertex);
   const setLabels = useQueryStore((state) => state.setLabels);
+  const mapLabels = useQueryStore((state) => state.mapLabels);
 	const [attributes, setAttributes] = useState(new Map());
   const links = useQueryStore((state) => state.links);
   const updateLink = useQueryStore((state) => state.updateLink);
+  const savedLabels = useQueryStore((state) => state.savedLabels);
 	const backend = useBackend();
 
   const select = useCallback(() => {
@@ -55,14 +57,28 @@ export default memo(({ vertex, resourceTypes }) => {
       setAttributes(new Map(attrs.map(a=> [a.path, a])));
       // refresh labels with potentially new required attributes
       const newRequiredLabels = attrs.map(a => {
+        const matchingSavedLabel = savedLabels.filter(s => s.key === a.path);
+        const op = matchingSavedLabel.length > 0 ? matchingSavedLabel[0].op: "==";
+        const val = matchingSavedLabel.length > 0 ? matchingSavedLabel[0].val: null;
         return {
-          id: randomString(8), key: a.path, val: null, required: true, allowedValues: a.allowed_values, dependsOn: a.depends_on
-        }
+          id: randomString(8), key: a.path, op: op, val: val, required: true, allowedValues: a.allowed_values, dependsOn: a.depends_on
+        };
       });
       setLabels(vertex.id, newRequiredLabels)
     };
         loadAttributes();
-  }, [vertex.id, vertex.resourceType, setLabels, backend]);
+  }, [vertex.id, vertex.resourceType, setLabels, savedLabels, backend]);
+
+  useEffect(() => { // when savedLabels change
+    console.log(savedLabels);
+    mapLabels(vertex.id, (l) => {
+      if (!l.op && !l.val && savedLabels.some(s => s.key === l.key)){
+        const sl = savedLabels.filter(s => s.key === s.val)[0];
+        return {...l, op: sl.op, val: sl.val}
+      }
+      return l;
+    })
+  }, [vertex.id, mapLabels, savedLabels])
 
   return (
     <Stack direction="row" sx={{border: vertex.selected ? "3px solid #aaaaff" : "1px solid gray", borderRadius: "10px"}} onClick={select}>

@@ -13,6 +13,7 @@ import { Tooltip } from '@mui/material';
 import LabelOp from '../LabelOp';
 import { randomString } from '../Utils';
 import { useBackend } from '../BackendProvider';
+import { useQueryStore } from '../state/QueryState';
 import { useState, useEffect } from 'react';
 
 
@@ -38,7 +39,9 @@ const themeFunction = (theme) => ({
 
 export default function LabelPicker({ resourceType, labels, setLabels, attributes }) {
 	const backend = useBackend();
-	const labelsWithUpdatedLabelsById = (ll, extraLabels) => {
+	const savedLabels = useQueryStore((state) => state.savedLabels);
+	const saveLabel = useQueryStore((state) => state.saveLabel);
+	const mergedLabels = (ll, extraLabels) => {
 		return ll.map(l => {
 			const ul = extraLabels.filter(x => l.id === x.id)
 			return ul ? {...l, ...ul[0]} : l
@@ -78,8 +81,13 @@ export default function LabelPicker({ resourceType, labels, setLabels, attribute
 								example={example}
 								disabled = {label.required || false}
 								updateData={(newKey) => {
-									const newContent = { key: newKey };
-									const newLabels = labelsWithUpdatedLabelsById(
+									var newContent = { key: newKey };
+									if (!label.op && !label.val){
+										const matchingSavedLabel = savedLabels.filter(s => s.key === newKey);
+										newContent.op = matchingSavedLabel.length > 0 ? matchingSavedLabel[0].op: null
+										newContent.val = matchingSavedLabel.length > 0 ? matchingSavedLabel[0].val: null
+									}
+									const newLabels = mergedLabels(
 										labels, [{...label, ...newContent}]
 									);
 									setLabels(newLabels);
@@ -89,10 +97,11 @@ export default function LabelPicker({ resourceType, labels, setLabels, attribute
 							/>
 							<LabelOp op={label.op ?? "=="} 
 										change={(val) => {
-											const newLabels = labelsWithUpdatedLabelsById(
+											const newLabels = mergedLabels(
 												labels, [{...label, op: val}]
 											)
 											setLabels(newLabels);
+											saveLabel({...label, op: val});
 										}}/>
 							<Stack
 								key={`${label.id}-val-outer`}
@@ -112,9 +121,10 @@ export default function LabelPicker({ resourceType, labels, setLabels, attribute
 										value={label.val}
 										fullWidth= {false}
 										onChange={(event) => {
-											setLabels(labelsWithUpdatedLabelsById(
+											setLabels(mergedLabels(
 												labels, [{...label, val: event.target.value}]
 											));
+											saveLabel({...label, val: event.target.value});
 										}}
 									/>
 								}
@@ -124,7 +134,7 @@ export default function LabelPicker({ resourceType, labels, setLabels, attribute
 										labelVal={label.val}
 										options={label.allowedValues || []}
 										onFieldUpdate={async (newValue) =>  {
-											// update allowed values for each label for which it key dependsOn this key
+											// update allowed values for each label for which its key dependsOn this key
 											const val = typeof newValue === "object" ? newValue.value : newValue;  // TODO: label val should object
 											const dependentLabels = await Promise.all(
 												labels
@@ -133,10 +143,11 @@ export default function LabelPicker({ resourceType, labels, setLabels, attribute
 													return {...l, allowedValues: await backend.attributeValues(resourceType, l.key, [{key: label.key, val: val}])}
 												})
 											)
-											const newLabels = labelsWithUpdatedLabelsById(
+											const newLabels = mergedLabels(
 												labels, [...dependentLabels, {...label, val: val}]
 											);
 											setLabels(newLabels);
+											saveLabel({...label, val: val});
 										}}
 										descr={`Select one of allowed values for ${label.key}`}
 									/>
@@ -155,7 +166,9 @@ export default function LabelPicker({ resourceType, labels, setLabels, attribute
 			}
 			<Box sx={{padding: "0", pl: "2px", pb: "4px"}}>
 				<IconButton aria-label="add" sx={{width: "fit-content", padding: "0"}} size="small"
-				onClick={() => {setLabels([...labels, {id: randomString(8), key:  "", val: "", required: false}]);}}>
+				onClick={() => {
+					setLabels([...labels, {id: randomString(8), key: "", val: "", op: "==", required: false}]);
+				}}>
 					<AddCircleOutlineIcon sx={{width: "16px", height: "16px", padding: "0px", color: "gray"}}/>
 				</IconButton>
 			</Box>

@@ -21,6 +21,13 @@ export const useQueryStore = create((set) => ({
         return {...v, labels: labels}
     })
   ]})),
+  mapLabels:(vertexId, f) => set((state) => ({ vertices: [
+    ...state.vertices.map(v => {
+        if (v.id !== vertexId)
+            return v;
+        return {...v, labels: v.labels.map(x => f(x))}
+    })
+  ]})),
   removeLabel: (vertexId, labelId) => set((state) => ({ vertices: [
     ...state.vertices.map(v => {
         if (v.id !== vertexId)
@@ -46,5 +53,7 @@ export const useQueryStore = create((set) => ({
   // alerts
   alert: "Hello",
   alertType: "info",
-  setAlert: (alrt, alrtType="info") => set((state) => ({alert: alrt, alertType: alrtType}))
+  setAlert: (alrt, alrtType="info") => set((state) => ({alert: alrt, alertType: alrtType})),
+  savedLabels: [],
+  saveLabel: (label) => set((state) => ({savedLabels: label.op && label.val ? [...state.savedLabels.filter(l => l.key !== label.key), label] : state.savedLabels}))
 }));
