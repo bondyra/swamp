@@ -28,7 +28,7 @@ const themeFunction = (theme) => ({
 		height: "20px"
 	},
 	[`&.${textFieldClasses.root}`]: {
-		width: "50px",
+		width: "auto",
 		minWidth:"10px",
 	},
 	[`&.${iconButtonClasses.root}`]: {
@@ -119,12 +119,13 @@ export default function LabelPicker({ resourceType, labels, setLabels, attribute
 										variant="outlined"
 										sx={themeFunction}
 										value={label.val}
-										fullWidth= {false}
+										fullWidth= {true}
 										onChange={(event) => {
 											setLabels(mergedLabels(
 												labels, [{...label, val: event.target.value}]
 											));
-											saveLabel({...label, val: event.target.value});
+											// this breaks typing in the middle. better just ignore it for such labels
+											// saveLabel({...label, val: event.target.value});
 										}}
 									/>
 								}

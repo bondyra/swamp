@@ -14,11 +14,13 @@ export default memo(({ fieldId, value, data }) => {
   const removeField = useQueryStore((state) => state.removeField);
   const redisplay = useQueryStore((state) => state.redisplay);
   const setRedisplay = useQueryStore((state) => state.setRedisplay);
-  const [text, setText] = useState("")
+  const [text, setText] = useState("");
+
+  
 
   useEffect(() => {
     async function update() {
-      if(redisplay && value){
+      if((redisplay && value) || (!text && value)){  // if needs to be redisplayed and there's some value OR it's a first load and there is some value already (on mount)
         const t = await jq.raw(data, value, ["-r", "-c"]);
         setText(t.stdout);
       }

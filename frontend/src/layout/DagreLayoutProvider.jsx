@@ -8,7 +8,7 @@ const dagreGraph = new dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
 
 
 const getLayoutedElements = (nodes, edges) => {
-  dagreGraph.setGraph({ rankdir: 'TB', edgesep: 10, ranksep: 20, nodesep: 5 });
+  dagreGraph.setGraph({ rankdir: 'TB', edgesep: 50, ranksep: 30, nodesep: 30 });
   nodes.forEach((node) => {
     dagreGraph.setNode(node.id, { width: node.measured.width, height: node.measured.height });
   });
