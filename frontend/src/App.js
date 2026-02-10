@@ -28,7 +28,7 @@ const App = () => {
           return;
         const timer = setTimeout(() => {
           setAlert("");
-        }, 2000);
+        }, 5000);
         return (() => clearTimeout(timer));
     })();
   }, [alert, setAlert]);
@@ -46,7 +46,7 @@ const App = () => {
               </Alert>
             </Stack>
           }
-          <Bar/>
+          {/* <Bar/> */}
           <Stack direction="row">
             <Menu/>
             <Box sx={{background:"black"}}>

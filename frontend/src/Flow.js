@@ -22,6 +22,7 @@ import { randomString } from './Utils'
 import { useBackend } from './BackendProvider';
 import { useQueryStore } from './state/QueryState';
 import * as jq from "jq-wasm";
+import { SwampEdge } from './Edge';
 
 
 const theme = createTheme({
@@ -40,6 +41,10 @@ const initialEdges = [
   // {id: `2-3`, source: "2", target: "3", style: {strokeWidth: 5} },
   // {id: `2-4`, source: "2", target: "4", style: {strokeWidth: 5} },
 ]
+
+const edgeTypes = {
+  'swamp-edge': SwampEdge,
+};
 
 const nodeTypes = {
   resource: Resource,
@@ -111,10 +116,9 @@ const SwampFlow = () => {
               const potentialToNodes = allNodes.filter(n => lt.toVertexId === n.data.vertexId);
               if (potentialToNodes){
                 const fromValue = await jq.raw(item.result, lt.fromAttr, ["-r", "-c"]);
-                ///// const fromValue = JSONPath({path: lt.fromAttr, json: item.result});
                 // todo: op, for now it's hardcoded to "eq"
                 potentialToNodes.filter(async n => await jq.raw(n.data.result, lt.toAttr, ["-r", "-c"]) === fromValue).forEach(n => {
-                  setEdges(oe => [...oe, {id: `${id}-${n.id}`, source: id, target: n.id, style: {strokeWidth: 5} }]);
+                  setEdges(oe => [...oe, {id: `${id}-${n.id}`, source: id, target: n.id, type: 'swamp-edge', data: {label: `${id} -> ${n.id}`}}]);
                 });
               }
             }
@@ -127,7 +131,7 @@ const SwampFlow = () => {
                 const toValue = await jq.raw(item.result, lf.toAttr, ["-r", "-c"]);
                 // todo: op, for now it's hardcoded to "eq"
                 potentialFromNodes.filter(async n => await jq.raw(n.data.result, lf.fromAttr, ["-r", "-c"]) === toValue).forEach(n => {
-                  setEdges(oe => [...oe, {id: `${n.id}-${id}`, source: n.id, target: id, style: {strokeWidth: 5} }]);
+                  setEdges(oe => [...oe, {id: `${n.id}-${id}`, source: n.id, target: id, type: 'swamp-edge', data: {label: `${n.id} -> ${id}`}}]);
                 });
               }
             }
@@ -147,7 +151,7 @@ const SwampFlow = () => {
     (params) =>
       setEdges((eds) =>
         addEdge(
-          { ...params, type: ConnectionLineType.Step, animated: true },
+          { ...params, type: ConnectionLineType.Straight, animated: true },
           eds,
         ),
       ),
@@ -189,6 +193,7 @@ const SwampFlow = () => {
         onConnect={onConnect}
         connectionLineType={ConnectionLineType.Step}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         nodesDraggable={false}
         colorMode={"dark"}
         fitView

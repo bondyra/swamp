@@ -1,11 +1,9 @@
-import { memo, useCallback, useEffect, useState } from 'react';
+import { memo, useEffect, useState } from 'react';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import List from '@mui/material/List';
 import Divider from '@mui/material/Divider';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
-import FileDownloadIcon from '@mui/icons-material/FileDownload';
-import FileUploadIcon from '@mui/icons-material/FileUpload';
 import ListItem from '@mui/material/ListItem';
 import Vertex from './Vertex';
 import Link from './Link';
@@ -14,6 +12,7 @@ import { useQueryStore } from './state/QueryState';
 import PreviewFlow from './preview/PreviewFlow';
 import { NiceButton } from './ui-elements/NiceButton';
 import { TextField } from '@mui/material';
+import YAML from "yaml";
 
 const menuTheme = (theme) => ({
     backgroundColor: "black",
@@ -49,30 +48,28 @@ export default memo(() => {
     const addLink = useQueryStore((state) => state.addLink);
     const backend = useBackend();
     const [resourceTypes, setResourceTypes] = useState([]);
-    const [queryInputOn, setQueryInputOn] = useState(false);
     const [queryInput, setQueryInput] = useState("");
 
-    const saveQuery = useCallback(() => {
+    useEffect(() => {
         var state = {
             vertices: vertices ?? [],
             links: links ?? [],
             fields: fields ?? []
         };
-        const q = JSON.stringify(state, null, 4);
-        navigator.clipboard.writeText(q);
-    }, [vertices, links, fields]);
+        setQueryInput(YAML.stringify(state, null, 2));
+    }, [vertices, links, fields, setQueryInput]);
 
-    const loadQuery = useCallback(() => {
-        if(queryInput){
-          const state = JSON.parse(queryInput);
-          setVertices(state["vertices"] ?? []);
-          setLinks(state["links"] ?? []);
-          setFields(state["fields"] ?? []);
-          setAlert(`Graph loaded`);
+    const applyYaml = () => {
+        try {
+            const state = YAML.parse(queryInput);
+            setVertices(state.vertices ?? []);
+            setLinks(state.links ?? []);
+            setFields(state.fields ?? []);
+            setAlert("Graph loaded");
+        } catch (e) {
+            setAlert("Invalid YAML");
         }
-        setQueryInputOn(false);
-        setQueryInput("");
-    }, [setVertices, setLinks, setFields, queryInput, setQueryInput, setQueryInputOn]);
+    };
 
     useEffect(() => {
         async function update() {
@@ -81,6 +78,16 @@ export default memo(() => {
         }
         update();
     }, [backend, setResourceTypes]);
+
+    const dupa = (e) => {
+        const isEnter = e.key === "Enter";
+        const isModifier = e.ctrlKey || e.metaKey;
+
+        if (isEnter && isModifier) {
+            e.preventDefault();
+            applyYaml();
+        }
+    };
 
   return (
     <Stack sx={menuTheme}>
@@ -126,29 +133,16 @@ export default memo(() => {
         {/* PREVIEW */}
         <Box sx={{width: "100%", fontSize: "16px", color:"gray"}}>Query preview</Box>
         <Box sx={{border: "1px dashed gray", mr: "5px"}}><PreviewFlow/></Box>
+        {/* QUERY */}
         <Divider sx={{background: "gray"}}/>
-        <Box sx={{width: "100%", fontSize: "16px", color:"gray"}}>JSON</Box>
+        <Box sx={{width: "100%", fontSize: "16px", color:"gray"}}>YAML (load with Ctrl+Enter)</Box>
         <Stack direction="row">
-            <NiceButton variant="contained" aria-label="run" backgroundcolor="primary" sx={{height: "24px"}} onClick={saveQuery}>
-                <FileDownloadIcon sx={{mr: "5px"}}/>
-                <p>Copy query</p>
-            </NiceButton>
-            <NiceButton variant="contained" aria-label="run" backgroundcolor="primary" sx={{height: "24px"}} onClick={() => setQueryInputOn(!queryInputOn)}>
-                <FileUploadIcon sx={{mr: "5px"}}/>
-                <p>Load query</p>
-            </NiceButton>
-        </Stack>
-        {
-            queryInputOn && 
-            <>
-                <TextField multiline value={queryInput} onChange={(e) => {setQueryInput(e.target.value)}} 
-                sx={{textarea: { color: "#ffffff", fontFamily: "monospace"}}}></TextField>
-                <NiceButton variant="contained" aria-label="run" backgroundcolor="primary" sx={{height: "24px"}} onClick={loadQuery}>
-                    <FileUploadIcon sx={{mr: "5px"}}/>
-                    <p>Load query</p>
-                </NiceButton>
-            </>
-        }
+            <TextField 
+            onChange={(e) => {setQueryInput(e.target.value);}}
+            multiline value={queryInput} sx={{textarea: { color: "#ffffff", fontFamily: "monospace"}, width: "100%"}}
+            onKeyDown={dupa}
+            />
+        </Stack> 
         <Divider sx={{background: "gray"}}/>
     </Stack>
   );
