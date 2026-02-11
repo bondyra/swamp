@@ -13,6 +13,7 @@ import PreviewFlow from './preview/PreviewFlow';
 import { NiceButton } from './ui-elements/NiceButton';
 import { TextField } from '@mui/material';
 import YAML from "yaml";
+import { toast } from 'react-toastify';
 
 const menuTheme = (theme) => ({
     backgroundColor: "black",
@@ -43,7 +44,6 @@ export default memo(() => {
     const setLinks = useQueryStore((state) => state.setLinks);
     const fields = useQueryStore((state) => state.fields);
     const setFields = useQueryStore((state) => state.setFields);
-    const setAlert = useQueryStore((state) => state.setAlert);
     const addVertex = useQueryStore((state) => state.addVertex);
     const addLink = useQueryStore((state) => state.addLink);
     const backend = useBackend();
@@ -61,13 +61,13 @@ export default memo(() => {
 
     const applyYaml = () => {
         try {
-            const state = YAML.parse(queryInput);
+            const state = queryInput.trim() === "" ? {} : YAML.parse(queryInput);
             setVertices(state.vertices ?? []);
             setLinks(state.links ?? []);
             setFields(state.fields ?? []);
-            setAlert("Graph loaded");
+            toast.success("Graph loaded", {className: "swamp-toast", bodyClassName: "swamp-toast-body"});
         } catch (e) {
-            setAlert("Invalid YAML");
+            toast.error("You fucked up", {className: "swamp-toast", bodyClassName: "swamp-toast-body"})
         }
     };
 

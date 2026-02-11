@@ -50,7 +50,6 @@ export default class Backend {
   }
 
   async* query(vertices) {
-    // todo: error handling
     const promises = vertices.filter(v => v.resourceType).map(v => {
       return this.queryOne(v.resourceType, v.labels, v.id);
     });

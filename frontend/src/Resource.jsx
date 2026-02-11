@@ -1,7 +1,5 @@
-import { memo, useCallback } from 'react';
-import { styled } from '@mui/material/styles';
+import { memo } from 'react';
 import { Handle, Position, useReactFlow } from '@xyflow/react';
-import ButtonBase from '@mui/material/ButtonBase';
 import Stack from '@mui/material/Stack';
 
 import DataDisplay from './DataDisplay';
@@ -9,45 +7,44 @@ import { Box } from '@mui/material';
 import { getIconSrc } from './Utils';
 
 
-const Button = styled(ButtonBase)(({ theme }) => ({
-  fontSize: 13,
-  width: '100%',
-  textAlign: 'left',
-  paddingBottom: 8,
-  fontWeight: 600,
-  color: '#586069',
-  ...theme.applyStyles('dark', {
-    color: '#8b949e',
-  }),
-  '&:hover,&:focus': {
-    color: '#0366d6',
-    ...theme.applyStyles('dark', {
-      color: '#58a6ff',
-    }),
-  },
-  '& span': {
-    width: '100%',
-  },
-  '& svg': {
-    width: 16,
-    height: 16,
-  },
-}));
+// const Button = styled(ButtonBase)(({ theme }) => ({
+//   fontSize: 13,
+//   width: '100%',
+//   textAlign: 'left',
+//   paddingBottom: 8,
+//   fontWeight: 600,
+//   color: '#586069',
+//   ...theme.applyStyles('dark', {
+//     color: '#8b949e',
+//   }),
+//   '&:hover,&:focus': {
+//     color: '#0366d6',
+//     ...theme.applyStyles('dark', {
+//       color: '#58a6ff',
+//     }),
+//   },
+//   '& span': {
+//     width: '100%',
+//   },
+//   '& svg': {
+//     width: 16,
+//     height: 16,
+//   },
+// }));
 
 export default memo(({ id, data, isConnectable }) => {
-  const reactFlow = useReactFlow();
+  useReactFlow();
 
-
-  const updateSelectedFields = useCallback(
-    (newValue) => {
-      reactFlow.updateNodeData(id, (node) => {
-        return { 
-          ...node.data,
-          selectedFields: newValue
-        };
-      })
-    }, [id, reactFlow]
-  )
+  // const updateSelectedFields = useCallback(
+  //   (newValue) => {
+  //     reactFlow.updateNodeData(id, (node) => {
+  //       return { 
+  //         ...node.data,
+  //         selectedFields: newValue
+  //       };
+  //     })
+  //   }, [id, reactFlow]
+  // )
 
   return (
     <>

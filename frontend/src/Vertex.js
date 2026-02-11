@@ -70,7 +70,6 @@ export default memo(({ vertex, resourceTypes }) => {
   }, [vertex.id, vertex.resourceType, setLabels, savedLabels, backend]);
 
   useEffect(() => { // when savedLabels change
-    console.log(savedLabels);
     mapLabels(vertex.id, (l) => {
       if (!l.op && !l.val && savedLabels.some(s => s.key === l.key)){
         const sl = savedLabels.filter(s => s.key === s.val)[0];
