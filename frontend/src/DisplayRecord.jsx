@@ -5,7 +5,7 @@ import JQPicker from './pickers/JQPicker';
 import {Box} from '@mui/material';
 import RemoveCircleIcon from '@mui/icons-material/RemoveCircle';
 import {Typography} from '@mui/material';
-import IconButton, {iconButtonClasses} from '@mui/material/IconButton';
+import IconButton from '@mui/material/IconButton';
 import * as jq from "jq-wasm"
 
 

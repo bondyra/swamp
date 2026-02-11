@@ -50,10 +50,6 @@ export const useQueryStore = create((set) => ({
   updateField: (fieldId, data) => set((state) => ({fields: state.fields.map(f => {if (f.id !== fieldId) return f; else return {...f, ...data}})})),
   addField: (vertexId) => set((state) => ({fields: [...state.fields, {vertexId: vertexId, id: randomString(16)}]})),
   setFields: (ff) => set((state) => ({fields: ff}) ),
-  // alerts
-  alert: "Hello",
-  alertType: "info",
-  setAlert: (alrt, alrtType="info") => set((state) => ({alert: alrt, alertType: alrtType})),
   savedLabels: [],
   saveLabel: (label) => set((state) => ({savedLabels: label.op && label.val ? [...state.savedLabels.filter(l => l.key !== label.key), label] : state.savedLabels}))
 }));

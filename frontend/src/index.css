@@ -14,6 +14,18 @@ code {
     monospace;
 }
 
+.swamp-toast {
+  background: #1E1E1E;
+  border-radius: 8px;
+  font-weight: 500;
+  color: rgb(243, 244, 246);
+}
+
+.swamp-toast-body {
+  font-size: 14px;
+  font-family: monospace;
+}
+
 .react-flow {
   --bg-color: #1E1E1E;
   --text-color: rgb(243, 244, 246);

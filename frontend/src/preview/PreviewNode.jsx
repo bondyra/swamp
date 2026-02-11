@@ -5,7 +5,7 @@ import { Box } from '@mui/material';
 import { getIconSrc } from '../Utils';
 
 export default memo(({ id, data, isConnectable }) => {
-  const reactFlow = useReactFlow();
+  useReactFlow();
 
   return (
     <>

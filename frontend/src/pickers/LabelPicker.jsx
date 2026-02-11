@@ -136,7 +136,7 @@ export default function LabelPicker({ resourceType, labels, setLabels, attribute
 										options={label.allowedValues || []}
 										onFieldUpdate={async (newValue) =>  {
 											// update allowed values for each label for which its key dependsOn this key
-											const val = typeof newValue === "object" ? newValue.value : newValue;  // TODO: label val should object
+											const val = typeof newValue === "object" ? newValue.value : newValue;
 											const dependentLabels = await Promise.all(
 												labels
 												.filter(l => l.dependsOn === label.key)

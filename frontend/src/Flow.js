@@ -23,6 +23,7 @@ import { useBackend } from './BackendProvider';
 import { useQueryStore } from './state/QueryState';
 import * as jq from "jq-wasm";
 import { SwampEdge } from './Edge';
+import { toast } from 'react-toastify';
 
 
 const theme = createTheme({
@@ -65,6 +66,33 @@ const linksToMap = (links, keyfun) => {
   return res
 }
 
+const edgeComp = (left, op, right) => {
+  switch (op){
+    case "==":
+      return left === right;
+    case "!=":
+      return left !== right;
+    case "like":
+      return typeof left === "string" &&
+             typeof right === "string" &&
+             left.includes(right);
+    case "not like":
+      return typeof left === "string" &&
+             typeof right === "string" &&
+             !left.includes(right);
+    case "contains": {
+      if (typeof left !== "string" || typeof right !== "string") return false;
+      return left.includes(right);
+    }
+    case "not contains": {
+      if (typeof left !== "string" || typeof right !== "string") return false;
+      return !left.includes(right);
+    }
+    default:
+      return left === right;  // eq
+  }
+}
+
 const SwampFlow = () => {
   const backend = useBackend();
   const reactFlow = useReactFlow();
@@ -79,7 +107,6 @@ const SwampFlow = () => {
   const links = useQueryStore((state) => state.links);
   const triggered = useQueryStore((state) => state.triggered);
   const setTriggered = useQueryStore((state) => state.setTriggered);
-  const setAlert = useQueryStore((state) => state.setAlert);
 
   useEffect(() => {
     async function update() {
@@ -92,7 +119,7 @@ const SwampFlow = () => {
         var allNodes = [...nodes];
         var linkFromMap = linksToMap(links, (l) => l.fromVertexId);
         var linkToMap = linksToMap(links, (l) => l.toVertexId);
-        for await (const item of backend.query(vertices, setAlert)) {
+        for await (const item of backend.query(vertices)) {
           const id = `${item.resourceType}.${item.result._id}`
           const newNode = {
             id: id,
@@ -116,8 +143,7 @@ const SwampFlow = () => {
               const potentialToNodes = allNodes.filter(n => lt.toVertexId === n.data.vertexId);
               if (potentialToNodes){
                 const fromValue = await jq.raw(item.result, lt.fromAttr, ["-r", "-c"]);
-                // todo: op, for now it's hardcoded to "eq"
-                potentialToNodes.filter(async n => await jq.raw(n.data.result, lt.toAttr, ["-r", "-c"]) === fromValue).forEach(n => {
+                potentialToNodes.filter(async n => edgeComp(await jq.raw(n.data.result, lt.toAttr, ["-r", "-c"]), lt.op, fromValue)).forEach(n => {
                   setEdges(oe => [...oe, {id: `${id}-${n.id}`, source: id, target: n.id, type: 'swamp-edge', data: {label: `${id} -> ${n.id}`}}]);
                 });
               }
@@ -129,8 +155,7 @@ const SwampFlow = () => {
               const potentialFromNodes = allNodes.filter(n => lf.fromVertexId === n.data.vertexId);
               if (potentialFromNodes){
                 const toValue = await jq.raw(item.result, lf.toAttr, ["-r", "-c"]);
-                // todo: op, for now it's hardcoded to "eq"
-                potentialFromNodes.filter(async n => await jq.raw(n.data.result, lf.fromAttr, ["-r", "-c"]) === toValue).forEach(n => {
+                potentialFromNodes.filter(async n => edgeComp(await jq.raw(n.data.result, lf.fromAttr, ["-r", "-c"]), lf.op, toValue)).forEach(n => {
                   setEdges(oe => [...oe, {id: `${n.id}-${id}`, source: n.id, target: id, type: 'swamp-edge', data: {label: `${n.id} -> ${id}`}}]);
                 });
               }
@@ -139,12 +164,12 @@ const SwampFlow = () => {
         }
       }
       catch (err) {
-        setAlert(err.toString(), "error")
+        toast.error(err.toString(), {className: "swamp-toast", bodyClassName: "swamp-toast-body"});
       }
     }
     setTriggered(false);
     update();
-  }, [backend, triggered, setTriggered, links, nodes, setEdges, setNodes, vertices, setAlert]);
+  }, [backend, triggered, setTriggered, links, nodes, setEdges, setNodes, vertices]);
 
   // RF stuff
   const onConnect = useCallback(

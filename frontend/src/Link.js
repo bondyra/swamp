@@ -40,7 +40,7 @@ export default memo(({ link }) => {
       if (link.to === null || link.to === undefined)
         return;
       const example = await backend.example(link.to);
-      setToExample(example)
+      setToExample(example);
     };
     const setDefaultValues = async () => {
       const data = await backend.suggestion(link.from, link.to);
@@ -51,7 +51,7 @@ export default memo(({ link }) => {
     loadFromExample();
     loadToExample();
     setDefaultValues();
-  }, [link.from, link.to, setFromExample, setToExample, updateLink, backend]);
+  }, [link.from, link.to, link.id, setFromExample, setToExample, updateLink, backend]);
 
   return (
     <Stack direction="row" sx={{border: link.selected ? "3px solid #aaaaff" : "1px solid gray", borderRadius: "10px"}} onClick={select}>
