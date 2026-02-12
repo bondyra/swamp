@@ -155,7 +155,7 @@ _resources = {
         "iter_items": lambda r: r["Vpcs"],
         "get_id": lambda i: i["VpcId"]
     },
-    "ec2": {
+    "instance": {
         "client": "ec2",
         "shape": "Instance",
         "api_call": lambda c: c.describe_instances(),
@@ -217,5 +217,145 @@ _resources = {
         "api_call": lambda c: c.describe_network_acls(),
         "iter_items": lambda r: r["NetworkAcls"],
         "get_id": lambda i: i["NetworkAclId"]
+    },
+    "ami": {
+        "client": "ec2",
+        "shape": "Image",
+        "api_call": lambda c: c.describe_images(),
+        "iter_items": lambda r: r["Images"],
+        "get_id": lambda i: i["ImageId"],
+    },
+    "launch_template": {
+        "client": "ec2",
+        "shape": "PrefixList",
+        "api_call": lambda c: c.describe_launch_templates(),
+        "iter_items": lambda r: r["LaunchTemplates"],
+        "get_id": lambda i: i["LaunchTemplateId"],
+    },
+    "prefix_list": {
+        "client": "ec2",
+        "shape": "",
+        "api_call": lambda c: c.describe_prefix_lists(),
+        "iter_items": lambda r: r["PrefixLists"],
+        "get_id": lambda i: i["PrefixListId"],
+    },
+    "reserved_instances": {
+        "client": "ec2",
+        "shape": "ReservedInstances",
+        "api_call": lambda c: c.describe_reserved_instances(),
+        "iter_items": lambda r: r["ReservedInstances"],
+        "get_id": lambda i: i["ReservedInstancesId"],
+    },
+    "snapshot": {
+        "client": "ec2",
+        "shape": "Snapshot",
+        "api_call": lambda c: c.describe_snapshots(),
+        "iter_items": lambda r: r["Snapshots"],
+        "get_id": lambda i: i["SnapshotId"],
+    },
+    "tgw_attachment": {
+        "client": "ec2",
+        "shape": "TransitGatewayAttachment",
+        "api_call": lambda c: c.describe_transit_gateway_attachments(),
+        "iter_items": lambda r: r["TransitGatewayAttachments"],
+        "get_id": lambda i: i["TransitGatewayAttachmentId"],
+    },
+    "tgw_route_table": {
+        "client": "ec2",
+        "shape": "TransitGatewayRouteTable",
+        "api_call": lambda c: c.describe_transit_gateway_route_tables(),
+        "iter_items": lambda r: r["TransitGatewayRouteTables"],
+        "get_id": lambda i: i["TransitGatewayRouteTableId"],
+    },
+    "transit_gateway": {
+        "client": "ec2",
+        "shape": "TransitGateway",
+        "api_call": lambda c: c.describe_transit_gateways(),
+        "iter_items": lambda r: r["TransitGateways"],
+        "get_id": lambda i: i["TransitGatewayId"],
+    },
+    "volume": {
+        "client": "ec2",
+        "shape": "Volume",
+        "api_call": lambda c: c.describe_volumes(),
+        "iter_items": lambda r: r["Volumes"],
+        "get_id": lambda i: i["VolumeId"],
+    },
+    "vpc_endpoint": {
+        "client": "ec2",
+        "shape": "VpcEndpoint",
+        "api_call": lambda c: c.describe_vpc_endpoints(),
+        "iter_items": lambda r: r["VpcEndpoints"],
+        "get_id": lambda i: i["VpcEndpointId"],
+    },
+    "vpc_peering_connection": {
+        "client": "ec2",
+        "shape": "VpcPeeringConnection",
+        "api_call": lambda c: c.describe_vpc_peering_connections(),
+        "iter_items": lambda r: r["VpcPeeringConnections"],
+        "get_id": lambda i: i["VpcPeeringConnectionId"],
+    },
+    "dx_connection": {
+        "client": "directconnect",
+        "shape": "Connection",
+        "api_call": lambda c: c.describe_connections(),
+        "iter_items": lambda r: r["connections"],
+        "get_id": lambda i: i["connectionId"]
+    },
+    "dx_lag": {
+        "client": "directconnect",
+        "shape": "Lag",
+        "api_call": lambda c: c.describe_lags(),
+        "iter_items": lambda r: r["lags"],
+        "get_id": lambda i: i["lagId"]
+    },
+    "dx_virtual_gateway": {
+        "client": "directconnect",
+        "shape": "VirtualGateway",
+        "api_call": lambda c: c.describe_virtual_gateways(),
+        "iter_items": lambda r: r["virtualGateways"],
+        "get_id": lambda i: i["virtualGatewayId"]
+    },
+    "dx_virtual_interface": {
+        "client": "directconnect",
+        "shape": "VirtualInterface",
+        "api_call": lambda c: c.describe_virtual_interfaces(),
+        "iter_items": lambda r: r["virtualInterfaces"],
+        "get_id": lambda i: i["virtualInterfaceId"]
+    },
+    "resolver_endpoint": {
+        "client": "route53resolver",
+        "shape": "ResolverEndpoint",
+        "api_call": lambda c: c.list_resolver_endpoints(),
+        "iter_items": lambda r: r["ResolverEndpoints"],
+        "get_id": lambda i: i["Id"]
+    },
+    "resolver_rule": {
+        "client": "route53resolver",
+        "shape": "ResolverRule",
+        "api_call": lambda c: c.list_resolver_rules(),
+        "iter_items": lambda r: r["ResolverRules"],
+        "get_id": lambda i: i["Id"]
+    },
+    "autoscaling_group": {
+        "client": "autoscaling",
+        "shape": "AutoScalingGroup",
+        "api_call": lambda c: c.describe_auto_scaling_groups(),
+        "iter_items": lambda r: r["AutoScalingGroups"],
+        "get_id": lambda i: i["AutoScalingGroupName"]
+    },
+    "load_balancer": {
+        "client": "elbv2",
+        "shape": "LoadBalancer",
+        "api_call": lambda c: c.describe_load_balancers(),
+        "iter_items": lambda r: r["LoadBalancers"],
+        "get_id": lambda i: i["LoadBalancerArn"]
+    },
+    "target_group": {
+        "client": "elbv2",
+        "shape": "TargetGroup",
+        "api_call": lambda c: c.describe_target_groups(),
+        "iter_items": lambda r: r["TargetGroups"],
+        "get_id": lambda i: i["TargetGroupArn"]
     },
 }
