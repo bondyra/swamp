@@ -13,7 +13,7 @@ export default memo(({ vertexId, data }) => {
     <Stack>
       {
         fields.filter(f => f.vertexId === vertexId).map(f => {
-          return <DisplayRecord fieldId={f.id} value={f.val} data={data} />
+          return <DisplayRecord key={f.id} fieldId={f.id} value={f.val} data={data} />
         })
       }
 			<Box sx={{padding: "0", pl: "2px", pb: "4px"}}>

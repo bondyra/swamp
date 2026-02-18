@@ -234,7 +234,7 @@ _resources = {
     },
     "prefix_list": {
         "client": "ec2",
-        "shape": "",
+        "shape": "PrefixList",
         "api_call": lambda c: c.describe_prefix_lists(),
         "iter_items": lambda r: r["PrefixLists"],
         "get_id": lambda i: i["PrefixListId"],

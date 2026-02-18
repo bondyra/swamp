@@ -30,18 +30,9 @@ const theme = createTheme({
   palette: {},
 });
 
-const initialNodes = [
-  // {id: "1", position: {x: 0, y: 0}, type: 'resource', data: {id: "1", vertexId: "a", resourceType: "twoja.stara1", result: {a: 1, b: 2}}},
-  // {id: "2", position: {x: 0, y: 0}, type: 'resource', data: {id: "2", vertexId: "b", resourceType: "twoja.stara2", result: {a: 1, b: 2}}},
-  // {id: "3", position: {x: 0, y: 0}, type: 'resource', data: {id: "3", vertexId: "c", resourceType: "twoja.stara3", result: {a: 1, b: 2}}},
-  // {id: "4", position: {x: 0, y: 0}, type: 'resource', data: {id: "4", vertexId: "d", resourceType: "twoja.stara4", result: {a: 1, b: 2}}},
-]
+const initialNodes = []
 
-const initialEdges = [
-  // {id: `1-2`, source: "1", target: "2", style: {strokeWidth: 5} },
-  // {id: `2-3`, source: "2", target: "3", style: {strokeWidth: 5} },
-  // {id: `2-4`, source: "2", target: "4", style: {strokeWidth: 5} },
-]
+const initialEdges = []
 
 const edgeTypes = {
   'swamp-edge': SwampEdge,
@@ -137,27 +128,49 @@ const SwampFlow = () => {
           };
           allNodes.push(newNode);
           setNodes(oldNodes => [...oldNodes, newNode]);
-          if (item.vertexId in linkFromMap){
+          if (item.vertexId in linkFromMap){ // 1st case - when new item has children, it could be the start of some link(s)
             const linksTo = linkFromMap[item.vertexId];
             for (const lt of linksTo) {
               const potentialToNodes = allNodes.filter(n => lt.toVertexId === n.data.vertexId);
-              if (potentialToNodes){
-                const fromValue = await jq.raw(item.result, lt.fromAttr, ["-r", "-c"]);
-                potentialToNodes.filter(async n => edgeComp(await jq.raw(n.data.result, lt.toAttr, ["-r", "-c"]), lt.op, fromValue)).forEach(n => {
-                  setEdges(oe => [...oe, {id: `${id}-${n.id}`, source: id, target: n.id, type: 'swamp-edge', data: {label: `${id} -> ${n.id}`}}]);
-                });
+              const left = (await jq.raw(item.result, lt.fromAttr, ["-r", "-c"])).stdout;
+              for (const n of potentialToNodes) {
+                const right = (await jq.raw(n.data.result, lt.toAttr, ["-r", "-c"])).stdout
+                if (edgeComp(left, lt.op, right)) {
+                  setEdges(oe => [
+                    ...oe,
+                    {
+                      id: `${id}-${n.id}`,
+                      source: id,
+                      target: n.id,
+                      type: 'swamp-edge',
+                      data: {label: `${id} -> ${n.id}`}
+                    }
+                  ]);
+                }
               }
             }
           }
-          if (item.vertexId in linkToMap){
+          if (item.vertexId in linkToMap){ // 2nd case - when new item has parents, it could be the end of some link(s)
             const linksFrom = linkToMap[item.vertexId];
             for (const lf of linksFrom) {
               const potentialFromNodes = allNodes.filter(n => lf.fromVertexId === n.data.vertexId);
-              if (potentialFromNodes){
-                const toValue = await jq.raw(item.result, lf.toAttr, ["-r", "-c"]);
-                potentialFromNodes.filter(async n => edgeComp(await jq.raw(n.data.result, lf.fromAttr, ["-r", "-c"]), lf.op, toValue)).forEach(n => {
-                  setEdges(oe => [...oe, {id: `${n.id}-${id}`, source: n.id, target: id, type: 'swamp-edge', data: {label: `${n.id} -> ${id}`}}]);
-                });
+              const right = (await jq.raw(item.result, lf.toAttr, ["-r", "-c"])).stdout;
+              console.log(`${id} 2 *right ${JSON.stringify(right)}`)
+              for (const n of potentialFromNodes) {
+                const left = (await jq.raw(n.data.result, lf.fromAttr, ["-r", "-c"])).stdout;
+                console.log(`${id} 2 left ${JSON.stringify(left)}`)
+                if (edgeComp(left, lf.op, right)) {
+                  setEdges(oe => [
+                    ...oe,
+                    {
+                      id: `${n.id}-${id}`,
+                      source: n.id,
+                      target: id,
+                      type: 'swamp-edge',
+                      data: {label: `${n.id} -> ${id}`}
+                    }
+                  ]);
+                }
               }
             }
           }

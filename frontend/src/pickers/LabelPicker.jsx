@@ -40,7 +40,6 @@ const themeFunction = (theme) => ({
 export default function LabelPicker({ resourceType, labels, setLabels, attributes }) {
 	const backend = useBackend();
 	const savedLabels = useQueryStore((state) => state.savedLabels);
-	const saveLabel = useQueryStore((state) => state.saveLabel);
 	const mergedLabels = (ll, extraLabels) => {
 		return ll.map(l => {
 			const ul = extraLabels.filter(x => l.id === x.id)
@@ -101,7 +100,6 @@ export default function LabelPicker({ resourceType, labels, setLabels, attribute
 												labels, [{...label, op: val}]
 											)
 											setLabels(newLabels);
-											saveLabel({...label, op: val});
 										}}/>
 							<Stack
 								key={`${label.id}-val-outer`}
@@ -124,8 +122,6 @@ export default function LabelPicker({ resourceType, labels, setLabels, attribute
 											setLabels(mergedLabels(
 												labels, [{...label, val: event.target.value}]
 											));
-											// this breaks typing in the middle. better just ignore it for such labels
-											// saveLabel({...label, val: event.target.value});
 										}}
 									/>
 								}
@@ -141,14 +137,14 @@ export default function LabelPicker({ resourceType, labels, setLabels, attribute
 												labels
 												.filter(l => l.dependsOn === label.key)
 												.map(async l => {
-													return {...l, allowedValues: await backend.attributeValues(resourceType, l.key, [{key: label.key, val: val}])}
+													var av = await backend.attributeValues(resourceType, l.key, [{key: label.key, val: val}]);
+													return {...l, allowedValues: av}
 												})
 											)
 											const newLabels = mergedLabels(
 												labels, [...dependentLabels, {...label, val: val}]
 											);
 											setLabels(newLabels);
-											saveLabel({...label, val: val});
 										}}
 										descr={`Select one of allowed values for ${label.key}`}
 									/>
