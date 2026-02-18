@@ -12,6 +12,7 @@ import { useQueryStore } from './state/QueryState';
 import PreviewFlow from './preview/PreviewFlow';
 import { NiceButton } from './ui-elements/NiceButton';
 import { TextField } from '@mui/material';
+import { Button } from '@mui/material';
 import YAML from "yaml";
 import { toast } from 'react-toastify';
 
@@ -92,8 +93,16 @@ export default memo(() => {
   return (
     <Stack sx={menuTheme}>
         <Divider sx={{background: "gray"}}/>
+        <Stack direction="row">
+            <Box sx={{fontSize: "28px", fontWeight: 800, color: "gray", fontStyle: "bold"}}>Swamp</Box>
+            <Box sx={{fontSize: "12px", fontWeight: 100, color: "gray",  mt: "8px", ml: "5px"}}>{process.env.REACT_APP_VERSION ?? "dev"}</Box>
+            <Button href="https://github.com/bondyra/swamp">
+                <Box component="img" sx={{height: 24, flexShrink: 0, mr: "5px"}} src={"./github.svg"} />
+            </Button>
+        </Stack>
+        <Divider sx={{background: "gray"}}/>
         {/* VERTICES */}
-        <Box sx={{width: "100%", fontSize: "24px"}}>Resources</Box>
+        <Box sx={{width: "100%", fontSize: "22px"}}>Resources</Box>
         <List sx={listTheme}>
             {
                 vertices.map(
@@ -112,7 +121,7 @@ export default memo(() => {
         </List>
         <Divider sx={{background: "gray"}}/>
         {/* EDGES */}
-        <Box sx={{width: "100%", fontSize: "24px"}}>Edges</Box>
+        <Box sx={{width: "100%", fontSize: "22px"}}>Edges</Box>
         <List sx={listTheme}>
             {
                 links.map(

@@ -120,7 +120,7 @@ export default function JQPicker({value, updateData, example, disabled, handleCl
       if (value === null || value === undefined || !value)
         return;
       const newVal = await jq.raw(example, value, ["-r", "-c"]);
-      setResult(newVal.stdout);
+      setResult(newVal.stdout ?? "");
     }
     runJq();
   }, [value, example])
@@ -135,7 +135,7 @@ export default function JQPicker({value, updateData, example, disabled, handleCl
         buttonSx ?? {
           fontSize: "14px",
           mt: '0px',
-          height: 20,
+          height: 'auto',
           padding: '.15em 2px',
           fontWeight: 600,
           lineHeight: '15px',

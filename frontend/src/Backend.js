@@ -1,3 +1,5 @@
+import {suggestions} from "./Suggestion";
+
 const BASE_API_URL = "http://localhost:8000"
 
 export default class Backend {
@@ -36,17 +38,7 @@ export default class Backend {
   }
 
   async suggestion(from, to) {
-    if (from === "aws.vpc" && to === "aws.subnet")
-      return {fromAttr: ".VpcId", op: "=", toAttr: ".VpcId"}
-    if (from === "aws.vpc" && to === "aws.route_table")
-      return {fromAttr: ".VpcId", op: "=", toAttr: ".VpcId"}
-    if (from === "aws.vpc" && to === "aws.network_acl")
-      return {fromAttr: ".VpcId", op: "=", toAttr: ".VpcId"}
-    if (from === "aws.network_acl" && to === "aws.subnet")
-      return {fromAttr: ".Associations[].SubnetId", op: "contains", toAttr: ".SubnetId"}
-    if (from === "aws.subnet" && to === "aws.network_acl")
-      return {fromAttr: ".SubnetId", op: "contains", toAttr: ".Associations[].SubnetId"}
-    return null;
+    return (suggestions[from] ?? {})[to] ?? null;
   }
 
   async* query(vertices) {
