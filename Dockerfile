@@ -28,5 +28,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY backend/ ./
 COPY --from=frontend /app/build /var/www/html
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+WORKDIR /
 
 CMD ["supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
