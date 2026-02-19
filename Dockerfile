@@ -1,4 +1,4 @@
-FROM node:22-slim AS frontend
+FROM node:18-slim AS frontend
 
 ARG version
 ENV REACT_APP_VERSION=${version}
