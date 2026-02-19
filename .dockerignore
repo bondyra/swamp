@@ -1,6 +1,7 @@
 node_modules
+build
 venv
 .venv
 __pycache__
-build
 dev_supervisord.conf
+.pytest_cache
