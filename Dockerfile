@@ -1,4 +1,4 @@
-FROM node:18-slim AS frontend
+FROM node:22-alpine AS frontend
 
 ARG version
 ENV VITE_VERSION=${version}
