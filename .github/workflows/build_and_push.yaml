@@ -43,4 +43,4 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
-            VITE_VERSION=${{ github.ref_name }}
+            version=${{ github.ref_name }}
