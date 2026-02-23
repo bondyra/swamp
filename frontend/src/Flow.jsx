@@ -21,9 +21,12 @@ import { DagreLayoutProvider } from './layout/DagreLayoutProvider';
 import { randomString } from './Utils'
 import { useBackend } from './BackendProvider';
 import { useQueryStore } from './state/QueryState';
-import * as jq from "jq-wasm";
 import { SwampEdge } from './Edge';
 import { toast } from 'react-toastify';
+import { getJq } from './jq';
+
+
+const jq = await getJq();
 
 
 const theme = createTheme({
@@ -131,10 +134,12 @@ const SwampFlow = () => {
           if (item.vertexId in linkFromMap){ // 1st case - when new item has children, it could be the start of some link(s)
             const linksTo = linkFromMap[item.vertexId];
             for (const lt of linksTo) {
+              const toAttr = lt.toAttr.startsWith('.') ? lt.toAttr : '.' + lt.toAttr
+              const fromAttr = lt.fromAttr.startsWith('.') ? lt.fromAttr : '.' + lt.fromAttr
               const potentialToNodes = allNodes.filter(n => lt.toVertexId === n.data.vertexId);
-              const left = (await jq.raw(item.result, lt.fromAttr, ["-r", "-c"])).stdout;
+              const left = (await jq.raw(JSON.stringify(item.result), fromAttr, ["-r", "-c"]));
               for (const n of potentialToNodes) {
-                const right = (await jq.raw(n.data.result, lt.toAttr, ["-r", "-c"])).stdout
+                const right = (await jq.raw(JSON.stringify(n.data.result), toAttr, ["-r", "-c"]))
                 if (edgeComp(left, lt.op, right)) {
                   setEdges(oe => [
                     ...oe,
@@ -153,12 +158,12 @@ const SwampFlow = () => {
           if (item.vertexId in linkToMap){ // 2nd case - when new item has parents, it could be the end of some link(s)
             const linksFrom = linkToMap[item.vertexId];
             for (const lf of linksFrom) {
+              const toAttr = lf.toAttr.startsWith('.') ? lf.toAttr : '.' + lf.toAttr
+              const fromAttr = lf.fromAttr.startsWith('.') ? lf.fromAttr : '.' + lf.fromAttr
               const potentialFromNodes = allNodes.filter(n => lf.fromVertexId === n.data.vertexId);
-              const right = (await jq.raw(item.result, lf.toAttr, ["-r", "-c"])).stdout;
-              console.log(`${id} 2 *right ${JSON.stringify(right)}`)
+              const right = (await jq.raw(JSON.stringify(item.result), toAttr, ["-r", "-c"]));
               for (const n of potentialFromNodes) {
-                const left = (await jq.raw(n.data.result, lf.fromAttr, ["-r", "-c"])).stdout;
-                console.log(`${id} 2 left ${JSON.stringify(left)}`)
+                const left = (await jq.raw(JSON.stringify(n.data.result), fromAttr, ["-r", "-c"]));
                 if (edgeComp(left, lf.op, right)) {
                   setEdges(oe => [
                     ...oe,

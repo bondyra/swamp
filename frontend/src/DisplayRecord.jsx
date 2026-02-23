@@ -6,7 +6,10 @@ import {Box} from '@mui/material';
 import RemoveCircleIcon from '@mui/icons-material/RemoveCircle';
 import {Typography} from '@mui/material';
 import IconButton from '@mui/material/IconButton';
-import * as jq from "jq-wasm"
+import { getJq } from './jq';
+
+
+const jq = await getJq();
 
 
 export default memo(({ fieldId, value, data }) => {
@@ -21,8 +24,8 @@ export default memo(({ fieldId, value, data }) => {
   useEffect(() => {
     async function update() {
       if((redisplay && value) || (!text && value)){  // if needs to be redisplayed and there's some value OR it's a first load and there is some value already (on mount)
-        const t = await jq.raw(data, value, ["-r", "-c"]);
-        setText(t.stdout);
+        const t = await jq.raw(JSON.stringify(data), value.startsWith('.') ? value : '.' + value, ["-r", "-c"]);
+        setText(t);
       }
     }
     update();
