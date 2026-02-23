@@ -7,7 +7,10 @@ import ButtonBase from '@mui/material/ButtonBase';
 import { TextField, textFieldClasses } from '@mui/material';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
-import * as jq from "jq-wasm";
+import { getJq } from '../jq';
+
+
+const jq = await getJq();
 
 
 const StyledAutocompletePopper = styled('div')(({ theme }) => ({
@@ -119,8 +122,8 @@ export default function JQPicker({value, updateData, example, disabled, handleCl
     const runJq = async () => {
       if (value === null || value === undefined || !value)
         return;
-      const newVal = await jq.raw(example, value, ["-r", "-c"]);
-      setResult(newVal.stdout ?? "");
+      const newVal = await jq.raw(JSON.stringify(example), value.startsWith('.') ? value : '.' + value, ["-r", "-c"]);
+      setResult(newVal ?? "");
     }
     runJq();
   }, [value, example])

@@ -95,7 +95,7 @@ export default memo(() => {
         <Divider sx={{background: "gray"}}/>
         <Stack direction="row">
             <Box sx={{fontSize: "28px", fontWeight: 800, color: "gray", fontStyle: "bold"}}>Swamp</Box>
-            <Box sx={{fontSize: "12px", fontWeight: 100, color: "gray",  mt: "8px", ml: "5px"}}>{process.env.REACT_APP_VERSION ?? "dev"}</Box>
+            <Box sx={{fontSize: "12px", fontWeight: 100, color: "gray",  mt: "8px", ml: "5px"}}>{import.meta.env.VITE_VERSION ?? "dev"}</Box>
             <Button href="https://github.com/bondyra/swamp">
                 <Box component="img" sx={{height: 24, flexShrink: 0, mr: "5px"}} src={"./github.svg"} />
             </Button>

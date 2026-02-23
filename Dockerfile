@@ -1,7 +1,7 @@
 FROM node:18-slim AS frontend
 
 ARG version
-ENV REACT_APP_VERSION=${version}
+ENV VITE_VERSION=${version}
 
 WORKDIR /app
 COPY frontend/package*.json ./
