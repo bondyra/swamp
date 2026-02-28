@@ -5,6 +5,7 @@ from typing import AsyncGenerator, Dict, List
 import aioboto3
 import boto3
 from itertools import product
+import json
 
 from backend.model import Attribute, Label, Provider, GenericQueryException
 from backend.utils import get_matches
@@ -59,6 +60,7 @@ class AWS(Provider):
         async with aioboto3.Session(profile_name=profile, region_name=region).client(client) as client:
             response = await _resources[r]["api_call"](client)
             for item in _resources[r]["iter_items"](response):
+                item = json.loads(json.dumps(item, default=str))
                 yield {
                     **{"_id": _resources[r]["get_id"](item)},
                     "_aws_profile": profile,
