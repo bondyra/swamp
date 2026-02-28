@@ -11,6 +11,8 @@ from backend.utils import get_matches
 
 
 class AWS(Provider):
+    _default_session = None
+
     @staticmethod
     def provider_name() -> str:
         return "aws"
@@ -22,11 +24,17 @@ class AWS(Provider):
     @staticmethod
     def resources() -> List[str]:
         return list(_resources.keys())
+    
+    @classmethod
+    def _get_default_profile(cls):
+        if not cls._default_profile:
+            cls._default_profile = boto3.Session(profile_name=_get_profiles()[0])
+        return cls._default_profile
 
     @classmethod
     def description(cls, r: str) -> str:
         client, shape = _resources[r]["client"], _resources[r]["shape"]
-        return boto3.client(client).meta.service_model.shape_for(shape).documentation
+        return cls._get_default_profile().client(client).meta.service_model.shape_for(shape).documentation
     
     @classmethod
     def icon(cls, r: str) -> str:
