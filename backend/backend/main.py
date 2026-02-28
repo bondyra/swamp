@@ -10,11 +10,12 @@ from backend.model import Label, GenericQueryException, iter_all_resource_types,
 
 
 app = FastAPI()
+# fixme
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
-    allow_credentials=True,
-    allow_methods=["GET"],
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
