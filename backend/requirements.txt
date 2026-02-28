@@ -3,5 +3,5 @@ uvicorn == 0.32.1
 aioboto3 == 12.3.0
 pydantic == 2.10.4
 kubernetes-asyncio == 32.0.0
-requests == 2.32.3
+requests == 2.32.4
 jq == 1.8.0

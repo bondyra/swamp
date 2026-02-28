@@ -26,15 +26,15 @@ class AWS(Provider):
         return list(_resources.keys())
     
     @classmethod
-    def _get_default_profile(cls):
-        if not cls._default_profile:
-            cls._default_profile = boto3.Session(profile_name=_get_profiles()[0])
-        return cls._default_profile
+    def _get_default_session(cls):
+        if not cls._default_session:
+            cls._default_session = boto3.Session(profile_name=_get_profiles()[0])
+        return cls._default_session
 
     @classmethod
     def description(cls, r: str) -> str:
         client, shape = _resources[r]["client"], _resources[r]["shape"]
-        return cls._get_default_profile().client(client).meta.service_model.shape_for(shape).documentation
+        return cls._get_default_session().client(client).meta.service_model.shape_for(shape).documentation
     
     @classmethod
     def icon(cls, r: str) -> str:
